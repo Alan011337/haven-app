@@ -6,3 +6,4 @@ python-dotenv
 matplotlib
 gspread
 oauth2client
+supabase
