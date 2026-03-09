@@ -5,6 +5,7 @@ from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = BACKEND_ROOT / "scripts" / "run-test-profile.sh"
+REQUIREMENTS_DEV_PATH = BACKEND_ROOT / "requirements-dev.txt"
 
 
 def test_run_test_profile_script_exists() -> None:
@@ -36,6 +37,11 @@ def test_run_test_profile_smoke_profile_targets_hot_paths() -> None:
     assert "ruff check . --select F821,F841,E9" in source
     assert "tests/test_ai_router_runtime.py" in source
     assert "tests/test_security_gate_contract.py" in source
+
+
+def test_requirements_dev_includes_ruff_for_test_profiles() -> None:
+    requirements = REQUIREMENTS_DEV_PATH.read_text(encoding="utf-8")
+    assert "ruff==" in requirements
 
 
 def test_run_test_profile_runtime_profile_targets_observability_contracts() -> None:
