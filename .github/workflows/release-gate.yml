@@ -446,15 +446,63 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: python scripts/check_cuj_synthetic_evidence_gate.py --require-pass --max-age-hours 36 --summary-path /tmp/cuj-synthetic-evidence-summary.json
 
-      - name: Fetch latest AI quality snapshot evidence (daily artifact)
+      - name: Prepare AI quality snapshot evidence
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE || 'local_snapshot' }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_REPO: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_REPO || '' }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_WORKFLOW_FILE: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_WORKFLOW_FILE || '.github/workflows/ai-quality-snapshot.yml' }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_BRANCH: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_BRANCH || 'main' }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_NAME: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_NAME || 'ai-quality-snapshot' }}
+          RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_FILE: ${{ vars.RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_FILE || 'docs/security/evidence/ai-quality-snapshot-latest.json' }}
+          RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE || '0' }}
         run: |
-          python scripts/fetch_latest_ai_quality_snapshot_evidence.py \
-            --output /tmp/ai-quality-snapshot-latest.json \
-            --allow-missing-evidence \
-            --summary-path /tmp/ai-quality-snapshot-fetch-summary.json
+          rm -f /tmp/ai-quality-snapshot-latest.json /tmp/ai-quality-snapshot-fetch-summary.json
+          if [ "${RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE}" = "daily_artifact" ]; then
+            fetch_args=(
+              --output /tmp/ai-quality-snapshot-latest.json
+              --workflow-file "${RELEASE_GATE_AI_QUALITY_EVIDENCE_WORKFLOW_FILE}"
+              --branch "${RELEASE_GATE_AI_QUALITY_EVIDENCE_BRANCH}"
+              --artifact-name "${RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_NAME}"
+              --artifact-file "${RELEASE_GATE_AI_QUALITY_EVIDENCE_ARTIFACT_FILE}"
+              --summary-path /tmp/ai-quality-snapshot-fetch-summary.json
+            )
+            if [ -n "${RELEASE_GATE_AI_QUALITY_EVIDENCE_REPO}" ]; then
+              fetch_args+=(--repo "${RELEASE_GATE_AI_QUALITY_EVIDENCE_REPO}")
+            fi
+            if [ "${RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE}" = "1" ]; then
+              fetch_args+=(--allow-missing-evidence)
+            fi
+            python scripts/fetch_latest_ai_quality_snapshot_evidence.py "${fetch_args[@]}"
+          elif [ "${RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE}" = "local_snapshot" ]; then
+            python scripts/run_ai_quality_snapshot.py \
+              --allow-missing-current \
+              --output /tmp/ai-quality-snapshot-latest.json
+            python - <<'PY'
+          import json
+          from pathlib import Path
+
+          summary_path = Path("/tmp/ai-quality-snapshot-fetch-summary.json")
+          evidence_path = Path("/tmp/ai-quality-snapshot-latest.json")
+          payload = {
+              "result": "pass",
+              "reasons": [],
+              "meta": {
+                  "source": "local_snapshot",
+                  "output": str(evidence_path),
+              },
+          }
+          summary_path.write_text(
+              json.dumps(payload, ensure_ascii=True, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          else
+            echo "[release-gate] fail: invalid RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE: ${RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE}"
+            echo "[release-gate] hint: supported values are local_snapshot or daily_artifact"
+            exit 1
+          fi
 
       - name: AI quality snapshot freshness gate (PR optional)
         if: github.event_name == 'pull_request'

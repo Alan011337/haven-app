@@ -243,11 +243,15 @@ class ReleaseGateWorkflowContractTests(unittest.TestCase):
 
     def test_release_gate_workflow_contains_ai_quality_snapshot_freshness_gate_steps(self) -> None:
         text = RELEASE_GATE_WORKFLOW_PATH.read_text(encoding="utf-8")
-        self.assertIn("name: Fetch latest AI quality snapshot evidence (daily artifact)", text)
+        self.assertIn("name: Prepare AI quality snapshot evidence", text)
         self.assertIn("name: AI quality snapshot freshness gate (PR optional)", text)
         self.assertIn("name: AI quality snapshot freshness gate (main required)", text)
         self.assertIn("name: AI quality snapshot freshness gate summary", text)
+        self.assertIn("RELEASE_GATE_AI_QUALITY_EVIDENCE_SOURCE", text)
+        self.assertIn("local_snapshot", text)
+        self.assertIn("daily_artifact", text)
         self.assertIn("python scripts/fetch_latest_ai_quality_snapshot_evidence.py", text)
+        self.assertIn("python scripts/run_ai_quality_snapshot.py", text)
         self.assertIn("python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence /tmp/ai-quality-snapshot-latest.json", text)
         self.assertIn("--allow-missing-evidence", text)
         self.assertIn("non_blocking_on_degraded", text)
