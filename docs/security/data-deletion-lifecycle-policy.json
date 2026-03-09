@@ -1,0 +1,58 @@
+{
+  "artifact_kind": "data-deletion-lifecycle-policy",
+  "schema_version": "1.0.0",
+  "default_mode": "hard_delete",
+  "phase_gate": {
+    "soft_delete_enabled": false,
+    "trash_retention_days": 30,
+    "purge_retention_days": 90
+  },
+  "required_audit_actions": [
+    "USER_DATA_ERASE",
+    "USER_DATA_ERASE_ERROR"
+  ],
+  "runtime_settings": {
+    "soft_delete_enabled_env": "DATA_SOFT_DELETE_ENABLED",
+    "trash_retention_days_env": "DATA_SOFT_DELETE_TRASH_RETENTION_DAYS",
+    "purge_retention_days_env": "DATA_SOFT_DELETE_PURGE_RETENTION_DAYS"
+  },
+  "resources": [
+    {
+      "data_class": "analyses",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    },
+    {
+      "data_class": "journals",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    },
+    {
+      "data_class": "card_responses",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    },
+    {
+      "data_class": "card_sessions",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    },
+    {
+      "data_class": "notification_events",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    },
+    {
+      "data_class": "users",
+      "current_delete_mode": "hard_delete",
+      "future_delete_mode": "soft_delete_then_purge"
+    }
+  ],
+  "references": {
+    "data_retention_policy": "docs/security/data-retention-policy.json",
+    "deletion_graph": "docs/security/data-rights-deletion-graph.json",
+    "data_rights_runbook": "docs/security/data-rights-fire-drill.md",
+    "soft_delete_purge_runbook": "docs/security/data-soft-delete-purge-audit.md",
+    "restore_rehearsal_runbook": "docs/security/data-restore-rehearsal.md"
+  }
+}

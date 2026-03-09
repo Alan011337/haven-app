@@ -1,0 +1,67 @@
+name: Notification Outbox Self-Heal Drill
+
+on:
+  schedule:
+    - cron: "30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  outbox-self-heal:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:////tmp/haven-outbox-self-heal.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      PYTHONUTF8: "1"
+      PYTHONPATH: .
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build synthetic outbox health snapshot
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = {
+              "outbox": {
+                  "depth": 0,
+                  "dead_letter_rate": 0.0,
+                  "stale_processing_count": 0,
+                  "retry_age_p95_seconds": 0,
+              }
+          }
+          Path("/tmp/notification-outbox-health-snapshot-ci.json").write_text(
+              json.dumps(payload, ensure_ascii=True, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Run outbox self-heal planner (dry-run)
+        run: |
+          python scripts/run_notification_outbox_self_heal.py \
+            --policy config/notification_outbox_self_heal_policy.json \
+            --snapshot /tmp/notification-outbox-health-snapshot-ci.json \
+            --output /tmp/notification-outbox-self-heal-summary-ci.json
+
+      - name: Upload outbox self-heal artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-outbox-self-heal
+          path: |
+            /tmp/notification-outbox-health-snapshot-ci.json
+            /tmp/notification-outbox-self-heal-summary-ci.json

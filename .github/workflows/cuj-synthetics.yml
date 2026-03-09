@@ -1,0 +1,135 @@
+name: CUJ Synthetics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  cuj-synthetics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run CUJ synthetic probe
+        id: cuj_probe
+        continue-on-error: true
+        env:
+          SYNTHETIC_BASE_URL: ${{ secrets.SYNTHETIC_BASE_URL }}
+          SYNTHETIC_BEARER_TOKEN: ${{ secrets.SYNTHETIC_BEARER_TOKEN }}
+          SYNTHETIC_TIMEOUT_SECONDS: "10"
+        run: python scripts/synthetics/run_cuj_synthetics.py --summary-path /tmp/cuj-synthetics-summary.json
+
+      - name: Upload synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cuj-synthetic-evidence
+          path: |
+            docs/sre/evidence/cuj-synthetic-*.json
+            docs/sre/evidence/cuj-synthetic-*.md
+          if-no-files-found: ignore
+
+      - name: CUJ synthetic summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/cuj-synthetics-summary.json")
+          lines = ["### CUJ synthetic monitor"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              failed = payload.get("failed_stages") or []
+              warn = payload.get("warn_stages") or []
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- failure_class: `{payload.get('failure_class', 'unknown')}`")
+              lines.append(
+                  "- failed_stages: `" + (", ".join(str(item) for item in failed) if failed else "none") + "`"
+              )
+              lines.append(
+                  "- warn_stages: `" + (", ".join(str(item) for item in warn) if warn else "none") + "`"
+              )
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Open or Update Alert Issue
+        if: steps.cuj_probe.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P1][SRE] CUJ synthetic failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const summaryPath = "/tmp/cuj-synthetics-summary.json";
+            let summary = {};
+            if (fs.existsSync(summaryPath)) {
+              try {
+                summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+              } catch (_error) {
+                summary = {};
+              }
+            }
+            const failureClass = summary.failure_class || "unknown";
+            const failedStages = Array.isArray(summary.failed_stages) ? summary.failed_stages : [];
+            const body = [
+              "Scheduled CUJ synthetic probe failed.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              `- Failure class: ${failureClass}`,
+              `- Failed stages: ${failedStages.length ? failedStages.join(", ") : "unknown"}`,
+              "",
+              "Action items:",
+              "1) Inspect health/slo payload and synthetic stage failures.",
+              "2) Validate degradation mode fallback (polling/inbox) is active.",
+              "3) If user-impacting, trigger canary rollback / release freeze."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body });
+            }
+
+      - name: Fail Job on Probe Failure
+        if: steps.cuj_probe.outcome == 'failure'
+        run: exit 1

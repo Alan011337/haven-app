@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "data-restore-drill",
+  "generated_by": "backend/scripts/run_data_restore_drill_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-23T03:05:24.889825+00:00",
+  "dry_run": true,
+  "runbook_path": "docs/security/data-restore-rehearsal.md",
+  "policy_path": "docs/security/data-deletion-lifecycle-policy.json",
+  "source_evidence_kind": "data-soft-delete-purge",
+  "source_evidence_path": "docs/security/evidence/data-soft-delete-purge-20260223T030524Z.json",
+  "source_evidence_generated_at": "2026-02-23T03:05:24.637955+00:00",
+  "source_evidence_max_age_days": 35,
+  "required_checks": [
+    "runbook_present",
+    "rollback_plan_present",
+    "lifecycle_contract_passed",
+    "source_purge_evidence_fresh",
+    "nonprod_dry_run"
+  ],
+  "checks_total": 5,
+  "checks_passed": 5,
+  "checks_failed": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "name": "runbook_present",
+      "ok": true,
+      "detail": "restore rehearsal runbook exists and is readable"
+    },
+    {
+      "name": "rollback_plan_present",
+      "ok": true,
+      "detail": "rollback section found in runbook"
+    },
+    {
+      "name": "lifecycle_contract_passed",
+      "ok": true,
+      "detail": "data deletion lifecycle contract satisfied"
+    },
+    {
+      "name": "source_purge_evidence_fresh",
+      "ok": true,
+      "detail": "source purge evidence freshness check passed"
+    },
+    {
+      "name": "nonprod_dry_run",
+      "ok": true,
+      "detail": "dry-run environment accepted"
+    }
+  ]
+}

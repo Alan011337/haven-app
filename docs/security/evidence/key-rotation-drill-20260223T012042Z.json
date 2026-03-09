@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "key-rotation-drill",
+  "generated_by": "backend/scripts/run_key_rotation_drill_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-23T01:20:42.397461+00:00",
+  "dry_run": true,
+  "kms_provider": "mock-kms",
+  "runbook_path": "docs/security/keys.md",
+  "policy_path": "docs/security/secrets-key-management-policy.json",
+  "required_checks": [
+    "runbook_present",
+    "policy_contract_passed",
+    "env_separation_enforced",
+    "rollback_plan_present",
+    "nonprod_dry_run"
+  ],
+  "checks_total": 5,
+  "checks_passed": 5,
+  "checks_failed": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "name": "runbook_present",
+      "ok": true,
+      "detail": "runbook file exists and is readable"
+    },
+    {
+      "name": "policy_contract_passed",
+      "ok": true,
+      "detail": "policy contract satisfied"
+    },
+    {
+      "name": "env_separation_enforced",
+      "ok": true,
+      "detail": "prod secret manager required and prohibited secret files absent"
+    },
+    {
+      "name": "rollback_plan_present",
+      "ok": true,
+      "detail": "rollback section found in runbook"
+    },
+    {
+      "name": "nonprod_dry_run",
+      "ok": true,
+      "detail": "dry-run environment accepted"
+    }
+  ]
+}

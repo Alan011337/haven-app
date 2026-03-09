@@ -1,0 +1,23 @@
+{
+  "artifact_kind": "encryption-posture-policy",
+  "schema_version": "1.0.0",
+  "transport_security": {
+    "tls_required": true,
+    "hsts_required": true,
+    "hsts_header_name": "Strict-Transport-Security",
+    "hsts_min_max_age_seconds": 31536000
+  },
+  "data_at_rest": {
+    "database_encryption_required": true,
+    "sensitive_field_log_redaction_required": true,
+    "field_level_encryption_required": true
+  },
+  "references": {
+    "security_headers_test": "backend/tests/test_security_headers.py",
+    "security_headers_impl": "backend/app/main.py",
+    "pii_redaction_impl": "backend/app/core/log_redaction.py",
+    "field_encryption_impl": "backend/app/core/field_encryption.py",
+    "field_encryption_tests": "backend/tests/test_field_level_encryption.py",
+    "security_baseline_doc": "SECURITY.md"
+  }
+}

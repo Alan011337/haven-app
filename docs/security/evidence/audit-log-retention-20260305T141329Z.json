@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "audit-log-retention",
+  "generated_by": "backend/scripts/run_audit_log_retention_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-03-05T14:13:29.605731+00:00",
+  "retention_days": 365,
+  "before_count": 0,
+  "deleted_count": 0,
+  "after_count": 0,
+  "healthy": true
+}

@@ -1,0 +1,150 @@
+{
+  "artifact_kind": "notification-trigger-matrix",
+  "schema_version": "1.0.0",
+  "description": "Multi-channel notification trigger rules for Haven events",
+  "channels": [
+    "push",
+    "email",
+    "in_app_ws"
+  ],
+  "triggers": {
+    "journal_created": {
+      "target": "partner",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 60,
+      "enabled": true
+    },
+    "card_waiting": {
+      "target": "partner",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 0,
+      "enabled": true
+    },
+    "card_revealed": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 0,
+      "enabled": true
+    },
+    "partner_bound": {
+      "target": "both",
+      "channels": [
+        "push",
+        "email",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "email",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 0,
+      "enabled": true
+    },
+    "partner_unbound": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 0,
+      "enabled": true
+    },
+    "daily_ritual_reminder": {
+      "target": "self",
+      "channels": [
+        "push"
+      ],
+      "fallback_priority": [
+        "push"
+      ],
+      "throttle_window_seconds": 3600,
+      "enabled": true
+    },
+    "streak_milestone": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 0,
+      "enabled": true
+    },
+    "time_capsule": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 86400,
+      "enabled": true
+    },
+    "active_care": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 86400,
+      "enabled": true
+    },
+    "mediation_invite": {
+      "target": "both",
+      "channels": [
+        "push",
+        "in_app_ws"
+      ],
+      "fallback_priority": [
+        "push",
+        "in_app_ws"
+      ],
+      "throttle_window_seconds": 3600,
+      "enabled": true
+    }
+  },
+  "kill_switch": {
+    "global_disable": false,
+    "per_channel_disable": {
+      "push": false,
+      "email": false,
+      "in_app_ws": false
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "artifact_kind": "ai-cost-quality-policy",
+  "schema_version": "1.0.0",
+  "thresholds": {
+    "schema_compliance_min": 99.9,
+    "hallucination_proxy_max": 0.05,
+    "drift_score_max": 0.2,
+    "cost_usd_per_active_couple_max": 1.5,
+    "token_budget_daily": 2000000
+  },
+  "drift_detection": {
+    "mode": "relative_delta_average",
+    "fallback_behavior": "degrade_but_do_not_block_journal_write",
+    "critical_multiplier": 1.5
+  },
+  "budget_guardrails": {
+    "enforcement_mode": "observe_only",
+    "on_breach": [
+      "emit_alert",
+      "switch_to_lower_cost_model_tier",
+      "preserve_core_cuj"
+    ],
+    "request_class_gate_mode": "deterministic"
+  },
+  "references": {
+    "policy_notice": "POLICY_AI.md",
+    "service": "backend/app/services/ai_quality_monitor.py",
+    "snapshot_script": "backend/scripts/run_ai_quality_snapshot.py",
+    "drift_detector_script": "backend/scripts/run_ai_eval_drift_detector.py",
+    "baseline_metrics": "docs/ai-safety/eval-baseline.json",
+    "monitor_doc": "docs/ai-safety/cost-quality-monitor.md",
+    "service_tests": "backend/tests/test_ai_quality_monitor.py",
+    "contract_tests": "backend/tests/test_ai_cost_quality_policy_contract.py",
+    "snapshot_tests": "backend/tests/test_ai_quality_snapshot_script.py",
+    "drift_detector_tests": "backend/tests/test_ai_eval_drift_detector_script.py"
+  }
+}

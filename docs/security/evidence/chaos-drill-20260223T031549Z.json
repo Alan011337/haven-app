@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "chaos-drill",
+  "generated_by": "backend/scripts/run_chaos_drill_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-23T03:15:49.877216+00:00",
+  "dry_run": true,
+  "runbook_path": "docs/ops/chaos-drill-spec.md",
+  "incident_playbook_path": "docs/ops/incident-response-playbook.md",
+  "report_template_path": "docs/ops/chaos-drill-report-template.md",
+  "workflow_path": ".github/workflows/chaos-drill.yml",
+  "required_drills": [
+    "ai_provider_outage",
+    "ws_storm"
+  ],
+  "executed_drills": [
+    "ai_provider_outage",
+    "ws_storm"
+  ],
+  "required_checks": [
+    "runbook_present",
+    "incident_playbook_ai_outage_present",
+    "incident_playbook_ws_storm_present",
+    "report_template_present",
+    "workflow_schedule_declared",
+    "nonprod_dry_run"
+  ],
+  "checks_total": 6,
+  "checks_passed": 6,
+  "checks_failed": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "name": "runbook_present",
+      "ok": true,
+      "detail": "chaos drill runbook exists and is readable"
+    },
+    {
+      "name": "incident_playbook_ai_outage_present",
+      "ok": true,
+      "detail": "AI outage section found in incident playbook"
+    },
+    {
+      "name": "incident_playbook_ws_storm_present",
+      "ok": true,
+      "detail": "WS storm section found in incident playbook"
+    },
+    {
+      "name": "report_template_present",
+      "ok": true,
+      "detail": "chaos drill report template exists"
+    },
+    {
+      "name": "workflow_schedule_declared",
+      "ok": true,
+      "detail": "weekly Friday schedule declared in workflow"
+    },
+    {
+      "name": "nonprod_dry_run",
+      "ok": true,
+      "detail": "dry-run environment accepted"
+    }
+  ]
+}

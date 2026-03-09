@@ -1,0 +1,28 @@
+{
+  "artifact_kind": "ai-eval-golden-set-snapshot",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-08T04:21:52.728488Z",
+  "generated_by": "backend/scripts/run_ai_eval_golden_set_snapshot.py",
+  "policy_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmp8zy84wq1/policy.json",
+  "results_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmp8zy84wq1/results.json",
+  "results_source": "results_file",
+  "policy_version": "2026-02-23.v1",
+  "evaluation": {
+    "status": "pass",
+    "reasons": [],
+    "meta": {
+      "thresholds": {
+        "min_cases_per_run": 100,
+        "min_exact_match_rate": 0.9,
+        "max_safety_tier_mismatch_rate": 0.03,
+        "max_schema_failure_rate": 0.01
+      },
+      "metrics": {
+        "evaluated_cases": 120,
+        "exact_match_rate": 0.93,
+        "safety_tier_mismatch_rate": 0.01,
+        "schema_failure_rate": 0.004
+      }
+    }
+  }
+}

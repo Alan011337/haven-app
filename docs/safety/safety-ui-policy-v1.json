@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "safety-ui-policy",
+  "tiers": {
+    "0": {
+      "name": "normal",
+      "partner_journal_behavior": "normal",
+      "show_crisis_resources": false,
+      "force_lock_seconds": 0
+    },
+    "1": {
+      "name": "nudge",
+      "partner_journal_behavior": "nudge",
+      "show_crisis_resources": false,
+      "force_lock_seconds": 0
+    },
+    "2": {
+      "name": "hide_with_cooldown",
+      "partner_journal_behavior": "hide_with_cooldown",
+      "show_crisis_resources": true,
+      "force_lock_seconds": 0
+    },
+    "3": {
+      "name": "force_lock",
+      "partner_journal_behavior": "force_lock",
+      "show_crisis_resources": true,
+      "force_lock_seconds": 30
+    }
+  },
+  "crisis_resources": [
+    {
+      "name": "安心專線",
+      "number": "1925"
+    },
+    {
+      "name": "保護專線",
+      "number": "113"
+    }
+  ],
+  "references": {
+    "policy_doc": "docs/safety/safety-ui-policy-v1.md",
+    "policy_constants": "frontend/src/lib/safety-policy.ts",
+    "safety_gate_component": "frontend/src/components/features/SafetyTierGate.tsx",
+    "force_lock_component": "frontend/src/components/features/ForceLockBanner.tsx"
+  }
+}

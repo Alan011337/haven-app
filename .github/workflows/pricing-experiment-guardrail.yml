@@ -1,0 +1,84 @@
+name: Pricing Experiment Guardrail Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  pricing-experiment-guardrail:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Generate pricing experiment guardrail snapshot
+        run: |
+          python scripts/run_pricing_experiment_guardrail_snapshot.py \
+            --allow-missing-metrics \
+            --output docs/security/evidence/pricing-experiment-guardrail-${GITHUB_RUN_ID}.json \
+            --latest-path docs/security/evidence/pricing-experiment-guardrail-latest.json
+
+      - name: Pricing experiment guardrail summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path("docs/security/evidence/pricing-experiment-guardrail-latest.json")
+          lines = ["### Daily pricing experiment guardrail snapshot"]
+          if not summary_path.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `snapshot_missing`")
+          else:
+              payload = json.loads(summary_path.read_text(encoding="utf-8"))
+              evaluation = payload.get("evaluation") or {}
+              reasons = evaluation.get("breaches") or []
+              lines.append(f"- status: `{evaluation.get('status', 'unknown')}`")
+              lines.append(f"- breaches: `{len(reasons)}`")
+              lines.append(f"- missing_metrics: `{len(evaluation.get('missing_metrics') or [])}`")
+              if reasons:
+                  lines.append("- breached_metrics: `" + ", ".join(item.get("metric", "unknown") for item in reasons if isinstance(item, dict)) + "`")
+              else:
+                  lines.append("- breached_metrics: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Upload pricing experiment guardrail artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pricing-experiment-guardrail
+          path: |
+            docs/security/evidence/pricing-experiment-guardrail-*.json
+            docs/security/evidence/pricing-experiment-guardrail-latest.json
+          if-no-files-found: error

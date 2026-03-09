@@ -1,0 +1,17 @@
+{
+  "name": "Haven",
+  "short_name": "Haven",
+  "description": "Your AI Journal Companion — 離線也可寫日記，連線後自動同步",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}

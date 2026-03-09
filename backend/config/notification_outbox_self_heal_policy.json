@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "thresholds": {
+    "warn_depth": 25.0,
+    "critical_depth": 100.0,
+    "warn_dead_rate": 0.2,
+    "critical_dead_rate": 0.4,
+    "retry_age_p95_warn_seconds": 600.0
+  },
+  "actions": {
+    "enable_reclaim_stale_processing": true,
+    "enable_pause_noncritical_notifications": true,
+    "enable_run_outbox_recovery_apply": true,
+    "enable_run_dead_letter_replay": true,
+    "enable_run_dead_letter_audit": true,
+    "enable_increase_dispatch_workers_temporarily": true
+  }
+}

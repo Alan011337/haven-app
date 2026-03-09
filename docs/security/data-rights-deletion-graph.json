@@ -1,0 +1,72 @@
+{
+  "artifact_kind": "data-rights-deletion-graph",
+  "schema_version": "1.0.0",
+  "endpoint": "/api/users/me/data",
+  "deleted_count_keys": [
+    "analyses",
+    "journals",
+    "card_responses",
+    "card_sessions",
+    "notification_events",
+    "users"
+  ],
+  "resources": [
+    {
+      "name": "user",
+      "delete_mode": "hard_delete",
+      "owner_key": "user.id"
+    },
+    {
+      "name": "journal",
+      "delete_mode": "hard_delete",
+      "owner_key": "journal.user_id"
+    },
+    {
+      "name": "analysis",
+      "delete_mode": "hard_delete",
+      "owner_key": "analysis.journal_id"
+    },
+    {
+      "name": "card_response",
+      "delete_mode": "hard_delete",
+      "owner_key": "card_response.user_id|session_id"
+    },
+    {
+      "name": "card_session",
+      "delete_mode": "hard_delete",
+      "owner_key": "card_session.creator_id|partner_id"
+    },
+    {
+      "name": "notification_event",
+      "delete_mode": "hard_delete",
+      "owner_key": "receiver_user_id|sender_user_id"
+    }
+  ],
+  "edges": [
+    {
+      "from": "user",
+      "to": "journal",
+      "reason": "ownership"
+    },
+    {
+      "from": "journal",
+      "to": "analysis",
+      "reason": "journal_id"
+    },
+    {
+      "from": "user",
+      "to": "card_response",
+      "reason": "owner_or_session_participation"
+    },
+    {
+      "from": "user",
+      "to": "card_session",
+      "reason": "session_participation"
+    },
+    {
+      "from": "user",
+      "to": "notification_event",
+      "reason": "sender_or_receiver"
+    }
+  ]
+}

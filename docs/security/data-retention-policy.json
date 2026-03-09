@@ -1,0 +1,70 @@
+{
+  "artifact_kind": "data-retention-policy",
+  "schema_version": "1.0.0",
+  "policies": [
+    {
+      "data_class": "audit_events",
+      "delete_mode": "purge_job",
+      "trigger": "scheduled",
+      "retention_days_default": 365,
+      "retention_days_env": "AUDIT_LOG_RETENTION_DAYS",
+      "owner_team": "backend-security"
+    },
+    {
+      "data_class": "data_export_packages",
+      "delete_mode": "ttl_expiry",
+      "trigger": "time_based",
+      "retention_days_default": 7,
+      "retention_days_env": "DATA_EXPORT_EXPIRY_DAYS",
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "analyses",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "journals",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "card_responses",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "card_sessions",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "notification_events",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    },
+    {
+      "data_class": "users",
+      "delete_mode": "hard_delete_on_user_erase",
+      "trigger": "user_erase",
+      "retention_days_default": null,
+      "retention_days_env": null,
+      "owner_team": "backend-privacy"
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+---
+description: "Haven frontend + UI/UX rules (Next.js App Router + shadcn/ui + Tailwind v4 + TS). Complements CLAUDE.md."
+globs:
+  - "frontend/**"
+  - "app/**"
+  - "components/**"
+  - "lib/**"
+  - "*.ts"
+  - "*.tsx"
+  - "*.css"
+alwaysApply: false
+---
+# Haven UI/UX + Frontend Rules (Cursor)
+
+## 0) Relationship to CLAUDE.md (non-negotiable)
+- Treat `CLAUDE.md` as the process law: batching, tests, rollback, observability, security.
+- This file ONLY defines frontend/UI system constraints (tokens, component layering, Next.js architecture, UX/A11y).
+- Conflict rule:
+  - Process conflicts → `CLAUDE.md` wins.
+  - UI system / frontend architecture choice conflicts → this file wins.
+
+## 1) Haven aesthetic & The Token Contract (CRITICAL)
+- **🚨 MANDATORY READ**: Before writing ANY UI components, styling, or `globals.css`, you MUST read `docs/design/ART-DIRECTION.md` to get the exact OKLCH values, typography mappings, component recipes, and shadow/radius parameters.
+- **Aesthetic**: Premium editorial minimalism: generous whitespace, restrained palette, typography hierarchy, subtle elevation.
+- **Avoid**: harsh borders (high-contrast 1px outlines everywhere), noisy/high-saturation gradients, “default shadcn boxy look”.
+- Dark mode is a material (velvet/ink), not an inverted light theme.
+
+## 2) Design tokens: single source of truth (MANDATORY)
+### 2.1 Where tokens live
+- Primary source: `frontend/src/app/globals.css`
+- Tailwind should reference semantic tokens; components should NOT hardcode ad-hoc colors.
+
+### 2.2 Token usage rules (Tailwind v4 + CSS-first)
+- Use semantic utilities everywhere:
+  - `bg-background`, `text-foreground`, `bg-card`, `border-border`, `bg-primary`, etc.
+- **🔥 HARD GUARDRAILS (Anti-Drift - Do Not Violate):**
+  - **NO ARBITRARY COLORS**: Never use `bg-[#...]`, `text-[rgb(...)]`, or `border-[oklch(...)]` in React components. 
+  - **NO ARBITRARY SHADOWS**: Never use `shadow-[...]`. Use only your defined semantic shadows (`shadow-soft`, `shadow-lift`, `shadow-modal`).
+  - **NO HARDCODED RADII**: Use `rounded-lg`, `rounded-full`, mapped to `--radius`.
+  - Exception: token definitions inside `globals.css` only.
+
+### 2.3 OKLCH consistency rule (prevents rgb(oklch(...)) bugs)
+- If tokens are stored as OKLCH triplets in CSS variables (e.g. `--primary: 0.205 0 0` or `--primary: oklch(0.205 0 0)`), then exports MUST remain OKLCH-consistent:
+  - In `@theme inline`, export as `oklch(var(--token))`
+  - In Tailwind config, use `oklch(var(--token) / <alpha-value>)` for alpha support
+- Never wrap OKLCH tokens with `rgb(var(--token))`.
+
+### 2.4 Required semantic token set (must exist)
+Define and use at least:
+- colors: `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--border`
+- geometry: `--radius` base + derived radii (`--radius-sm/md/lg`)
+- elevation: 2 shadow presets max (`soft` and `lift`, plus optional `modal`)
+- motion: 2 motion presets max (`duration` + `easing`)
+
+## 3) shadcn/ui customization + component layering
+### 3.1 Layering (no exceptions)
+- `frontend/src/components/ui/*` = shadcn primitives (as generated) with theme-token styling.
+- `frontend/src/components/haven/*` = product wrappers/compositions (Haven look + behaviors).
+- Pages/features must prefer using `components/haven/*` instead of raw primitives.
+
+### 3.2 “No default shadcn look”
+- You MUST customize shadcn theme variables in `globals.css` to avoid harsh/boxy defaults: larger radii, soft borders, gentle focus-visible rings.
+
+### 3.3 Interaction states (required)
+Every interactive component MUST support: `default` / `hover` / `active` / `focus-visible` / `disabled` / `loading` / `error`.
+
+## 4) Accessibility (A11y) is mandatory
+- **Keyboard-first UX**: every screen must be usable without mouse.
+- **Focus management**: correct for Dialog/Drawer/Menu/Popover/Combobox.
+- **Focus Rings**: Use `:focus-visible` (rings on keyboard nav; not permanently on mouse click). Never remove outlines without replacement.
+- **🔥 Strict A11y Guardrails**:
+  - Icon-only controls MUST have `aria-label` or `aria-labelledby` (`title` is not enough).
+  - Form inputs MUST have a `<label>` (visual or `sr-only`). A `placeholder` is NOT a label.
+
+## 5) Next.js App Router architecture rules
+- Default to React Server Components (RSC).
+- Use `'use client'` ONLY at leaf interactive components: Zustand hooks, client-only interactions, animations.
+- Each major route segment should include: `loading.tsx` (skeletons), `error.tsx` (recoverable UI), `not-found.tsx`.
+- Prefer predictable structure: `frontend/src/app/(marketing)/*`, `frontend/src/app/(app)/*`.
+
+## 6) Data & state rules (TanStack Query + Zustand)
+- TanStack Query: ALL server data fetching/caching/mutations, optimistic updates, consistent loading/empty/error states.
+- Zustand: ONLY ephemeral client UI state (filters, cmd palette, modal open, drafts). Never duplicate server state.
+- **Error handling UX**: inline errors for forms, non-blocking toasts for transient failures, empty state must have a clear soft CTA.
+
+## 7) Motion & micro-interactions (subtle, tactile)
+- Micro-motion only: opacity / translate within 8px, 200–240ms, ease-out.
+- Hover = gentle lift; Active = subtle press (tiny scale down `active:scale-95`).
+- Loading: prefer skeletons/shimmers consistent with theme tokens. No generic spinners.
+
+## 8) Golden Screens & Output requirements (align with CLAUDE.md)
+When implementing UI (e.g., Home, Deck List, Journal, Settings), ALWAYS provide:
+- Inventory: repo map + files to touch (+ **Acknowledge you read ART-DIRECTION.md**)
+- Top 3 ROI TODOs with DoD (as required by `CLAUDE.md`)
+- **UI Definition of Done (DoD) for Batch N**:
+  - ✅ **Guardrail Check**: No arbitrary bracket values (`-[...]`) for colors or shadows were used.
+  - ✅ **A11y Check**: Forms have labels; icons have `aria-label`; `:focus-visible` is implemented.
+  - ✅ **Motion Check**: `hover:scale` / `active:scale-95` and Haven easing applied.
+  - ✅ **State Check**: Loading/empty/error states & keyboard nav paths verified.
+- test commands + expected outcomes (`npm run lint`, `npm run build`).
+- rollback steps.
+
+## 9) Guardrails (to prevent style drift)
+- No ad-hoc component styling that bypasses tokens.
+- No “one-off” radius/shadow/colors unless promoted into tokens first.
+- If you must break a rule, you MUST: explain why, keep scope minimal, add a TODO to migrate into tokens later.
+
+## 10) Documented exceptions (see ART-DIRECTION.md §8)
+- **global-error.tsx**: Allowed minimal inline hex colors only in that file, because it must render when the root layout and CSS pipeline are broken.
+- **Focus on primary/dark background**: `focus-visible:ring-white/90` (or future `--focus-over-primary`) is allowed for elements on primary or dark hero/header backgrounds; use `ring-ring` elsewhere.

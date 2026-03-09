@@ -1,3 +1,19 @@
-.env
-.streamlit/secrets.toml
-.env
+# /.gitignore
+
+node_modules/
+.env*
+.DS_Store
+venv/
+__pycache__/
+backend/*-local.db
+backend/test.db
+backend/dev.db
+backend/billing-reconciliation-local.db
+backend/audit-log-retention-local.db
+backend/*.db
+
+# Generated evidence artifacts (keep *-latest.json tracked, ignore timestamped snapshots)
+docs/sre/evidence/*-20??????T??????Z.json
+docs/sre/evidence/*-20??????T??????Z.md
+docs/security/evidence/*-20??????T??????Z.json
+docs/security/evidence/*-20??????T??????Z.md

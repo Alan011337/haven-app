@@ -1,0 +1,47 @@
+{
+  "schema_version": "v1",
+  "required_fast_steps": [
+    "api_inventory_check",
+    "export_endpoint_authz_matrix",
+    "export_read_authz_matrix",
+    "check_file_hygiene_contract",
+    "check_gate_consistency_contract",
+    "check_owasp_api_top10_mapping_contract",
+    "check_event_tracking_privacy_contract",
+    "check_event_registry_contract",
+    "check_core_loop_event_contract",
+    "security_gate_fast_pytest"
+  ],
+  "required_any_profile_steps": [
+    "import_smoke_app_main",
+    "check_module_size_budget",
+    "check_runtime_switch_contract"
+  ],
+  "required_shared_contract_steps": [
+    "check_owasp_api_top10_mapping_contract",
+    "check_api_contract_snapshot",
+    "check_frontend_api_transport_contract",
+    "check_frontend_security_headers_contract",
+    "check_frontend_polling_governance_contract",
+    "check_frontend_test_coverage_floor",
+    "check_env_secret_manifest_contract",
+    "check_duplicate_suffix_files",
+    "check_idempotency_normalization_contract",
+    "check_event_tracking_privacy_contract",
+    "check_event_registry_contract",
+    "check_core_loop_event_contract",
+    "check_supply_chain_workflow_contract",
+    "check_feature_flag_governance_contract",
+    "check_endpoint_authorization_matrix",
+    "check_read_authorization_matrix",
+    "check_data_rights_contract",
+    "check_ai_router_policy_contract",
+    "check_store_compliance_contract",
+    "check_cuj_synthetic_contract"
+  ],
+  "required_full_only_steps": [
+    "check_function_level_authorization",
+    "check_observability_live_contract",
+    "security_gate_full_pytest"
+  ]
+}

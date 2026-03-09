@@ -1,0 +1,358 @@
+name: AI Quality Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "5 3 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ai-quality-snapshot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Generate AI quality snapshot evidence
+        run: |
+          python scripts/run_ai_quality_snapshot.py \
+            --allow-missing-current \
+            --output docs/security/evidence/ai-quality-snapshot-${GITHUB_RUN_ID}.json \
+            --latest-path docs/security/evidence/ai-quality-snapshot-latest.json
+
+      - name: Validate AI quality snapshot freshness contract
+        run: python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence docs/security/evidence/ai-quality-snapshot-latest.json --max-age-hours 36 --summary-path /tmp/ai-quality-snapshot-gate-summary.json
+
+      - name: Run AI eval drift detector
+        run: |
+          python scripts/run_ai_eval_drift_detector.py \
+            --snapshot docs/security/evidence/ai-quality-snapshot-latest.json \
+            --policy ../docs/security/ai-cost-quality-policy.json \
+            --output docs/security/evidence/ai-eval-drift-${GITHUB_RUN_ID}.json \
+            --latest-path docs/security/evidence/ai-eval-drift-latest.json \
+            --summary-path /tmp/ai-eval-drift-summary.json
+
+      - name: AI quality snapshot summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-quality-snapshot-gate-summary.json")
+          lines = ["### Daily AI quality snapshot"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              meta = payload.get("meta") or {}
+              reasons = payload.get("reasons") or []
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- evaluation_result: `{meta.get('evaluation_result', 'unknown')}`")
+              lines.append(f"- evidence_age_hours: `{meta.get('age_hours', 'unknown')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: AI eval drift summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-eval-drift-summary.json")
+          lines = ["### Daily AI eval drift detector"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              meta = payload.get("meta") or {}
+              reasons = payload.get("reasons") or []
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- drift_score: `{meta.get('drift_score', 'unknown')}`")
+              lines.append(f"- drift_score_max: `{meta.get('drift_score_max', 'unknown')}`")
+              lines.append(f"- drift_score_critical: `{meta.get('drift_score_critical', 'unknown')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Detect degraded AI quality snapshot
+        if: always()
+        id: degrade_flag
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-quality-snapshot-gate-summary.json")
+          degraded = "false"
+          if summary_file.exists():
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              if str(payload.get("result", "")).strip().lower() == "degraded":
+                  degraded = "true"
+
+          output_path = os.getenv("GITHUB_OUTPUT")
+          if output_path:
+              with open(output_path, "a", encoding="utf-8") as fp:
+                  fp.write(f"degraded={degraded}\n")
+          print(f"degraded={degraded}")
+          PY
+
+      - name: Detect AI eval drift alert
+        if: always()
+        id: drift_flag
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-eval-drift-summary.json")
+          result = "unknown"
+          drift_alert = "false"
+          if summary_file.exists():
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              result = str(payload.get("result", "unknown")).strip().lower()
+              if result in {"degraded", "critical"}:
+                  drift_alert = "true"
+
+          output_path = os.getenv("GITHUB_OUTPUT")
+          if output_path:
+              with open(output_path, "a", encoding="utf-8") as fp:
+                  fp.write(f"drift_alert={drift_alert}\n")
+                  fp.write(f"drift_level={result}\n")
+          print(f"drift_alert={drift_alert}")
+          print(f"drift_level={result}")
+          PY
+
+      - name: Open or update degraded AI quality issue
+        if: steps.degrade_flag.outputs.degraded == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P1][AI] Daily quality snapshot degraded";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Daily AI quality snapshot is degraded (non-blocking for CUJ).",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Action items:",
+              "1) Inspect ai-quality snapshot artifact and degraded reasons.",
+              "2) Validate model routing, token budget, and schema compliance trend.",
+              "3) Plan mitigation without blocking core Journal/CUJ path."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Close degraded AI quality issue when recovered
+        if: steps.degrade_flag.outputs.degraded != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const titlePrefix = "[P1][AI] Daily quality snapshot degraded";
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const resolutionComment = [
+              "Daily AI quality snapshot recovered to pass.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            const matches = openIssues.filter((issue) => issue.title.startsWith(titlePrefix));
+            for (const issue of matches) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: resolutionComment,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: "closed",
+              });
+            }
+
+      - name: Open or update AI eval drift alert issue
+        if: steps.drift_flag.outputs.drift_alert == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P1][AI] Drift detector alert";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const level = `${{ steps.drift_flag.outputs.drift_level }}` || "unknown";
+            const body = [
+              "Daily AI drift detector crossed threshold (non-blocking for core CUJ).",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              `- Drift level: ${level}`,
+              "",
+              "Action items:",
+              "1) Inspect ai-eval-drift snapshot artifact and drift reasons.",
+              "2) Validate baseline/current signal quality and router behavior.",
+              "3) Apply mitigation while preserving journal/core CUJ path."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Close AI eval drift alert issue when recovered
+        if: steps.drift_flag.outputs.drift_alert != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const titlePrefix = "[P1][AI] Drift detector alert";
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const resolutionComment = [
+              "Daily AI drift detector recovered to pass.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            const matches = openIssues.filter((issue) => issue.title.startsWith(titlePrefix));
+            for (const issue of matches) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: resolutionComment,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: "closed",
+              });
+            }
+
+      - name: Upload AI quality snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-quality-snapshot
+          path: |
+            docs/security/evidence/ai-quality-snapshot-*.json
+            docs/security/evidence/ai-eval-drift-*.json
+            docs/security/evidence/ai-eval-drift-latest.json
+            /tmp/ai-quality-snapshot-gate-summary.json
+            /tmp/ai-eval-drift-summary.json
+          if-no-files-found: error

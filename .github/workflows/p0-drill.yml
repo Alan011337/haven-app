@@ -1,0 +1,99 @@
+name: P0 Drill
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 1 * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  p0-drill:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./drill.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run P0 drills
+        id: drill
+        continue-on-error: true
+        run: |
+          python scripts/run_p0_drills.py
+          python scripts/validate_security_evidence.py --kind p0-drill --contract-mode strict
+          python scripts/validate_security_evidence.py --kind data-rights-fire-drill --contract-mode strict
+          python scripts/validate_security_evidence.py --kind billing-fire-drill --contract-mode strict
+
+      - name: Upload drill evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-drill-evidence
+          path: docs/security/evidence/p0-drill-*
+          if-no-files-found: warn
+
+      - name: Open or Update Alert Issue
+        if: steps.drill.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P0][DataRights] Fire drill failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Monthly P0 data-rights fire drill failed in CI.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Please inspect the uploaded `p0-drill-evidence` artifact and restore Access/Export/Erase + Billing drill health before release."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail Job on Drill Failure
+        if: steps.drill.outcome == 'failure'
+        run: exit 1

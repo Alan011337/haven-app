@@ -1,0 +1,98 @@
+name: Billing Console Drift
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  billing-console-drift:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./billing-console-drift.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+      BILLING_STRIPE_WEBHOOK_SECRET: whsec_ci_drift_stub
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run billing console drift audit
+        id: drift
+        continue-on-error: true
+        run: |
+          python scripts/run_billing_console_drift_audit.py
+          python scripts/validate_security_evidence.py --kind billing-console-drift --contract-mode strict
+
+      - name: Upload billing console drift evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-console-drift-evidence
+          path: docs/security/evidence/billing-console-drift-*
+          if-no-files-found: warn
+
+      - name: Open or Update Alert Issue
+        if: steps.drift.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P1][Billing] Console drift audit failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Billing console drift audit failed in CI.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Please inspect the uploaded `billing-console-drift-evidence` artifact and align webhook console/runtime settings."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail Job on Drift Failure
+        if: steps.drift.outcome == 'failure'
+        run: exit 1

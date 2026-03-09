@@ -1,0 +1,1529 @@
+{
+  "artifact_kind": "api-inventory",
+  "entries": [
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.read_root",
+      "method": "GET",
+      "name": "read_root",
+      "owner_team": "backend-platform",
+      "path": "/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": []
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.admin.list_admin_audit_events",
+      "method": "GET",
+      "name": "list_admin_audit_events",
+      "owner_team": "backend-core",
+      "path": "/api/admin/audit-events",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.admin.list_moderation_queue",
+      "method": "GET",
+      "name": "list_moderation_queue",
+      "owner_team": "backend-core",
+      "path": "/api/admin/moderation/queue",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.admin.resolve_moderation_report",
+      "method": "POST",
+      "name": "resolve_moderation_report",
+      "owner_team": "backend-core",
+      "path": "/api/admin/moderation/{report_id}/resolve",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.admin.read_admin_user_status",
+      "method": "GET",
+      "name": "read_admin_user_status",
+      "owner_team": "backend-core",
+      "path": "/api/admin/users/{user_id}/status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.admin.admin_unbind_user_pair",
+      "method": "POST",
+      "name": "admin_unbind_user_pair",
+      "owner_team": "backend-core",
+      "path": "/api/admin/users/{user_id}/unbind",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.appreciations.list_appreciations",
+      "method": "GET",
+      "name": "list_appreciations",
+      "owner_team": "backend-platform",
+      "path": "/api/appreciations",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "appreciations"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.appreciations.create_appreciation",
+      "method": "POST",
+      "name": "create_appreciation",
+      "owner_team": "backend-platform",
+      "path": "/api/appreciations",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "appreciations"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.login.logout",
+      "method": "POST",
+      "name": "logout",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/logout",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "auth"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.login.refresh_access_token",
+      "method": "POST",
+      "name": "refresh_access_token",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/refresh",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "auth"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.login.login_for_access_token",
+      "method": "POST",
+      "name": "login_for_access_token",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/token",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "auth"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.baseline.get_baseline",
+      "method": "GET",
+      "name": "get_baseline",
+      "owner_team": "backend-platform",
+      "path": "/api/baseline",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "baseline"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.baseline.create_or_update_baseline",
+      "method": "POST",
+      "name": "create_or_update_baseline",
+      "owner_team": "backend-platform",
+      "path": "/api/baseline",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "baseline"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing_checkout_routes.create_checkout_session",
+      "method": "POST",
+      "name": "create_checkout_session",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/create-checkout-session",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing_checkout_routes.create_portal_session",
+      "method": "POST",
+      "name": "create_portal_session",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/create-portal-session",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing_checkout_routes.read_my_entitlements",
+      "method": "GET",
+      "name": "read_my_entitlements",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/entitlements/me",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing.billing_reconciliation",
+      "method": "GET",
+      "name": "billing_reconciliation",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/reconciliation",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing.billing_state_change",
+      "method": "POST",
+      "name": "billing_state_change",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/state-change",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing.webhook_appstore_stub",
+      "method": "POST",
+      "name": "webhook_appstore_stub",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/appstore",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing.webhook_googleplay_stub",
+      "method": "POST",
+      "name": "webhook_googleplay_stub",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/googleplay",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "billing_sensitive",
+      "endpoint": "app.api.routers.billing.stripe_webhook",
+      "method": "POST",
+      "name": "stripe_webhook",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/stripe",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-d-billing-correctness-foundation",
+      "tags": [
+        "billing"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.blueprint.list_blueprint",
+      "method": "GET",
+      "name": "list_blueprint",
+      "owner_team": "backend-platform",
+      "path": "/api/blueprint/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "blueprint"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.blueprint.add_blueprint_item",
+      "method": "POST",
+      "name": "add_blueprint_item",
+      "owner_team": "backend-platform",
+      "path": "/api/blueprint/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "blueprint"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.blueprint.get_date_suggestions",
+      "method": "GET",
+      "name": "get_date_suggestions",
+      "owner_team": "backend-platform",
+      "path": "/api/blueprint/date-suggestions",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "blueprint"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.deck_draw_card",
+      "method": "POST",
+      "name": "deck_draw_card",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/draw",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.get_deck_history",
+      "method": "GET",
+      "name": "get_deck_history",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/history",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.get_deck_history_summary",
+      "method": "GET",
+      "name": "get_deck_history_summary",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/history/summary",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.list_decks",
+      "method": "GET",
+      "name": "list_decks",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/list",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.deck_respond",
+      "method": "POST",
+      "name": "deck_respond",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/respond/{session_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.get_deck_card_counts",
+      "method": "GET",
+      "name": "get_deck_card_counts",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/stats",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.draw_card_from_deck",
+      "method": "GET",
+      "name": "draw_card_from_deck",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/{deck_id}/draw",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.read_cards",
+      "method": "GET",
+      "name": "read_cards",
+      "owner_team": "backend-core",
+      "path": "/api/cards/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.get_card_backlog",
+      "method": "GET",
+      "name": "get_card_backlog",
+      "owner_team": "backend-core",
+      "path": "/api/cards/backlog",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.get_daily_status",
+      "method": "GET",
+      "name": "get_daily_status",
+      "owner_team": "backend-core",
+      "path": "/api/cards/daily-status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.draw_card",
+      "method": "GET",
+      "name": "draw_card",
+      "owner_team": "backend-core",
+      "path": "/api/cards/draw",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.respond_to_card",
+      "method": "POST",
+      "name": "respond_to_card",
+      "owner_team": "backend-core",
+      "path": "/api/cards/respond",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.cards.get_card_conversation",
+      "method": "GET",
+      "name": "get_card_conversation",
+      "owner_team": "backend-core",
+      "path": "/api/cards/{card_id}/conversation",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "cards"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.cooldown.rewrite_message",
+      "method": "POST",
+      "name": "rewrite_message",
+      "owner_team": "backend-platform",
+      "path": "/api/cooldown/rewrite-message",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "cooldown"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.cooldown.start_cooldown_session",
+      "method": "POST",
+      "name": "start_cooldown_session",
+      "owner_team": "backend-platform",
+      "path": "/api/cooldown/start",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "cooldown"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.cooldown.get_cooldown_status",
+      "method": "GET",
+      "name": "get_cooldown_status",
+      "owner_team": "backend-platform",
+      "path": "/api/cooldown/status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "cooldown"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.baseline.get_couple_goal",
+      "method": "GET",
+      "name": "get_couple_goal",
+      "owner_team": "backend-platform",
+      "path": "/api/couple-goal",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "couple-goal"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.baseline.set_couple_goal",
+      "method": "POST",
+      "name": "set_couple_goal",
+      "owner_team": "backend-platform",
+      "path": "/api/couple-goal",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "couple-goal"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.daily_sync.submit_daily_sync",
+      "method": "POST",
+      "name": "submit_daily_sync",
+      "owner_team": "backend-platform",
+      "path": "/api/daily-sync",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "daily-sync"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.daily_sync.get_daily_sync_status",
+      "method": "GET",
+      "name": "get_daily_sync_status",
+      "owner_team": "backend-platform",
+      "path": "/api/daily-sync/status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "daily-sync"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.read_my_journals",
+      "method": "GET",
+      "name": "read_my_journals",
+      "owner_team": "backend-core",
+      "path": "/api/journals/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.create_journal",
+      "method": "POST",
+      "name": "create_journal",
+      "owner_team": "backend-core",
+      "path": "/api/journals/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.read_partner_journals",
+      "method": "GET",
+      "name": "read_partner_journals",
+      "owner_team": "backend-core",
+      "path": "/api/journals/partner",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.delete_journal",
+      "method": "DELETE",
+      "name": "delete_journal",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_language.get_preference",
+      "method": "GET",
+      "name": "get_preference",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/preference",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-languages"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_language.upsert_preference",
+      "method": "PUT",
+      "name": "upsert_preference",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/preference",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-languages"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_language.get_weekly_task",
+      "method": "GET",
+      "name": "get_weekly_task",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/weekly-task",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-languages"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_language.complete_weekly_task",
+      "method": "POST",
+      "name": "complete_weekly_task",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/weekly-task/complete",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-languages"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.get_love_map_cards",
+      "method": "GET",
+      "name": "get_love_map_cards",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/cards",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.list_love_map_notes",
+      "method": "GET",
+      "name": "list_love_map_notes",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/notes",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.create_or_update_love_map_note",
+      "method": "POST",
+      "name": "create_or_update_love_map_note",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/notes",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.update_love_map_note",
+      "method": "PUT",
+      "name": "update_love_map_note",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/notes/{note_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.mediation.submit_mediation_answers",
+      "method": "POST",
+      "name": "submit_mediation_answers",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/answers",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "mediation"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.mediation.start_repair_flow_endpoint",
+      "method": "POST",
+      "name": "start_repair_flow_endpoint",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/repair/start",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "mediation"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.mediation.get_repair_flow_status_endpoint",
+      "method": "GET",
+      "name": "get_repair_flow_status_endpoint",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/repair/status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "mediation"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.mediation.complete_repair_flow_step_endpoint",
+      "method": "POST",
+      "name": "complete_repair_flow_step_endpoint",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/repair/step-complete",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "mediation"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.mediation.get_mediation_status_endpoint",
+      "method": "GET",
+      "name": "get_mediation_status_endpoint",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "mediation"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.memory.get_calendar",
+      "method": "GET",
+      "name": "get_calendar",
+      "owner_team": "backend-platform",
+      "path": "/api/memory/calendar",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.memory.get_relationship_report_route",
+      "method": "GET",
+      "name": "get_relationship_report_route",
+      "owner_team": "backend-platform",
+      "path": "/api/memory/report",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.memory.get_time_capsule",
+      "method": "GET",
+      "name": "get_time_capsule",
+      "owner_team": "backend-platform",
+      "path": "/api/memory/time-capsule",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.memory.get_timeline",
+      "method": "GET",
+      "name": "get_timeline",
+      "owner_team": "backend-platform",
+      "path": "/api/memory/timeline",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.reports.submit_report",
+      "method": "POST",
+      "name": "submit_report",
+      "owner_team": "backend-core",
+      "path": "/api/reports",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "reports"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.reports.get_weekly_report_route",
+      "method": "GET",
+      "name": "get_weekly_report_route",
+      "owner_team": "backend-core",
+      "path": "/api/reports/weekly",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "reports"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.create_user",
+      "method": "POST",
+      "name": "create_user",
+      "owner_team": "backend-core",
+      "path": "/api/users/",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.events_routes.track_core_loop_event",
+      "method": "POST",
+      "name": "track_core_loop_event",
+      "owner_team": "backend-core",
+      "path": "/api/users/events/core-loop",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.events_routes.track_cuj_event",
+      "method": "POST",
+      "name": "track_cuj_event",
+      "owner_team": "backend-core",
+      "path": "/api/users/events/cuj",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_feature_flags",
+      "method": "GET",
+      "name": "read_my_feature_flags",
+      "owner_team": "backend-core",
+      "path": "/api/users/feature-flags",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_first_delight",
+      "method": "GET",
+      "name": "read_my_first_delight",
+      "owner_team": "backend-core",
+      "path": "/api/users/first-delight",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.acknowledge_my_first_delight",
+      "method": "POST",
+      "name": "acknowledge_my_first_delight",
+      "owner_team": "backend-core",
+      "path": "/api/users/first-delight/ack",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_gamification_summary",
+      "method": "GET",
+      "name": "read_my_gamification_summary",
+      "owner_team": "backend-core",
+      "path": "/api/users/gamification-summary",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.generate_invite_code",
+      "method": "POST",
+      "name": "generate_invite_code",
+      "owner_team": "backend-core",
+      "path": "/api/users/invite-code",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.read_user_me",
+      "method": "GET",
+      "name": "read_user_me",
+      "owner_team": "backend-core",
+      "path": "/api/users/me",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.update_user_me",
+      "method": "PATCH",
+      "name": "update_user_me",
+      "owner_team": "backend-core",
+      "path": "/api/users/me",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.list_my_consents",
+      "method": "GET",
+      "name": "list_my_consents",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/consents",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.create_consent_receipt",
+      "method": "POST",
+      "name": "create_consent_receipt",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/consents",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.users.routes.erase_my_data",
+      "method": "DELETE",
+      "name": "erase_my_data",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/data",
+      "protocol": "http",
+      "runbook_ref": "docs/security/data-rights-fire-drill.md",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.users.routes.export_my_data",
+      "method": "GET",
+      "name": "export_my_data",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/data-export",
+      "protocol": "http",
+      "runbook_ref": "docs/security/data-rights-fire-drill.md",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.get_my_onboarding_consent",
+      "method": "GET",
+      "name": "get_my_onboarding_consent",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/onboarding-consent",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.upsert_my_onboarding_consent",
+      "method": "POST",
+      "name": "upsert_my_onboarding_consent",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/onboarding-consent",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.read_my_notifications",
+      "method": "GET",
+      "name": "read_my_notifications",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.mark_notifications_read",
+      "method": "POST",
+      "name": "mark_notifications_read",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/mark-read",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.read_my_notification_stats",
+      "method": "GET",
+      "name": "read_my_notification_stats",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/stats",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.mark_single_notification_read",
+      "method": "POST",
+      "name": "mark_single_notification_read",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/{notification_id}/read",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.retry_notification_delivery",
+      "method": "POST",
+      "name": "retry_notification_delivery",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/{notification_id}/retry",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_onboarding_quest",
+      "method": "GET",
+      "name": "read_my_onboarding_quest",
+      "owner_team": "backend-core",
+      "path": "/api/users/onboarding-quest",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.pair_with_partner",
+      "method": "POST",
+      "name": "pair_with_partner",
+      "owner_team": "backend-core",
+      "path": "/api/users/pair",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.get_partner_status",
+      "method": "GET",
+      "name": "get_partner_status",
+      "owner_team": "backend-core",
+      "path": "/api/users/partner-status",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.list_my_push_subscriptions",
+      "method": "GET",
+      "name": "list_my_push_subscriptions",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.upsert_my_push_subscription",
+      "method": "POST",
+      "name": "upsert_my_push_subscription",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.dry_run_my_push_dispatch",
+      "method": "POST",
+      "name": "dry_run_my_push_dispatch",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions/dry-run",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.notification_routes.delete_my_push_subscription",
+      "method": "DELETE",
+      "name": "delete_my_push_subscription",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions/{subscription_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_reengagement_hooks",
+      "method": "GET",
+      "name": "read_my_reengagement_hooks",
+      "owner_team": "backend-core",
+      "path": "/api/users/reengagement-hooks",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.events_routes.track_referral_couple_invite",
+      "method": "POST",
+      "name": "track_referral_couple_invite",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/couple-invite",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.events_routes.track_referral_landing_view",
+      "method": "POST",
+      "name": "track_referral_landing_view",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/landing-view",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.events_routes.track_referral_signup",
+      "method": "POST",
+      "name": "track_referral_signup",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/signup",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.read_my_sync_nudges",
+      "method": "GET",
+      "name": "read_my_sync_nudges",
+      "owner_team": "backend-core",
+      "path": "/api/users/sync-nudges",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.growth_routes.deliver_my_sync_nudge",
+      "method": "POST",
+      "name": "deliver_my_sync_nudge",
+      "owner_team": "backend-core",
+      "path": "/api/users/sync-nudges/{nudge_type}/deliver",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "account_sensitive",
+      "endpoint": "app.api.routers.users.routes.read_user",
+      "method": "GET",
+      "name": "read_user",
+      "owner_team": "backend-core",
+      "path": "/api/users/{user_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "users"
+      ]
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_check",
+      "method": "GET",
+      "name": "health_check",
+      "owner_team": "backend-platform",
+      "path": "/health",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_deep",
+      "method": "GET",
+      "name": "health_deep",
+      "owner_team": "backend-platform",
+      "path": "/health/deep",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_degradation",
+      "method": "GET",
+      "name": "health_degradation",
+      "owner_team": "backend-platform",
+      "path": "/health/degradation",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_live",
+      "method": "GET",
+      "name": "health_live",
+      "owner_team": "backend-platform",
+      "path": "/health/live",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_ready",
+      "method": "GET",
+      "name": "health_ready",
+      "owner_team": "backend-platform",
+      "path": "/health/ready",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "operational",
+      "endpoint": "app.core.health_routes.health_slo_snapshot",
+      "method": "GET",
+      "name": "health_slo_snapshot",
+      "owner_team": "backend-platform",
+      "path": "/health/slo",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-a-release-gate-baseline",
+      "tags": []
+    },
+    {
+      "auth_policy": "public",
+      "data_sensitivity": "public",
+      "endpoint": "app.core.health_routes.metrics_snapshot",
+      "method": "GET",
+      "name": "metrics_snapshot",
+      "owner_team": "backend-platform",
+      "path": "/metrics",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": []
+    },
+    {
+      "auth_policy": "custom",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.main.websocket_endpoint",
+      "method": "WEBSOCKET",
+      "name": "websocket_endpoint",
+      "owner_team": "backend-realtime",
+      "path": "/ws/{user_id}",
+      "protocol": "websocket",
+      "runbook_ref": "docs/security/abuse-budget-policy.md",
+      "tags": []
+    }
+  ],
+  "generated_by": "backend/scripts/export_api_inventory.py",
+  "schema_version": "1.1.0"
+}

@@ -1,0 +1,340 @@
+import { apiGet, apiPost, apiPut, getWithFallback } from '@/services/api-transport';
+export * from '@/services/notifications-api';
+export * from '@/services/engagement-api';
+export * from '@/services/billing-api';
+export * from '@/services/relationship-api';
+export * from '@/services/daily-sync-api';
+export * from '@/services/appreciations-api';
+export {
+  createJournal,
+  deleteJournal,
+  fetchJournals,
+  fetchJournalsPage,
+  fetchPartnerJournals,
+  fetchPartnerJournalsPage,
+  JOURNALS_INITIAL_LIMIT,
+  MAX_JOURNAL_CONTENT_LENGTH,
+} from '@/services/journals-api';
+export type {
+  CreateJournalOptions,
+  CreateJournalResponse,
+  CursorListResult,
+} from '@/services/journals-api';
+// idempotency contract marker: `createJournal` keeps `idempotencyKey` -> `Idempotency-Key` mapping in journals-api.
+export type {
+  ActionCardData,
+  FeatureFlagsResponse,
+  FirstDelightAcknowledgePayload,
+  FirstDelightAcknowledgeResponse,
+  FirstDelightResponse,
+  GamificationSummaryResponse,
+  NotificationDailyStatsItem,
+  NotificationErrorReasonStatsItem,
+  NotificationEventItem,
+  NotificationFilters,
+  NotificationMarkReadResult,
+  NotificationRetryResult,
+  NotificationStats,
+  OnboardingQuestResponse,
+  OnboardingQuestStep,
+  OnboardingQuestStepKey,
+  PartnerStatus,
+  PushDispatchDryRunResult,
+  PushSubscriptionDeleteResult,
+  PushSubscriptionItem,
+  PushSubscriptionPayload,
+  PushSubscriptionUpsertResult,
+  ReferralCoupleInviteTrackPayload,
+  ReferralLandingTrackPayload,
+  ReferralSignupTrackPayload,
+  ReferralTrackResult,
+  SyncNudgeDeliverPayload,
+  SyncNudgeDeliverResponse,
+  SyncNudgeItem,
+  SyncNudgeType,
+  SyncNudgesResponse,
+} from '@/services/api-client.types';
+import type {
+  ActionCardData,
+  PartnerStatus,
+} from '@/services/api-client.types';
+
+const LOCAL_CARDS: Record<string, ActionCardData> = {
+  card_hug: {
+    key: 'card_hug',
+    title: '溫柔擁抱',
+    description: '先放下對錯，給對方一個不帶評價的擁抱。',
+    category: 'comfort',
+    difficulty_level: 1,
+  },
+  card_walk: {
+    key: 'card_walk',
+    title: '散步五分鐘',
+    description: '一起走一小段路，讓情緒慢慢落地。',
+    category: 'action',
+    difficulty_level: 1,
+  },
+  card_tea: {
+    key: 'card_tea',
+    title: '一杯熱飲',
+    description: '幫彼此準備一杯熱飲，建立安定感。',
+    category: 'comfort',
+    difficulty_level: 1,
+  },
+  card_write: {
+    key: 'card_write',
+    title: '一句感謝',
+    description: '寫下一句今天最想謝謝對方的話。',
+    category: 'connection',
+    difficulty_level: 1,
+  },
+};
+
+export const fetchCard = async (key: string): Promise<ActionCardData> => {
+  return LOCAL_CARDS[key] ?? {
+    key,
+    title: key.replace(/[_-]/g, ' '),
+    description: '用一句真心話，回應你最在意的那個人。',
+    category: 'connection',
+    difficulty_level: 1,
+  };
+};
+
+
+export const fetchPartnerStatus = async (): Promise<PartnerStatus> => {
+  return getWithFallback({
+    action: () => apiGet<PartnerStatus>('/users/partner-status'),
+    fallbackValue: {
+      has_partner: false,
+      latest_journal_at: null,
+      current_score: 0,
+      unread_notification_count: 0,
+    },
+    errorTag: 'fetch-partner-status-failed',
+  });
+};
+
+// --- Module B3: Love Languages ---
+export interface LoveLanguagePreferencePublic {
+  preference: Record<string, unknown>;
+  updated_at: string;
+}
+
+export interface WeeklyTaskPublic {
+  task_slug: string;
+  task_label: string;
+  assigned_at: string;
+  completed: boolean;
+  completed_at: string | null;
+}
+
+export const fetchLoveLanguagePreference = async (): Promise<LoveLanguagePreferencePublic | null> => {
+  return apiGet<LoveLanguagePreferencePublic | null>('/love-languages/preference');
+};
+
+export const putLoveLanguagePreference = async (preference: Record<string, unknown>): Promise<LoveLanguagePreferencePublic> => {
+  return apiPut<LoveLanguagePreferencePublic>('/love-languages/preference', { preference });
+};
+
+export const fetchWeeklyTask = async (): Promise<WeeklyTaskPublic | null> => {
+  return apiGet<WeeklyTaskPublic | null>('/love-languages/weekly-task');
+};
+
+export const completeWeeklyTask = async (): Promise<WeeklyTaskPublic> => {
+  return apiPost<WeeklyTaskPublic>('/love-languages/weekly-task/complete');
+};
+
+// --- Module C1: SOS Cooldown ---
+export interface CooldownStatusPublic {
+  in_cooldown: boolean;
+  started_by_me: boolean;
+  ends_at_iso: string | null;
+  remaining_seconds: number | null;
+}
+
+export const fetchCooldownStatus = async (): Promise<CooldownStatusPublic> => {
+  return apiGet<CooldownStatusPublic>('/cooldown/status');
+};
+
+export const startCooldown = async (duration_minutes: number): Promise<CooldownStatusPublic> => {
+  return apiPost<CooldownStatusPublic>('/cooldown/start', { duration_minutes });
+};
+
+export const rewriteMessage = async (message: string): Promise<{ rewritten: string }> => {
+  return apiPost<{ rewritten: string }>('/cooldown/rewrite-message', { message });
+};
+
+// --- Module C3: Mediation ---
+export interface MediationStatusPublic {
+  in_mediation: boolean;
+  questions: string[];
+  my_answered: boolean;
+  partner_answered: boolean;
+  session_id?: string;
+  my_answers?: string[];
+  partner_answers?: string[];
+  next_sop?: string;
+}
+
+export const fetchMediationStatus = async (): Promise<MediationStatusPublic> => {
+  return apiGet<MediationStatusPublic>('/mediation/status');
+};
+
+export const submitMediationAnswers = async (
+  sessionId: string,
+  answers: [string, string, string]
+): Promise<{ status: string; message: string }> => {
+  return apiPost<{ status: string; message: string }>('/mediation/answers', {
+    session_id: sessionId,
+    answers,
+  });
+};
+
+export interface RepairFlowStartResult {
+  accepted: boolean;
+  deduped: boolean;
+  session_id: string;
+}
+
+export interface RepairFlowStatusPublic {
+  enabled: boolean;
+  session_id: string | null;
+  in_repair_flow: boolean;
+  safety_mode_active: boolean;
+  completed: boolean;
+  current_step: number;
+  my_completed_steps: number[];
+  partner_completed_steps: number[];
+}
+
+export interface RepairFlowStepCompletePayload {
+  session_id: string;
+  step: number;
+  source?: string;
+  i_feel?: string;
+  i_need?: string;
+  mirror_text?: string;
+  shared_commitment?: string;
+  improvement_note?: string;
+}
+
+export interface RepairFlowStepCompleteResult {
+  accepted: boolean;
+  deduped: boolean;
+  step: number;
+  completed: boolean;
+  safety_mode_active: boolean;
+}
+
+export const startRepairFlow = async (payload?: {
+  source_session_id?: string;
+  source?: string;
+}): Promise<RepairFlowStartResult> => {
+  return apiPost<RepairFlowStartResult>('/mediation/repair/start', payload ?? {});
+};
+
+export const fetchRepairFlowStatus = async (sessionId: string): Promise<RepairFlowStatusPublic> => {
+  return apiGet<RepairFlowStatusPublic>('/mediation/repair/status', {
+    params: { session_id: sessionId },
+  });
+};
+
+export const completeRepairFlowStep = async (
+  payload: RepairFlowStepCompletePayload,
+): Promise<RepairFlowStepCompleteResult> => {
+  return apiPost<RepairFlowStepCompleteResult>(
+    '/mediation/repair/step-complete',
+    payload,
+  );
+};
+
+// --- Module D1: Love Map ---
+export interface LoveMapCardSummary {
+  id: string;
+  title: string;
+  description: string;
+  question: string;
+  depth_level: number;
+  layer: string;
+}
+
+export interface LoveMapCardsResponse {
+  safe: LoveMapCardSummary[];
+  medium: LoveMapCardSummary[];
+  deep: LoveMapCardSummary[];
+}
+
+export interface LoveMapNotePublic {
+  id: string;
+  layer: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const fetchLoveMapCards = async (): Promise<LoveMapCardsResponse> => {
+  return apiGet<LoveMapCardsResponse>('/love-map/cards');
+};
+
+export const fetchLoveMapNotes = async (): Promise<LoveMapNotePublic[]> => {
+  return apiGet<LoveMapNotePublic[]>('/love-map/notes');
+};
+
+export const createOrUpdateLoveMapNote = async (
+  layer: 'safe' | 'medium' | 'deep',
+  content: string
+): Promise<LoveMapNotePublic> => {
+  return apiPost<LoveMapNotePublic>('/love-map/notes', { layer, content });
+};
+
+export const updateLoveMapNote = async (
+  noteId: string,
+  content: string
+): Promise<LoveMapNotePublic> => {
+  return apiPut<LoveMapNotePublic>(`/love-map/notes/${noteId}`, { content });
+};
+
+// --- Module D2: Blueprint & date suggestions ---
+export interface WishlistItemPublic {
+  id: string;
+  title: string;
+  notes: string;
+  created_at: string;
+  added_by_me: boolean;
+}
+
+export interface DateSuggestionPublic {
+  suggested: boolean;
+  message: string;
+  last_activity_at: string | null;
+  suggestions: string[];
+}
+
+export const fetchBlueprint = async (): Promise<WishlistItemPublic[]> => {
+  return apiGet<WishlistItemPublic[]>('/blueprint');
+};
+
+export const addBlueprintItem = async (
+  title: string,
+  notes?: string
+): Promise<WishlistItemPublic> => {
+  return apiPost<WishlistItemPublic>('/blueprint', { title, notes: notes ?? '' });
+};
+
+export const fetchDateSuggestions = async (): Promise<DateSuggestionPublic> => {
+  return apiGet<DateSuggestionPublic>('/blueprint/date-suggestions');
+};
+
+// --- Module D3: Weekly Report ---
+export interface WeeklyReportPublic {
+  period_start: string;
+  period_end: string;
+  daily_sync_completion_rate: number;
+  daily_sync_days_filled: number;
+  appreciation_count: number;
+  insight: string | null;
+}
+
+export const fetchWeeklyReport = async (): Promise<WeeklyReportPublic> => {
+  return apiGet<WeeklyReportPublic>('/reports/weekly');
+};

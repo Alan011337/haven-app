@@ -1,0 +1,88 @@
+name: Growth NSM Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  growth-nsm-snapshot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Generate Growth NSM WRM snapshot evidence
+        run: |
+          python scripts/run_growth_nsm_snapshot.py \
+            --window-days 7 \
+            --output docs/growth/evidence/wrm-snapshot-${GITHUB_RUN_ID}.json \
+            --latest-path docs/growth/evidence/wrm-snapshot-latest.json
+
+      - name: Growth NSM snapshot summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path("docs/growth/evidence/wrm-snapshot-latest.json")
+          lines = ["### Daily Growth NSM (WRM) Snapshot"]
+          if not summary_path.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `snapshot_missing`")
+          else:
+              payload = json.loads(summary_path.read_text(encoding="utf-8"))
+              snapshot = payload.get("snapshot") or {}
+              metrics = snapshot.get("metrics") or {}
+              counts = snapshot.get("counts") or {}
+              evaluation = payload.get("evaluation") or {}
+              reasons = evaluation.get("reasons") or []
+              lines.append(f"- evaluation_status: `{evaluation.get('status', 'unknown')}`")
+              lines.append(f"- wrm_pairs_total: `{metrics.get('wrm_pairs_total', 'unknown')}`")
+              lines.append(f"- wrm_active_pair_rate: `{metrics.get('wrm_active_pair_rate', 'unknown')}`")
+              lines.append(f"- active_pairs_observed_total: `{counts.get('active_pairs_observed_total', 'unknown')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Upload Growth NSM snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-nsm-snapshot
+          path: |
+            docs/growth/evidence/wrm-snapshot-*.json
+            docs/growth/evidence/wrm-snapshot-latest.json
+          if-no-files-found: error

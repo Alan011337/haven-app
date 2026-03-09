@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "billing-console-drift",
+  "generated_by": "backend/scripts/run_billing_console_drift_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-23T03:46:47.357357+00:00",
+  "dry_run": true,
+  "provider": "stripe",
+  "runbook_path": "docs/billing/console-drift-monitor.md",
+  "policy_path": "docs/security/billing-console-drift-policy.json",
+  "required_checks": [
+    "runbook_present",
+    "policy_contract_passed",
+    "store_compliance_contract_passed",
+    "webhook_secret_configured",
+    "webhook_tolerance_within_policy",
+    "async_mode_within_policy",
+    "nonprod_dry_run"
+  ],
+  "checks_total": 7,
+  "checks_passed": 7,
+  "checks_failed": 0,
+  "all_passed": true,
+  "runtime": {
+    "webhook_tolerance_seconds": 300,
+    "webhook_async_mode": false
+  },
+  "results": [
+    {
+      "name": "runbook_present",
+      "ok": true,
+      "detail": "runbook exists and is non-empty"
+    },
+    {
+      "name": "policy_contract_passed",
+      "ok": true,
+      "detail": "policy contract satisfied"
+    },
+    {
+      "name": "store_compliance_contract_passed",
+      "ok": true,
+      "detail": "store compliance contract satisfied"
+    },
+    {
+      "name": "webhook_secret_configured",
+      "ok": true,
+      "detail": "billing webhook secret is configured"
+    },
+    {
+      "name": "webhook_tolerance_within_policy",
+      "ok": true,
+      "detail": "runtime tolerance=300s within max=300s"
+    },
+    {
+      "name": "async_mode_within_policy",
+      "ok": true,
+      "detail": "runtime async_mode=False allowed"
+    },
+    {
+      "name": "nonprod_dry_run",
+      "ok": true,
+      "detail": "dry-run environment accepted"
+    }
+  ]
+}

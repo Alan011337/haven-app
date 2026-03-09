@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "billing-reconciliation",
+  "generated_by": "backend/scripts/run_billing_reconciliation_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-03-03T05:45:52.250774+00:00",
+  "total_users": 0,
+  "healthy_users": 0,
+  "unhealthy_users": 0,
+  "results": []
+}

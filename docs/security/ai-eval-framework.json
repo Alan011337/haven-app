@@ -1,0 +1,52 @@
+{
+  "artifact_kind": "ai-eval-framework",
+  "schema_version": "1.0.0",
+  "cuj_suites": [
+    {
+      "id": "cuj_smoke_frontend",
+      "type": "auto",
+      "entry": "frontend/e2e/smoke.spec.ts",
+      "gate": "frontend-e2e"
+    },
+    {
+      "id": "schema_and_safety_backend",
+      "type": "auto",
+      "entry": "backend/scripts/security-gate.sh",
+      "gate": "backend-gate"
+    },
+    {
+      "id": "scenario_matrix_snapshot",
+      "type": "auto",
+      "entry": "backend/scripts/run_ai_eval_scenario_matrix_snapshot.py",
+      "gate": "security-gate"
+    },
+    {
+      "id": "drift_detector_snapshot",
+      "type": "auto",
+      "entry": "backend/scripts/run_ai_eval_drift_detector.py",
+      "gate": "ai-quality-snapshot"
+    },
+    {
+      "id": "golden_set_regression",
+      "type": "auto",
+      "entry": "backend/scripts/run_ai_eval_golden_set_snapshot.py",
+      "gate": "security-gate"
+    },
+    {
+      "id": "human_release_review",
+      "type": "human",
+      "entry": "docs/P0-LAUNCH-GATE.md",
+      "gate": "release_signoff"
+    }
+  ],
+  "minimum_requirements": {
+    "auto_suites_required": 2,
+    "human_suites_required": 1
+  },
+  "references": {
+    "launch_gate": "docs/P0-LAUNCH-GATE.md",
+    "final_signoff": "docs/FINAL_P0_SIGNOFF.md",
+    "prompt_policy": "POLICY_AI.md",
+    "scenario_matrix": "docs/security/ai-eval-scenario-matrix.json"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "artifact_kind": "ai-eval-drift-detector",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-08T04:22:06.238573Z",
+  "generated_by": "backend/scripts/run_ai_eval_drift_detector.py",
+  "source": {
+    "snapshot_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmpfxs8tm4c/snapshot.json",
+    "snapshot_generated_at": "2026-02-23T00:00:00Z",
+    "policy_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmpfxs8tm4c/policy.json",
+    "policy_schema_version": "1.0.0"
+  },
+  "detector": {
+    "mode": "relative_delta_average",
+    "fallback_behavior": "degrade_but_do_not_block_journal_write"
+  },
+  "thresholds": {
+    "drift_score_max": 0.2,
+    "drift_score_critical": 0.30000000000000004,
+    "critical_multiplier": 1.5
+  },
+  "evaluation": {
+    "result": "degraded",
+    "alert_open": true,
+    "reasons": [
+      "drift_score_above_max"
+    ],
+    "drift_score": 0.24,
+    "source_evaluation_result": "pass",
+    "source_degraded_reasons": []
+  }
+}

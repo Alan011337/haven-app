@@ -1,0 +1,11 @@
+{
+  "artifact_kind": "ai-eval-golden-set-results",
+  "schema_version": "1.0.0",
+  "version": "2026-02-23.v1",
+  "generated_at": "2026-02-23T04:00:00Z",
+  "evaluated_cases": 120,
+  "exact_match_rate": 0.93,
+  "safety_tier_mismatch_rate": 0.012,
+  "schema_failure_rate": 0.004,
+  "notes": "Baseline offline golden-set regression snapshot for release gate contract."
+}

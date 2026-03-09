@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "growth-kill-switch-coverage",
+  "owner": "growth-platform",
+  "entries": [
+    {
+      "flag": "growth_referral_enabled",
+      "kill_switch": "disable_referral_funnel",
+      "risk_tier": "tier_1",
+      "cuj_impact": true,
+      "rollback_command": "set disable_referral_funnel=true"
+    },
+    {
+      "flag": "growth_ab_experiment_enabled",
+      "kill_switch": "disable_growth_ab_experiment",
+      "risk_tier": "tier_1",
+      "cuj_impact": true,
+      "rollback_command": "set disable_growth_ab_experiment=true"
+    },
+    {
+      "flag": "growth_pricing_experiment_enabled",
+      "kill_switch": "disable_pricing_experiment",
+      "risk_tier": "tier_0",
+      "cuj_impact": true,
+      "rollback_command": "set disable_pricing_experiment=true"
+    },
+    {
+      "flag": "growth_reengagement_hooks_enabled",
+      "kill_switch": "disable_growth_reengagement_hooks",
+      "risk_tier": "tier_1",
+      "cuj_impact": true,
+      "rollback_command": "set disable_growth_reengagement_hooks=true"
+    },
+    {
+      "flag": "growth_activation_dashboard_enabled",
+      "kill_switch": "disable_growth_activation_dashboard",
+      "risk_tier": "tier_1",
+      "cuj_impact": false,
+      "rollback_command": "set disable_growth_activation_dashboard=true"
+    },
+    {
+      "flag": "growth_onboarding_quest_enabled",
+      "kill_switch": "disable_growth_onboarding_quest",
+      "risk_tier": "tier_1",
+      "cuj_impact": false,
+      "rollback_command": "set disable_growth_onboarding_quest=true"
+    },
+    {
+      "flag": "growth_sync_nudges_enabled",
+      "kill_switch": "disable_growth_sync_nudges",
+      "risk_tier": "tier_1",
+      "cuj_impact": true,
+      "rollback_command": "set disable_growth_sync_nudges=true"
+    },
+    {
+      "flag": "growth_first_delight_enabled",
+      "kill_switch": "disable_growth_first_delight",
+      "risk_tier": "tier_1",
+      "cuj_impact": true,
+      "rollback_command": "set disable_growth_first_delight=true"
+    }
+  ],
+  "references": {
+    "feature_flag_service": "backend/app/services/feature_flags.py",
+    "audit_doc": "docs/plan/P0_P1_AUDIT.md",
+    "execution_plan": "docs/plan/EXECUTION_PLAN.md"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "artifact_kind": "prompt-rollout-policy",
+  "schema_version": "1.0.0",
+  "strategy": {
+    "mode": "canary_then_full_rollout",
+    "canary_percent": 10,
+    "promotion_gate": {
+      "health_slo_required": true,
+      "safety_regression_required": true,
+      "max_allowed_burn_rate": 1.0
+    }
+  },
+  "guardrails": {
+    "rollback_on_slo_degrade": true,
+    "rollback_on_safety_regression": true,
+    "rollback_on_prompt_abuse_spike": true
+  },
+  "references": {
+    "canary_guard_script": "backend/scripts/run_canary_guard.py",
+    "canary_workflow": ".github/workflows/canary-guard.yml",
+    "safety_tests": "backend/tests/test_ai_safety_logic.py",
+    "schema_tests": "backend/tests/test_ai_schema_contract.py",
+    "fuzz_tests": "backend/tests/test_ai_schema_fuzz.py"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Haven",
+    "slug": "haven-mobile",
+    "version": "1.0.0",
+    "scheme": "haven",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.haven.mobile"
+    },
+    "android": {
+      "package": "com.haven.mobile"
+    }
+  }
+}

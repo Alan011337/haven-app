@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-03-01T00:58:04.845228+00:00",
+  "base_url": "offline_fixture://health",
+  "result": "pass",
+  "failure_class": "none",
+  "failed_stages": [],
+  "warn_stages": [],
+  "strict_mode": false,
+  "stages": [
+    {
+      "stage": "health_endpoint",
+      "status": "pass",
+      "detail": "health.status=ok"
+    },
+    {
+      "stage": "ws_slo_gate",
+      "status": "pass",
+      "detail": "ws=ok, ws_burn_rate=ok"
+    },
+    {
+      "stage": "cuj_slo_gate",
+      "status": "pass",
+      "detail": "cuj=insufficient_data"
+    },
+    {
+      "stage": "cuj_01_ritual",
+      "status": "pass",
+      "detail": "skeleton probe uses /health/slo ws status as proxy"
+    },
+    {
+      "stage": "cuj_02_journal",
+      "status": "pass",
+      "detail": "sample_count=12, p95_ms=900"
+    }
+  ]
+}

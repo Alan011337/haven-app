@@ -1,0 +1,421 @@
+{
+  "artifact_kind": "endpoint-authorization-matrix",
+  "entries": [
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/admin/moderation/{report_id}/resolve",
+      "subject_scope": "admin_allowlist",
+      "test_ref": "backend/tests/test_admin_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/admin/users/{user_id}/unbind",
+      "subject_scope": "admin_allowlist",
+      "test_ref": "backend/tests/test_admin_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/token",
+      "subject_scope": "credential_owner",
+      "test_ref": "backend/tests/test_auth_token_endpoint_security.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/refresh",
+      "subject_scope": "credential_owner",
+      "test_ref": "backend/tests/test_auth_token_endpoint_security.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-auth",
+      "path": "/api/auth/logout",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/appreciations",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/baseline",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/blueprint/",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/cooldown/rewrite-message",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/cooldown/start",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/couple-goal",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/daily-sync",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "PUT",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/preference",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-languages/weekly-task/complete",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/notes",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "PUT",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/notes/{note_id}",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/create-checkout-session",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_billing_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/create-portal-session",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_billing_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/state-change",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_billing_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/appstore",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_billing_webhook_security.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/googleplay",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_billing_webhook_security.py"
+    },
+    {
+      "auth_mode": "public",
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "owner_team": "backend-billing",
+      "path": "/api/billing/webhooks/stripe",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_billing_webhook_security.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/draw",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_card_deck_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/respond/{session_id}",
+      "subject_scope": "session_participant",
+      "test_ref": "backend/tests/test_card_deck_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/cards/respond",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_card_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/answers",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_mediation_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/repair/start",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_repair_flow_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/mediation/repair/step-complete",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_repair_flow_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "DELETE",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/journals/",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "PATCH",
+      "owner_team": "backend-core",
+      "path": "/api/users/me",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_user_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "public",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_user_field_level_authorization.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/invite-code",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_user_pairing_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "public",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/landing-view",
+      "subject_scope": "n/a",
+      "test_ref": "backend/tests/test_referral_funnel_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/couple-invite",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_referral_funnel_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/referrals/signup",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_referral_funnel_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/first-delight/ack",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_first_delight_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/sync-nudges/{nudge_type}/deliver",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_sync_nudges_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "DELETE",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/data",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_data_rights_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/consents",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_user_consent_receipt_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/me/onboarding-consent",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/events/cuj",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_cuj_event_ingest_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/events/core-loop",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_core_loop_event_ingest_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/mark-read",
+      "subject_scope": "notification_owner",
+      "test_ref": "backend/tests/test_notification_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/{notification_id}/read",
+      "subject_scope": "notification_owner",
+      "test_ref": "backend/tests/test_notification_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/notifications/{notification_id}/retry",
+      "subject_scope": "notification_owner",
+      "test_ref": "backend/tests/test_notification_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_push_subscription_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions/dry-run",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_push_subscription_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "DELETE",
+      "owner_team": "backend-core",
+      "path": "/api/users/push-subscriptions/{subscription_id}",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_push_subscription_api.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/reports",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_reports_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/users/pair",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_user_pairing_authorization_matrix.py"
+    }
+  ],
+  "generated_by": "backend/scripts/check_endpoint_authorization_matrix.py",
+  "schema_version": "1.0.0"
+}

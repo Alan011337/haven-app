@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-02-16T13:45:58.325626+00:00",
+  "results": [
+    {
+      "name": "data_rights_export_scope",
+      "ok": true,
+      "detail": "journals=1, notifications=1"
+    },
+    {
+      "name": "data_rights_erase_integrity",
+      "ok": true,
+      "detail": "deleted_user=True,partner_unpaired=True,shared_deleted=True,unrelated_preserved=True"
+    },
+    {
+      "name": "billing_state_change_idempotency",
+      "ok": true,
+      "detail": "first=200,second=200,second_replayed=True,mismatch=409"
+    },
+    {
+      "name": "billing_reconciliation_health",
+      "ok": true,
+      "detail": "status=200,healthy=True,command_count=1,missing_command_ledger_count=0"
+    },
+    {
+      "name": "billing_webhook_binding_resolution",
+      "ok": true,
+      "detail": "first=200,follow=200,binding=yes,entitlement_state=PAST_DUE"
+    },
+    {
+      "name": "billing_webhook_identifier_conflict_guard",
+      "ok": true,
+      "detail": "subscription_bind=200,conflict=409"
+    },
+    {
+      "name": "billing_webhook_replay_safety",
+      "ok": true,
+      "detail": "first=200,second=200,second_replayed=True,mismatch=409,receipts=1,webhook_ledgers=1"
+    }
+  ],
+  "all_passed": true
+}

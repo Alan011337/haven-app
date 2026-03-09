@@ -1,0 +1,39 @@
+{
+  "artifact_kind": "data-rights-export-package-spec",
+  "schema_version": "1.0.0",
+  "endpoint": "/api/users/me/data-export",
+  "export_version": "v1",
+  "expires_after_days_default": 7,
+  "sections": [
+    {
+      "name": "user",
+      "required": true,
+      "owner_scope": "current_user"
+    },
+    {
+      "name": "journals",
+      "required": true,
+      "owner_scope": "current_user"
+    },
+    {
+      "name": "analyses",
+      "required": true,
+      "owner_scope": "current_user"
+    },
+    {
+      "name": "card_responses",
+      "required": true,
+      "owner_scope": "current_user"
+    },
+    {
+      "name": "card_sessions",
+      "required": true,
+      "owner_scope": "self_or_partner"
+    },
+    {
+      "name": "notification_events",
+      "required": true,
+      "owner_scope": "sender_or_receiver"
+    }
+  ]
+}

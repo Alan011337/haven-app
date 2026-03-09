@@ -1,0 +1,523 @@
+{
+  "idempotency_exempt_paths": [
+    "/api/auth/logout",
+    "/api/auth/refresh",
+    "/api/auth/token",
+    "/api/billing/webhooks/appstore",
+    "/api/billing/webhooks/googleplay",
+    "/api/billing/webhooks/stripe",
+    "/api/v2/auth/logout",
+    "/api/v2/auth/refresh",
+    "/api/v2/auth/token"
+  ],
+  "route_count": 101,
+  "route_digest": "064fe4dea962c35c4229ecd4881010fa99bc4257f5826bb901460098e914994b",
+  "routes": [
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/admin/audit-events"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/admin/moderation/queue"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/admin/moderation/{report_id}/resolve"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/admin/users/{user_id}/status"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/admin/users/{user_id}/unbind"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/appreciations"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/appreciations"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/auth/token"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/baseline"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/baseline"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/billing/create-checkout-session"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/billing/create-portal-session"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/billing/entitlements/me"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/billing/reconciliation"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/billing/state-change"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/billing/webhooks/appstore"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/billing/webhooks/googleplay"
+    },
+    {
+      "idempotency_policy": "exempt",
+      "method": "POST",
+      "path": "/api/billing/webhooks/stripe"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/blueprint/"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/blueprint/"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/blueprint/date-suggestions"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/card-decks/draw"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/history"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/history/summary"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/list"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/card-decks/respond/{session_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/stats"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/{deck_id}/draw"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cards/"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cards/backlog"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cards/daily-status"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cards/draw"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/cards/respond"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cards/{card_id}/conversation"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/cooldown/rewrite-message"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/cooldown/start"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/cooldown/status"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/couple-goal"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/couple-goal"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/daily-sync"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/daily-sync/status"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/journals/"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/journals/"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/journals/partner"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "DELETE",
+      "path": "/api/journals/{journal_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-languages/preference"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PUT",
+      "path": "/api/love-languages/preference"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-languages/weekly-task"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-languages/weekly-task/complete"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/cards"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/notes"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/notes"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PUT",
+      "path": "/api/love-map/notes/{note_id}"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/mediation/answers"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/mediation/repair/start"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/mediation/repair/status"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/mediation/repair/step-complete"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/mediation/status"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/memory/calendar"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/memory/report"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/memory/time-capsule"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/memory/timeline"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/reports"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/reports/weekly"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/events/core-loop"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/events/cuj"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/feature-flags"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/first-delight"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/first-delight/ack"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/gamification-summary"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/invite-code"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/me"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PATCH",
+      "path": "/api/users/me"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/me/consents"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/me/consents"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "DELETE",
+      "path": "/api/users/me/data"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/me/data-export"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/me/onboarding-consent"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/me/onboarding-consent"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/notifications"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/notifications/mark-read"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/notifications/stats"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/notifications/{notification_id}/read"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/notifications/{notification_id}/retry"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/onboarding-quest"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/pair"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/partner-status"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/push-subscriptions"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/push-subscriptions"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/push-subscriptions/dry-run"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "DELETE",
+      "path": "/api/users/push-subscriptions/{subscription_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/reengagement-hooks"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/referrals/couple-invite"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/referrals/landing-view"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/referrals/signup"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/sync-nudges"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/users/sync-nudges/{nudge_type}/deliver"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/users/{user_id}"
+    }
+  ],
+  "schema_version": "v1"
+}

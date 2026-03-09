@@ -1,0 +1,826 @@
+tracker:
+  id: haven-v2-roadmap
+  version: 1
+  scope: full_roadmap_p0_p1_p2_v1
+  generated_at: '2026-02-17T09:10:25Z'
+  source_of_truth:
+  - docs/p0-machine-tracker.yaml
+  - docs/p0-execution-protocol.md
+  - docs/security/owasp-api-top10-mapping.md
+  - README.md
+  status_enum:
+  - done
+  - in_progress
+  - blocked
+  - todo
+  priority_enum:
+  - P0
+  - P1
+  - P2
+  phase_enum:
+  - META
+  - PHASE0_RELIABILITY
+  - PHASE0_2_LEGAL
+  - PHASE1_CORE_SECURITY
+  - PHASE1_5_SCALABILITY
+  - PHASE2_NOTIFICATION_AND_POLISH
+  - PHASEX_GROWTH
+  - PHASEY_MONETIZATION
+  - PHASE3_EXPANSION
+  - PHASE4_OPS
+  - PHASE5_CONTINUOUS_POLISH
+items:
+- id: META-01
+  phase: META
+  title: Priority protocol (P0/P1/P2)
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: keep unchanged unless priority policy is revised
+- id: META-02
+  phase: META
+  title: Definition of Done template
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: enforce DoD fields on all new P0 tickets
+- id: META-03
+  phase: META
+  title: Critical path graph
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: keep billing/data-rights/security as blockers
+- id: LAUNCH-01
+  phase: PHASE0_RELIABILITY
+  title: Launch readiness gate
+  owner: platform
+  priority: P0
+  status: blocked
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  - ".github/workflows/release-gate.yml"
+  next_action: finish SLO instrumentation and drill runbooks before launch decision
+- id: P0-A
+  phase: PHASE0_RELIABILITY
+  title: Release gate baseline
+  owner: platform
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - scripts/release-gate.sh
+  - ".github/workflows/release-gate.yml"
+  - backend/scripts/security-gate.sh
+  gate_snapshot:
+    backend_security_passed: 258
+    backend_full_passed: 379
+    frontend_env: ok
+    frontend_typecheck: ok
+  next_action: confirm first PR run in GitHub Actions is green
+- id: P0-B
+  phase: PHASE1_CORE_SECURITY
+  title: Security gate v1 (OWASP API Top 10 baseline)
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/scripts/security-gate.sh
+  - backend/scripts/check_endpoint_authorization_matrix.py
+  - backend/scripts/check_read_authorization_matrix.py
+  - backend/scripts/check_api_inventory_owner_attestation.py
+  - docs/security/endpoint-authorization-matrix.json
+  - docs/security/read-authorization-matrix.json
+  - backend/tests/test_read_authorization_matrix_policy.py
+  - docs/security/api-inventory-owner-attestation.json
+  - docs/security/api-inventory-owner-attestation.md
+  - ".github/CODEOWNERS"
+  - ".github/workflows/api-inventory-attestation.yml"
+  - docs/security/owasp-api-top10-mapping.md
+  - docs/p0-execution-protocol.md
+  next_action: keep write/read matrix + owner attestation contracts green for all
+    critical routes
+- id: P0-C
+  phase: PHASE0_2_LEGAL
+  title: Data rights foundation (Access/Export/Erase)
+  owner: backend-privacy
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/routers/users.py
+  - backend/scripts/security-gate.sh
+  - backend/scripts/check_data_rights_contract.py
+  - backend/scripts/check_data_retention_contract.py
+  - backend/scripts/check_data_classification_contract.py
+  - backend/scripts/check_data_deletion_lifecycle_contract.py
+  - backend/app/services/data_deletion_lifecycle.py
+  - backend/alembic/versions/ab8c9d0e1f3a_add_deleted_at_columns_for_soft_delete.py
+  - backend/scripts/validate_security_evidence.py
+  - backend/tests/test_data_rights_api.py
+  - backend/tests/test_data_rights_contract_policy.py
+  - backend/tests/test_data_retention_contract_policy.py
+  - backend/tests/test_data_classification_contract_policy.py
+  - backend/tests/test_data_deletion_lifecycle_contract_policy.py
+  - docs/security/data-rights-export-package-spec.json
+  - docs/security/data-rights-deletion-graph.json
+  - docs/security/data-retention-policy.json
+  - docs/security/data-classification-policy.json
+  - docs/security/data-deletion-lifecycle-policy.json
+  - docs/security/data-rights-fire-drill.md
+  - ".github/workflows/p0-drill.yml"
+  next_action: keep export/deletion + retention + classification + deletion-lifecycle
+    contract gates and monthly fire-drill freshness gate green
+- id: P0-D
+  phase: PHASEY_MONETIZATION
+  title: Billing correctness foundation
+  owner: backend-billing
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/routers/billing.py
+  - backend/tests/test_billing_idempotency_api.py
+  - backend/tests/test_billing_webhook_security.py
+  - backend/tests/test_billing_authorization_matrix.py
+  - ".github/workflows/billing-reconciliation.yml"
+  - backend/scripts/security-gate.sh
+  - backend/scripts/validate_security_evidence.py
+  next_action: keep daily reconciliation cadence and freshness gate green
+- id: SLO-OBS
+  phase: PHASE0_RELIABILITY
+  title: SLO/SLI, error budget, burn-rate alerting
+  owner: sre
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T04:25:55Z'
+  evidence_paths:
+  - backend/app/main.py
+  - backend/app/core/config.py
+  - backend/scripts/check_env.py
+  - backend/tests/test_health_endpoint.py
+  - backend/tests/test_backend_env_check.py
+  - backend/scripts/check_slo_burn_rate_gate.py
+  - backend/scripts/run_canary_guard.py
+  - backend/tests/test_canary_guard.py
+  - scripts/canary-guard.sh
+  - ".github/workflows/release-gate.yml"
+  - ".github/workflows/slo-burn-rate-monitor.yml"
+  - ".github/workflows/canary-guard.yml"
+  next_action: calibrate production threshold envs and decide when to enforce insufficient-data
+    as blocking
+- id: REL-GATE-01
+  phase: PHASE0_RELIABILITY
+  title: Burn-rate based deploy gate
+  owner: sre
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T04:25:55Z'
+  evidence_paths:
+  - backend/scripts/check_slo_burn_rate_gate.py
+  - scripts/release-gate.sh
+  - ".github/workflows/release-gate.yml"
+  - ".github/workflows/slo-burn-rate-monitor.yml"
+  - ".github/workflows/canary-guard.yml"
+  depends_on:
+  - SLO-OBS
+  next_action: wire production rollout system with CANARY_GUARD_ROLLOUT_HOOK_URL and
+    CANARY_GUARD_ROLLBACK_HOOK_URL
+- id: REL-GATE-02
+  phase: PHASE0_RELIABILITY
+  title: Canary + auto rollback
+  owner: sre
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T04:25:55Z'
+  evidence_paths:
+  - backend/scripts/run_canary_guard.py
+  - backend/tests/test_canary_guard.py
+  - scripts/canary-guard.sh
+  - ".github/workflows/canary-guard.yml"
+  - backend/scripts/check_env.py
+  next_action: connect live rollout/rollback hooks and execute first canary fire-drill
+- id: DEG-01
+  phase: PHASE0_RELIABILITY
+  title: Degradation matrix implementation
+  owner: backend
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: document and implement journal/card/push downgrade behavior
+- id: DEG-02
+  phase: PHASE0_RELIABILITY
+  title: Provider outage UX spec
+  owner: frontend
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define user-facing fallback copy and recovery path
+- id: LEGAL-FOUNDATION
+  phase: PHASE0_2_LEGAL
+  title: Privacy/ToS/consent receipts + age gating package
+  owner: legal-ops
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: ship policy versioning + consent receipts + age gate policy
+- id: DATA-RIGHTS-02
+  phase: PHASE0_2_LEGAL
+  title: Monthly data-rights fire drill cadence
+  owner: backend-privacy
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T02:26:41Z'
+  evidence_paths:
+  - docs/security/evidence/p0-drill-20260217T022550Z.json
+  next_action: schedule next monthly drill and keep evidence freshness under 35 days
+- id: SEC-TEST-02
+  phase: PHASE1_CORE_SECURITY
+  title: Endpoint authorization matrix coverage
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T03:19:01Z'
+  evidence_paths:
+  - backend/scripts/security-gate.sh
+  - backend/scripts/check_endpoint_authorization_matrix.py
+  - backend/scripts/check_read_authorization_matrix.py
+  - docs/security/endpoint-authorization-matrix.json
+  - docs/security/read-authorization-matrix.json
+  - backend/tests/test_endpoint_authorization_matrix_policy.py
+  - backend/tests/test_read_authorization_matrix_policy.py
+  next_action: update write/read matrix rows and test_ref markers when endpoint authorization
+    behavior is added or changed
+- id: SEC-09
+  phase: PHASE1_CORE_SECURITY
+  title: OWASP mapping + test gates
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T03:46:03Z'
+  evidence_paths:
+  - docs/security/owasp-api-top10-mapping.md
+  - backend/scripts/check_function_level_authorization.py
+  - backend/tests/test_function_level_authorization_policy.py
+  - backend/scripts/export_api_inventory.py
+  - docs/security/api-inventory.json
+  - backend/tests/test_api_inventory_contract.py
+  - backend/scripts/check_api_inventory_owner_attestation.py
+  - docs/security/api-inventory-owner-attestation.json
+  - docs/security/api-inventory-owner-attestation.md
+  - backend/tests/test_api_inventory_owner_attestation_policy.py
+  - ".github/CODEOWNERS"
+  - ".github/workflows/api-inventory-attestation.yml"
+  - backend/tests/test_security_headers.py
+  - backend/scripts/security-gate.sh
+  next_action: keep monthly attestation workflow green and add chatops notifications
+    beyond GitHub issue alerts
+- id: SEC-RATE-LIMIT
+  phase: PHASE1_CORE_SECURITY
+  title: Formal rate-limit and abuse budget policy
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T03:46:03Z'
+  evidence_paths:
+  - docs/security/abuse-budget-policy.md
+  - backend/app/services/rate_limit.py
+  - backend/app/services/rate_limit_runtime_metrics.py
+  - backend/app/services/request_identity.py
+  - backend/tests/test_abuse_budget_policy.py
+  - backend/tests/test_rate_limit_runtime_metrics.py
+  - backend/tests/test_health_endpoint.py
+  - backend/tests/test_journal_notification_rules.py
+  - backend/tests/test_card_mode_isolation.py
+  - backend/scripts/security-gate.sh
+  next_action: calibrate per-scope limits against production traffic and wire burn-rate
+    alerts
+- id: SEC-02
+  phase: PHASE1_CORE_SECURITY
+  title: WebSocket abuse protections
+  owner: backend
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T01:32:50Z'
+  evidence_paths:
+  - backend/tests/test_ws_abuse_guard.py
+  - backend/tests/test_websocket_auth_guard.py
+  next_action: formalize capacity budget and alert policy
+- id: SEC-04
+  phase: PHASE1_CORE_SECURITY
+  title: Audit log baseline
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T02:04:33Z'
+  evidence_paths:
+  - backend/app/models/audit_event.py
+  - backend/app/services/audit_log.py
+  - backend/app/services/audit_log_retention.py
+  - backend/scripts/run_audit_log_retention.py
+  - backend/scripts/run_audit_log_retention_audit.py
+  - backend/tests/test_audit_log_baseline.py
+  - backend/tests/test_audit_log_security_controls.py
+  - backend/tests/test_audit_log_billing_notification_controls.py
+  - backend/tests/test_security_evidence_validation.py
+  - ".github/workflows/audit-log-retention.yml"
+  - scripts/audit-log-retention.sh
+  - docs/security/audit-log-retention-policy.md
+  - backend/scripts/security-gate.sh
+  - docs/security/evidence/audit-log-retention-20260217T044703Z.json
+  - docs/security/evidence/audit-log-retention-20260217T044703Z.md
+  next_action: keep retention audit cadence and freshness gate green
+- id: PRIV-E2EE-01
+  phase: PHASE1_CORE_SECURITY
+  title: Field-level encryption for sensitive fields
+  owner: backend-security
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: select sensitive fields and key management model
+- id: DATA-01
+  phase: PHASE1_CORE_SECURITY
+  title: Data classification policy
+  owner: security-governance
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T07:22:32Z'
+  evidence_paths:
+  - docs/security/data-classification-policy.json
+  - backend/scripts/check_data_classification_contract.py
+  - backend/tests/test_data_classification_contract_policy.py
+  - backend/scripts/security-gate.sh
+  next_action: keep sensitivity mapping and handling rules aligned with API inventory
+    data_sensitivity values
+- id: DATA-02
+  phase: PHASE1_CORE_SECURITY
+  title: Retention policy
+  owner: security-governance
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T07:14:16Z'
+  evidence_paths:
+  - docs/security/data-retention-policy.json
+  - backend/scripts/check_data_retention_contract.py
+  - backend/tests/test_data_retention_contract_policy.py
+  - backend/scripts/security-gate.sh
+  - docs/security/audit-log-retention-policy.md
+  next_action: define trash/purge extensions while keeping retention contract gate
+    green
+- id: DATA-03
+  phase: PHASE0_2_LEGAL
+  title: Export/download API hardening
+  owner: backend-privacy
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T04:59:58Z'
+  evidence_paths:
+  - backend/tests/test_data_rights_api.py
+  - backend/tests/test_data_rights_contract_policy.py
+  - backend/scripts/check_data_rights_contract.py
+  - docs/security/data-rights-export-package-spec.json
+  - docs/security/data-rights-deletion-graph.json
+  - docs/security/data-rights-fire-drill.md
+  next_action: keep export package/deletion graph specs in sync with API contract
+    changes
+- id: DATA-DEL-01
+  phase: PHASE1_CORE_SECURITY
+  title: Trash + purge deletion lifecycle policy
+  owner: backend-privacy
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T08:03:08Z'
+  evidence_paths:
+  - docs/security/data-deletion-lifecycle-policy.json
+  - backend/scripts/check_data_deletion_lifecycle_contract.py
+  - backend/tests/test_data_deletion_lifecycle_contract_policy.py
+  - backend/app/services/data_deletion_lifecycle.py
+  - backend/app/services/data_soft_delete_purge.py
+  - backend/alembic/versions/ab8c9d0e1f3a_add_deleted_at_columns_for_soft_delete.py
+  - backend/scripts/run_data_soft_delete_purge.py
+  - backend/scripts/run_data_soft_delete_purge_audit.py
+  - backend/tests/test_data_soft_delete_purge_service.py
+  - docs/security/data-soft-delete-purge-audit.md
+  - ".github/workflows/data-soft-delete-purge.yml"
+  - docs/security/evidence/data-soft-delete-purge-20260217T080308Z.json
+  - backend/tests/test_data_rights_api.py
+  - backend/scripts/security-gate.sh
+  - docs/security/data-rights-fire-drill.md
+  next_action: run first controlled apply window (`--apply`) in staging and capture
+    rollback + incident playbook evidence
+- id: AI-POL-01
+  phase: PHASE1_CORE_SECURITY
+  title: Non-impersonation policy
+  owner: ai-safety
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: codify policy checks in prompt/test suite
+- id: AI-EVAL-02
+  phase: PHASE1_CORE_SECURITY
+  title: Safety/policy regression in CI
+  owner: ai-safety
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: create red-team scenarios and CI gate
+- id: SCAL-DB-PARTITION
+  phase: PHASE1_5_SCALABILITY
+  title: DB partition strategy for journals/card_responses
+  owner: backend
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths: []
+  next_action: choose partition key and migration plan
+- id: SCAL-READ-REPLICA
+  phase: PHASE1_5_SCALABILITY
+  title: Read replica strategy
+  owner: backend
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths: []
+  next_action: separate feed/history reads from write path
+- id: SCAL-WS-REDIS
+  phase: PHASE1_5_SCALABILITY
+  title: WebSocket horizontal scale with Redis pub/sub
+  owner: backend
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths: []
+  next_action: introduce broker-based fanout manager
+- id: DATA-READ-01
+  phase: PHASE1_5_SCALABILITY
+  title: Read model / denormalization
+  owner: backend
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: prototype materialized views for feed/streak
+- id: CACHE-01
+  phase: PHASE1_5_SCALABILITY
+  title: Cache strategy
+  owner: platform
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define edge + server cache contract
+- id: QUEUE-01
+  phase: PHASE1_5_SCALABILITY
+  title: Async pipeline for analysis/push/reports
+  owner: backend
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: move long-latency jobs out of request path
+- id: DECK-8-PACK
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Eight deck migration end-to-end
+  owner: product-content
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths:
+  - frontend/src/services/api-client.ts
+  - backend/app/api/routers/card_decks.py
+  next_action: finish content automation and review workflow
+- id: DECK-CONTENT-AUTO
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Automated content generation pipeline
+  owner: product-content
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths:
+  - frontend/scripts/seed.ts
+  next_action: create generation + human-review pipeline
+- id: DECK-CONTENT-REVIEW
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Question review mechanism
+  owner: product-content
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define review rubric and moderation checklist
+- id: DECK-LIBRARY-UX
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Deck library UX polish
+  owner: frontend
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths:
+  - frontend/src/components/features/DailyCard.tsx
+  next_action: optimize card browsing flow and mobile ergonomics
+- id: DECK-I18N-L10N
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Deck content i18n/l10n adaptation
+  owner: product-content
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define locale-specific editorial plan
+- id: NOTIF-MULTICHANNEL
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Multi-channel notification trigger matrix
+  owner: backend-notifications
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: formalize trigger table across journal/card/bind events
+- id: PUSH-P0
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Web Push baseline
+  owner: backend-notifications
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: implement VAPID contract, subscription lifecycle, and delivery observability
+- id: EMAIL-OPS
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Email provider ops hardening
+  owner: backend-notifications
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths:
+  - backend/tests/test_notification_service.py
+  next_action: configure provider SLA monitoring and cleanup jobs
+- id: GROW-NSM
+  phase: PHASEX_GROWTH
+  title: North star metric (WRM)
+  owner: growth
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define WRM contract and tracking events
+- id: EXP-01
+  phase: PHASEX_GROWTH
+  title: Experiment framework
+  owner: growth
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: bootstrap feature flag + guardrail metrics
+- id: GROW-REFERRAL
+  phase: PHASEX_GROWTH
+  title: Referral loop optimization
+  owner: growth
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: implement invite funnel tracking (view->signup->bind)
+- id: GROW-ACTIVATION
+  phase: PHASEX_GROWTH
+  title: Activation funnel dashboard
+  owner: growth
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define conversion events and cohort views
+- id: GAME-STREAK
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Couple streak system
+  owner: backend
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: add streak fields and reward multipliers
+- id: GAME-LOVE-BAR
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Love bar visual feedback
+  owner: frontend
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: ship score progress UI component
+- id: GAME-TITLES
+  phase: PHASE2_NOTIFICATION_AND_POLISH
+  title: Level/title reward system
+  owner: frontend
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define level table and unlock assets
+- id: MON-01
+  phase: PHASEY_MONETIZATION
+  title: Subscription tiering
+  owner: monetization
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: finalize free/premium/couple plan matrix
+- id: MON-02
+  phase: PHASEY_MONETIZATION
+  title: Entitlements service
+  owner: backend-billing
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: implement server-side entitlement source of truth
+- id: MON-03
+  phase: PHASEY_MONETIZATION
+  title: Payment integrations (Stripe/IAP/Play)
+  owner: backend-billing
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: add provider adapters and parity tests
+- id: BILL-STORE-01
+  phase: PHASEY_MONETIZATION
+  title: App Store / Play billing compliance matrix
+  owner: monetization
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: publish compliance checklist and review process
+- id: BILL-STORE-02
+  phase: PHASEY_MONETIZATION
+  title: Cross-platform entitlement parity tests
+  owner: backend-billing
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: add parity test cases for iOS/Android/Web
+- id: MEMORY-LANE
+  phase: PHASE3_EXPANSION
+  title: Memory lane archive system
+  owner: product
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define feed/calendar model and media attachments
+- id: LIFE-COACH
+  phase: PHASE3_EXPANSION
+  title: Active care / life coach triggers
+  owner: ai-product
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define inactivity trigger and safety boundaries
+- id: RAG-MEMORY
+  phase: PHASE3_EXPANSION
+  title: Long-term memory via RAG
+  owner: ai-platform
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: prototype embedding pipeline with privacy scrub
+- id: COMM-01
+  phase: PHASE3_EXPANSION
+  title: Whisper wall (anonymized community)
+  owner: community
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: ship de-identification and moderation pipeline first
+- id: COMM-02
+  phase: PHASE3_EXPANSION
+  title: Deck marketplace / creator economy
+  owner: community
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define creator onboarding, moderation, payouts compliance
+- id: OPS-HEALTHCHECK
+  phase: PHASE4_OPS
+  title: Health check external monitoring
+  owner: platform
+  priority: P1
+  status: in_progress
+  last_verified_at: 
+  evidence_paths: []
+  next_action: wire uptime monitor to /health with alert routing
+- id: OPS-03
+  phase: PHASE4_OPS
+  title: Incident playbooks (AI outage / WS storm)
+  owner: sre
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: publish runbooks and complete at least one drill each
+- id: OPS-BACKUP-01
+  phase: PHASE4_OPS
+  title: Automated encrypted backups
+  owner: sre
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: set schedule + encryption + restore validation policy
+- id: OPS-BACKUP-02
+  phase: PHASE4_OPS
+  title: Quarterly restore drills
+  owner: sre
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: run first restore drill and capture evidence report
+- id: AI-ROUTER-01
+  phase: PHASE4_OPS
+  title: AI router multi-provider abstraction
+  owner: ai-platform
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define provider interface + fallback policy
+- id: AI-OPS-01
+  phase: PHASE4_OPS
+  title: Prompt rollout policy (canary + guardrails)
+  owner: ai-platform
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: set versioned prompt rollout and rollback contract
+- id: UI-DECK-VISUAL
+  phase: PHASE5_CONTINUOUS_POLISH
+  title: Deck-specific visuals and animations
+  owner: frontend
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: ship card back themes and motion primitives
+- id: UI-DYNAMIC-BG
+  phase: PHASE5_CONTINUOUS_POLISH
+  title: Mood-driven dynamic backgrounds
+  owner: frontend
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: map mood labels to visual tokens
+- id: A11Y-WCAG-01
+  phase: PHASE5_CONTINUOUS_POLISH
+  title: WCAG 2.2 AA checklist + automated checks
+  owner: frontend
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: integrate axe/lighthouse checks in CI
+- id: DS-01
+  phase: PHASE5_CONTINUOUS_POLISH
+  title: Design tokens foundation
+  owner: design-system
+  priority: P1
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: publish token schema across web/mobile
+- id: DS-02
+  phase: PHASE5_CONTINUOUS_POLISH
+  title: Motion system standards
+  owner: design-system
+  priority: P2
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: define core animation curves and duration scale

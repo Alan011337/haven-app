@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "ai-persona-policy",
+  "persona_id": "third_party_observer_v1",
+  "immutable_policies": [
+    "AI-POL-01",
+    "AI-POL-02",
+    "AI-POL-03"
+  ],
+  "dynamic_context_injection": {
+    "enabled_by_default": false,
+    "feature_flag": "AI_DYNAMIC_CONTEXT_INJECTION_ENABLED",
+    "strategy": [
+      "relationship_weather_inference",
+      "conflict_to_deescalation_guidance",
+      "repair_signal_amplification"
+    ]
+  },
+  "runtime_output_guardrail": {
+    "enabled_by_default": true,
+    "feature_flag": "AI_PERSONA_RUNTIME_GUARDRAIL_ENABLED",
+    "version": "v1",
+    "strategy": [
+      "non_impersonation_runtime_assertion",
+      "partner_identity_claim_rewrite",
+      "direct_love_phrase_rewrite"
+    ],
+    "fallback_behavior": "sanitize_output_and_keep_third_party_observer_voice"
+  },
+  "references": {
+    "ai_policy_notice": "POLICY_AI.md",
+    "prompt_source": "backend/app/core/prompts.py",
+    "persona_service": "backend/app/services/ai_persona.py",
+    "analysis_service": "backend/app/services/ai.py",
+    "persona_doc": "docs/ai-safety/persona-engine.md",
+    "persona_tests": "backend/tests/test_ai_persona.py",
+    "contract_tests": "backend/tests/test_ai_persona_policy_contract.py"
+  }
+}

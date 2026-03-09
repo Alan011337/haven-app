@@ -1,0 +1,188 @@
+name: Migration Rehearsal (Postgres)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 1 * * 2"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  migration-rehearsal-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: haven
+          POSTGRES_USER: haven
+          POSTGRES_DB: haven
+        options: >-
+          --health-cmd "pg_isready -U haven -d haven"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql+psycopg://haven:haven@127.0.0.1:5432/haven
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      PYTHONUTF8: "1"
+      PYTHONPATH: .
+      MIGRATION_REHEARSAL_MAX_SECONDS: "900"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Rehearse alembic upgrade/downgrade/upgrade on Postgres
+        id: rehearsal
+        continue-on-error: true
+        run: |
+          started_at="$(date +%s)"
+          ./scripts/run-alembic.sh --mode verify-only
+          ./scripts/run-alembic.sh upgrade head
+          python - <<'PY'
+          import uuid
+          from datetime import datetime, timezone
+          from sqlalchemy import create_engine, inspect, text
+          from app.core.config import settings
+
+          engine = create_engine(settings.DATABASE_URL)
+          with engine.begin() as conn:
+            table_names = set(inspect(conn).get_table_names())
+            if "events_log" in table_names:
+              conn.execute(
+                text(
+                  """
+                  INSERT INTO events_log (
+                    event_id, ts, event_name, dedupe_key, created_at, updated_at
+                  ) VALUES (
+                    :event_id, :ts, :event_name, :dedupe_key, :created_at, :updated_at
+                  )
+                  """
+                ),
+                {
+                  "event_id": str(uuid.uuid4()),
+                  "ts": datetime.now(timezone.utc),
+                  "event_name": "migration_rehearsal_seed",
+                  "dedupe_key": f"migration-rehearsal:{uuid.uuid4()}",
+                  "created_at": datetime.now(timezone.utc),
+                  "updated_at": datetime.now(timezone.utc),
+                },
+              )
+          print("[migration-rehearsal] seed fixture inserted")
+          PY
+          ./scripts/run-alembic.sh downgrade -1
+          ./scripts/run-alembic.sh upgrade head
+          finished_at="$(date +%s)"
+          elapsed="$((finished_at-started_at))"
+          echo "MIGRATION_REHEARSAL_ELAPSED_SECONDS=${elapsed}" >> "${GITHUB_ENV}"
+          echo "MIGRATION_REHEARSAL_STARTED_AT=${started_at}" >> "${GITHUB_ENV}"
+          echo "MIGRATION_REHEARSAL_FINISHED_AT=${finished_at}" >> "${GITHUB_ENV}"
+          if [ "${elapsed}" -gt "${MIGRATION_REHEARSAL_MAX_SECONDS}" ]; then
+            echo "[migration-rehearsal] fail: elapsed ${elapsed}s exceeded budget ${MIGRATION_REHEARSAL_MAX_SECONDS}s"
+            exit 1
+          fi
+
+      - name: Build migration rehearsal summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          outcome = os.environ.get("REHEARSAL_OUTCOME", "unknown")
+          payload = {
+              "artifact_kind": "migration-rehearsal-postgres",
+              "schema_version": "v1",
+              "generated_at": datetime.now(timezone.utc).isoformat(),
+              "result": "pass" if outcome == "success" else "fail",
+              "meta": {
+                  "database": "postgres",
+                  "outcome": outcome,
+                  "elapsed_seconds": int(os.environ.get("MIGRATION_REHEARSAL_ELAPSED_SECONDS", "0") or 0),
+                  "started_at_unix": int(os.environ.get("MIGRATION_REHEARSAL_STARTED_AT", "0") or 0),
+                  "finished_at_unix": int(os.environ.get("MIGRATION_REHEARSAL_FINISHED_AT", "0") or 0),
+                  "max_budget_seconds": int(os.environ.get("MIGRATION_REHEARSAL_MAX_SECONDS", "900") or 900),
+              },
+          }
+          Path("/tmp/migration-rehearsal-postgres-summary.json").write_text(
+              json.dumps(payload, ensure_ascii=True, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+        env:
+          REHEARSAL_OUTCOME: ${{ steps.rehearsal.outcome }}
+
+      - name: Upload migration rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-rehearsal-postgres
+          path: /tmp/migration-rehearsal-postgres-summary.json
+          if-no-files-found: error
+
+      - name: Open or Update Alert Issue
+        if: steps.rehearsal.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P0][Migration] Postgres rehearsal failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Postgres migration rehearsal failed in CI.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Please inspect `migration-rehearsal-postgres` artifact and fix migration rollback safety.",
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail Job on Rehearsal Failure
+        if: steps.rehearsal.outcome == 'failure'
+        run: exit 1

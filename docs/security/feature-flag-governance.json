@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "feature-flag-governance",
+  "owner": "platform-runtime",
+  "references": {
+    "feature_flag_service": "backend/app/services/feature_flags.py",
+    "alpha_gate_doc": "docs/alpha-gate-v1.md",
+    "release_checklist": "RELEASE_CHECKLIST.md"
+  },
+  "intentionally_unmapped_kill_switches": [
+    "disable_growth_events_ingest"
+  ],
+  "entries": [
+    {"flag": "growth_referral_enabled", "kill_switch": "disable_referral_funnel", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_referral_funnel=true"},
+    {"flag": "growth_ab_experiment_enabled", "kill_switch": "disable_growth_ab_experiment", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_growth_ab_experiment=true"},
+    {"flag": "growth_pricing_experiment_enabled", "kill_switch": "disable_pricing_experiment", "owner_team": "billing", "risk_tier": "tier_0", "cuj_impact": true, "rollback_action": "set disable_pricing_experiment=true"},
+    {"flag": "growth_reengagement_hooks_enabled", "kill_switch": "disable_growth_reengagement_hooks", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_growth_reengagement_hooks=true"},
+    {"flag": "growth_activation_dashboard_enabled", "kill_switch": "disable_growth_activation_dashboard", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": false, "rollback_action": "set disable_growth_activation_dashboard=true"},
+    {"flag": "growth_onboarding_quest_enabled", "kill_switch": "disable_growth_onboarding_quest", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": false, "rollback_action": "set disable_growth_onboarding_quest=true"},
+    {"flag": "growth_sync_nudges_enabled", "kill_switch": "disable_growth_sync_nudges", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_growth_sync_nudges=true"},
+    {"flag": "growth_first_delight_enabled", "kill_switch": "disable_growth_first_delight", "owner_team": "growth", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_growth_first_delight=true"},
+    {"flag": "weekly_review_v1", "kill_switch": "disable_weekly_review_v1", "owner_team": "product", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_weekly_review_v1=true"},
+    {"flag": "repair_flow_v1", "kill_switch": "disable_repair_flow_v1", "owner_team": "safety", "risk_tier": "tier_0", "cuj_impact": true, "rollback_action": "set disable_repair_flow_v1=true"},
+    {"flag": "dynamic_background_enabled", "kill_switch": "disable_dynamic_background", "owner_team": "frontend", "risk_tier": "tier_2", "cuj_impact": false, "rollback_action": "set disable_dynamic_background=true"},
+    {"flag": "websocket_realtime_enabled", "kill_switch": "disable_websocket_realtime", "owner_team": "realtime", "risk_tier": "tier_0", "cuj_impact": true, "rollback_action": "set disable_websocket_realtime=true"},
+    {"flag": "webpush_enabled", "kill_switch": "disable_webpush", "owner_team": "notifications", "risk_tier": "tier_1", "cuj_impact": false, "rollback_action": "set disable_webpush=true"},
+    {"flag": "email_notifications_enabled", "kill_switch": "disable_email_notifications", "owner_team": "notifications", "risk_tier": "tier_1", "cuj_impact": false, "rollback_action": "set disable_email_notifications=true"},
+    {"flag": "timeline_cursor_enabled", "kill_switch": "disable_timeline_cursor", "owner_team": "backend", "risk_tier": "tier_1", "cuj_impact": true, "rollback_action": "set disable_timeline_cursor=true"},
+    {"flag": "safety_mode_enabled", "kill_switch": "disable_safety_mode", "owner_team": "safety", "risk_tier": "tier_0", "cuj_impact": true, "rollback_action": "set disable_safety_mode=true"}
+  ]
+}

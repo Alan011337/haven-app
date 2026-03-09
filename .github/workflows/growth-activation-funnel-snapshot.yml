@@ -1,0 +1,90 @@
+name: Growth Activation Funnel Snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  growth-activation-funnel-snapshot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Generate growth activation funnel snapshot evidence
+        run: |
+          python scripts/run_growth_activation_funnel_snapshot.py \
+            --window-days 30 \
+            --output docs/growth/evidence/activation-funnel-snapshot-${GITHUB_RUN_ID}.json \
+            --latest-path docs/growth/evidence/activation-funnel-snapshot-latest.json
+
+      - name: Growth activation funnel snapshot summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path("docs/growth/evidence/activation-funnel-snapshot-latest.json")
+          lines = ["### Daily Growth Activation Funnel Snapshot"]
+          if not summary_path.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `snapshot_missing`")
+          else:
+              payload = json.loads(summary_path.read_text(encoding="utf-8"))
+              snapshot = payload.get("snapshot") or {}
+              counts = snapshot.get("counts") or {}
+              metrics = snapshot.get("metrics") or {}
+              evaluation = payload.get("evaluation") or {}
+              lines.append(f"- snapshot_status: `{snapshot.get('status', 'unknown')}`")
+              lines.append(f"- evaluation_status: `{evaluation.get('status', 'unknown')}`")
+              lines.append(f"- signup_completed_users: `{counts.get('signup_completed_users', 'unknown')}`")
+              lines.append(f"- partner_bound_users: `{counts.get('partner_bound_users', 'unknown')}`")
+              lines.append(f"- first_journal_users: `{counts.get('first_journal_users', 'unknown')}`")
+              lines.append(f"- first_deck_users: `{counts.get('first_deck_users', 'unknown')}`")
+              lines.append(f"- bind_rate: `{metrics.get('bind_rate', 'unknown')}`")
+              lines.append(f"- first_journal_rate: `{metrics.get('first_journal_rate', 'unknown')}`")
+              lines.append(f"- first_deck_rate: `{metrics.get('first_deck_rate', 'unknown')}`")
+              reasons = evaluation.get("reasons") or []
+              lines.append("- reasons: `" + (", ".join(str(reason) for reason in reasons) if reasons else "none") + "`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Upload growth activation funnel snapshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-activation-funnel-snapshot
+          path: |
+            docs/growth/evidence/activation-funnel-snapshot-*.json
+            docs/growth/evidence/activation-funnel-snapshot-latest.json
+          if-no-files-found: error

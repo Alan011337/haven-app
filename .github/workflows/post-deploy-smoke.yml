@@ -1,0 +1,101 @@
+name: Post Deploy Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment base URL"
+        required: true
+        type: string
+  schedule:
+    - cron: "15 2 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  post-deploy-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+      PYTHONPATH: .
+      POST_DEPLOY_BASE_URL: ${{ github.event.inputs.base_url || vars.POST_DEPLOY_BASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate base URL
+        run: |
+          if [ -z "${POST_DEPLOY_BASE_URL}" ]; then
+            echo "[post-deploy-smoke] missing POST_DEPLOY_BASE_URL"
+            exit 1
+          fi
+
+      - name: Run post deploy smoke
+        id: smoke
+        continue-on-error: true
+        run: |
+          python scripts/run_post_deploy_smoke.py \
+            --base-url "${POST_DEPLOY_BASE_URL}" \
+            --output /tmp/post-deploy-smoke-summary.json
+
+      - name: Upload smoke summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-smoke
+          path: /tmp/post-deploy-smoke-summary.json
+          if-no-files-found: error
+
+      - name: Open or Update Alert Issue
+        if: steps.smoke.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P0][Smoke] Post deploy smoke failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Post deploy smoke check failed.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Inspect `post-deploy-smoke` artifact and follow docs/INCIDENT_PLAYBOOKS.md.",
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail job on smoke failure
+        if: steps.smoke.outcome == 'failure'
+        run: exit 1

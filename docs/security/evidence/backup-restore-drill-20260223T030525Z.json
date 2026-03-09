@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "backup-restore-drill",
+  "generated_by": "backend/scripts/run_backup_restore_drill_audit.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-23T03:05:25.613520+00:00",
+  "dry_run": true,
+  "runbook_path": "docs/ops/backup-restore-runbook.md",
+  "policy_path": "docs/ops/backup-policy.json",
+  "source_evidence_kind": "data-restore-drill",
+  "source_evidence_path": "docs/security/evidence/data-restore-drill-20260223T030524Z.json",
+  "source_evidence_generated_at": "2026-02-23T03:05:24.889825+00:00",
+  "source_evidence_max_age_days": 120,
+  "backup_encryption_required": true,
+  "backup_retention_days": 35,
+  "required_checks": [
+    "runbook_present",
+    "rollback_plan_present",
+    "backup_policy_present",
+    "encryption_policy_enforced",
+    "restore_workflow_declared",
+    "source_restore_evidence_fresh",
+    "nonprod_dry_run"
+  ],
+  "checks_total": 7,
+  "checks_passed": 7,
+  "checks_failed": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "name": "runbook_present",
+      "ok": true,
+      "detail": "backup restore runbook exists and is readable"
+    },
+    {
+      "name": "rollback_plan_present",
+      "ok": true,
+      "detail": "rollback section found in runbook"
+    },
+    {
+      "name": "backup_policy_present",
+      "ok": true,
+      "detail": "backup policy exists and is valid JSON"
+    },
+    {
+      "name": "encryption_policy_enforced",
+      "ok": true,
+      "detail": "encryption policy enforced with algorithm=AES-256"
+    },
+    {
+      "name": "restore_workflow_declared",
+      "ok": true,
+      "detail": "workflow exists: .github/workflows/backup-restore-drill.yml"
+    },
+    {
+      "name": "source_restore_evidence_fresh",
+      "ok": true,
+      "detail": "source data-restore evidence freshness check passed"
+    },
+    {
+      "name": "nonprod_dry_run",
+      "ok": true,
+      "detail": "dry-run environment accepted"
+    }
+  ]
+}

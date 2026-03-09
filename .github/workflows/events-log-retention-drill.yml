@@ -1,0 +1,90 @@
+name: Events Log Retention Drill
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+
+jobs:
+  events-log-retention-drill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run events_log lifecycle dry-run
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:////tmp/haven-events-retention-drill.db
+          OPENAI_API_KEY: test-key
+          SECRET_KEY: 01234567890123456789012345678901
+          PYTHONUTF8: "1"
+          PYTHONPATH: .
+        run: |
+          python scripts/bootstrap-sqlite-schema.py
+          python scripts/run_events_log_lifecycle.py \
+            --rollup-retention-days "${EVENTS_LOG_ROLLUP_RETENTION_DAYS:-30}" \
+            --rollup-batch-size "${EVENTS_LOG_ROLLUP_BATCH_SIZE:-5000}" \
+            --retention-days "${EVENTS_LOG_RETENTION_DAYS:-120}" \
+            --retention-batch-size "${EVENTS_LOG_PURGE_BATCH_SIZE:-2000}" \
+            > /tmp/events-log-retention-drill-raw.json
+
+      - name: Build drill evidence JSON
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          raw_path = Path("/tmp/events-log-retention-drill-raw.json")
+          payload = json.loads(raw_path.read_text(encoding="utf-8"))
+          ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+          output_path = Path(f"/tmp/events-log-retention-drill-{ts}.json")
+          latest_path = Path("/tmp/events-log-retention-drill-latest.json")
+          evidence = {
+              "artifact_kind": "events-log-retention-drill",
+              "schema_version": "v1",
+              "generated_at": datetime.now(timezone.utc).isoformat(),
+              "result": "pass",
+              "meta": {
+                  "run_id": os.environ.get("RUN_ID"),
+                  "run_number": os.environ.get("RUN_NUMBER"),
+                  "run_attempt": os.environ.get("RUN_ATTEMPT"),
+                  "mode": "dry_run",
+                  "governance_mode": "rollup_then_retention",
+              },
+              "drill": {
+                  "service": "events_log",
+                  "summary": payload,
+              },
+          }
+          content = json.dumps(evidence, ensure_ascii=True, sort_keys=True, indent=2) + "\n"
+          output_path.write_text(content, encoding="utf-8")
+          latest_path.write_text(content, encoding="utf-8")
+          print(f"evidence_path={output_path}")
+          print(f"latest_path={latest_path}")
+          PY
+
+      - name: Upload events retention drill artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: events-log-retention-drill
+          path: |
+            /tmp/events-log-retention-drill-*.json

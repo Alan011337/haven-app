@@ -1,0 +1,32 @@
+{
+  "schema_version": "v1",
+  "owners": {
+    "growth": "growth",
+    "cuj": "core-loop",
+    "realtime": "platform",
+    "security": "security"
+  },
+  "events": [
+    "signup_completed",
+    "login_succeeded",
+    "partner_linked",
+    "allowlist_denied",
+    "daily_sync_submitted",
+    "daily_card_revealed",
+    "card_answer_submitted",
+    "appreciation_sent",
+    "daily_loop_completed",
+    "timeline_viewed",
+    "timeline_page_loaded",
+    "ws_connected",
+    "ws_disconnected",
+    "ws_reconnect_attempted",
+    "realtime_fallback_activated",
+    "authz_denied_object_level",
+    "unauthorized_request",
+    "email_notification_queued",
+    "email_notification_sent",
+    "webpush_subscribed",
+    "webpush_sent"
+  ]
+}

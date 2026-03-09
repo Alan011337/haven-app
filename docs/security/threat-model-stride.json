@@ -1,0 +1,111 @@
+{
+  "artifact_kind": "threat-model-stride",
+  "schema_version": "1.0.0",
+  "scope": "Haven backend/frontend MVP paths (Bind/Ritual/Journal/Unlock + billing + data-rights)",
+  "assets": [
+    {"id": "user_identity", "description": "User accounts, tokens, pairing identity"},
+    {"id": "relationship_content", "description": "Journals, card responses, analyses"},
+    {"id": "billing_state", "description": "Billing command, idempotency, reconciliation records"},
+    {"id": "operational_signal", "description": "Health, SLO, audit evidence and CI gates"}
+  ],
+  "actors": [
+    {"id": "legitimate_user", "description": "Authenticated account owner"},
+    {"id": "malicious_user", "description": "Authenticated attacker abusing object access"},
+    {"id": "external_attacker", "description": "Unauthenticated attacker on public endpoints"},
+    {"id": "insider_or_misconfig", "description": "Internal mistakes, key leakage, wrong deployment settings"}
+  ],
+  "trust_boundaries": [
+    {"id": "client_to_api", "description": "Browser/app to FastAPI boundary"},
+    {"id": "api_to_db", "description": "FastAPI service to Supabase/Postgres"},
+    {"id": "api_to_ai_provider", "description": "FastAPI to OpenAI APIs"},
+    {"id": "api_to_notification_provider", "description": "FastAPI to Resend provider"}
+  ],
+  "threats": [
+    {
+      "id": "jwt_token_theft",
+      "stride": "spoofing",
+      "surface": "client_to_api",
+      "description": "Stolen or leaked JWT allows attacker to impersonate legitimate user",
+      "controls": ["token_misuse_tests", "security_baseline_docs", "hsts_enforcement"]
+    },
+    {
+      "id": "api1_bola",
+      "stride": "elevation_of_privilege",
+      "surface": "client_to_api",
+      "description": "Object-level authorization bypass on journals/cards/decks/notifications",
+      "controls": ["authorization_matrix_gate", "token_misuse_tests"]
+    },
+    {
+      "id": "partner_cross_access",
+      "stride": "elevation_of_privilege",
+      "surface": "client_to_api",
+      "description": "Authenticated user accesses non-partner relationship data via IDOR",
+      "controls": ["authorization_matrix_gate", "token_misuse_tests"]
+    },
+    {
+      "id": "api4_resource_exhaustion",
+      "stride": "denial_of_service",
+      "surface": "client_to_api",
+      "description": "Write flood and websocket storm to drain compute/token budget",
+      "controls": ["rate_limit_guard", "ws_abuse_guard", "abuse_budget_policy"]
+    },
+    {
+      "id": "token_drain_dos",
+      "stride": "denial_of_service",
+      "surface": "api_to_ai_provider",
+      "description": "Repeated journal submissions to force high OpenAI API spend",
+      "controls": ["rate_limit_guard", "abuse_budget_policy"]
+    },
+    {
+      "id": "prompt_injection",
+      "stride": "tampering",
+      "surface": "api_to_ai_provider",
+      "description": "User content attempts to override hidden instructions",
+      "controls": ["prompt_abuse_policy", "moderation_precheck", "safety_regression_tests"]
+    },
+    {
+      "id": "journal_content_tampering",
+      "stride": "tampering",
+      "surface": "client_to_api",
+      "description": "Modification of journal content after submission or in transit",
+      "controls": ["audit_log", "security_baseline_docs"]
+    },
+    {
+      "id": "audit_log_gaps",
+      "stride": "repudiation",
+      "surface": "api_to_db",
+      "description": "Missing or incomplete audit trail allows denial of destructive actions",
+      "controls": ["audit_log", "security_baseline_docs"]
+    },
+    {
+      "id": "secret_leakage",
+      "stride": "information_disclosure",
+      "surface": "insider_or_misconfig",
+      "description": "Leaked provider keys or sensitive values in logs",
+      "controls": ["env_check", "pii_redaction", "security_baseline_docs"]
+    },
+    {
+      "id": "pii_in_logs",
+      "stride": "information_disclosure",
+      "surface": "api_to_db",
+      "description": "Journal content, emails or names exposed in application logs",
+      "controls": ["pii_redaction", "structured_logger"]
+    }
+  ],
+  "control_references": {
+    "authorization_matrix_gate": "backend/scripts/check_endpoint_authorization_matrix.py",
+    "token_misuse_tests": "backend/tests/test_auth_token_misuse_regression.py",
+    "rate_limit_guard": "backend/app/services/rate_limit.py",
+    "ws_abuse_guard": "backend/app/services/ws_abuse_guard.py",
+    "abuse_budget_policy": "docs/security/abuse-budget-policy.md",
+    "prompt_abuse_policy": "docs/security/prompt-abuse-policy.json",
+    "moderation_precheck": "backend/app/services/ai.py",
+    "safety_regression_tests": "backend/tests/test_ai_safety_logic.py",
+    "env_check": "backend/scripts/check_env.py",
+    "pii_redaction": "backend/app/core/log_redaction.py",
+    "structured_logger": "backend/app/core/structured_logger.py",
+    "audit_log": "backend/app/services/audit_log.py",
+    "hsts_enforcement": "backend/app/main.py",
+    "security_baseline_docs": "SECURITY.md"
+  }
+}

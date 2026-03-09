@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.1.0",
+  "artifact_kind": "p0-drill",
+  "generated_by": "backend/scripts/run_p0_drills.py",
+  "contract_mode": "strict",
+  "generated_at": "2026-02-17T02:25:50.149496+00:00",
+  "required_checks": [
+    "billing_reconciliation_health",
+    "billing_state_change_idempotency",
+    "billing_webhook_binding_resolution",
+    "billing_webhook_identifier_conflict_guard",
+    "billing_webhook_replay_safety",
+    "billing_webhook_transition_guard",
+    "data_rights_audit_trail",
+    "data_rights_erase_integrity",
+    "data_rights_export_scope"
+  ],
+  "checks_total": 9,
+  "checks_passed": 9,
+  "checks_failed": 0,
+  "results": [
+    {
+      "name": "data_rights_export_scope",
+      "ok": true,
+      "detail": "journals=1, notifications=1"
+    },
+    {
+      "name": "data_rights_erase_integrity",
+      "ok": true,
+      "detail": "deleted_user=True,partner_unpaired=True,shared_deleted=True,unrelated_preserved=True"
+    },
+    {
+      "name": "data_rights_audit_trail",
+      "ok": true,
+      "detail": "export=yes,erase=yes"
+    },
+    {
+      "name": "billing_state_change_idempotency",
+      "ok": true,
+      "detail": "first=200,second=200,second_replayed=True,mismatch=409"
+    },
+    {
+      "name": "billing_reconciliation_health",
+      "ok": true,
+      "detail": "status=200,healthy=True,command_count=1,missing_command_ledger_count=0"
+    },
+    {
+      "name": "billing_webhook_binding_resolution",
+      "ok": true,
+      "detail": "first=200,follow=200,binding=yes,entitlement_state=PAST_DUE"
+    },
+    {
+      "name": "billing_webhook_identifier_conflict_guard",
+      "ok": true,
+      "detail": "subscription_bind=200,conflict=409"
+    },
+    {
+      "name": "billing_webhook_transition_guard",
+      "ok": true,
+      "detail": "cancel=200,invalid_paid=409,entitlement_state=CANCELED,invalid_ledger=none"
+    },
+    {
+      "name": "billing_webhook_replay_safety",
+      "ok": true,
+      "detail": "first=200,second=200,second_replayed=True,mismatch=409,receipts=1,webhook_ledgers=1"
+    }
+  ],
+  "all_passed": true
+}

@@ -1,0 +1,12 @@
+{
+  "release_freeze": false,
+  "window": "rolling_24h",
+  "checked_at": "2026-02-22T00:00:00Z",
+  "source": "bootstrap",
+  "reason": null,
+  "slo_snapshot": {
+    "SLO-01": "unknown",
+    "SLO-02": "unknown"
+  },
+  "notes": "Update by SRE automation or incident commander."
+}

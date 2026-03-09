@@ -1,0 +1,113 @@
+{
+  "plan_version": "2026-02-22",
+  "project": "Haven P1",
+  "inventory": {
+    "frontend": {
+      "framework": "Next.js 16 + TypeScript",
+      "paths": [
+        "frontend/src/app",
+        "frontend/src/components",
+        "frontend/src/services"
+      ]
+    },
+    "backend": {
+      "framework": "FastAPI + SQLModel + Alembic",
+      "paths": [
+        "backend/app",
+        "backend/alembic",
+        "backend/scripts",
+        "backend/tests"
+      ]
+    },
+    "ci": {
+      "workflows": [
+        ".github/workflows/release-gate.yml",
+        ".github/workflows/slo-burn-rate-monitor.yml",
+        ".github/workflows/billing-reconciliation.yml"
+      ]
+    }
+  },
+  "risks": [
+    "payment_webhook_replay_and_reconciliation_drift",
+    "alembic_legacy_baseline_on_fresh_sqlite",
+    "residual_identifier_logging",
+    "data_rights_deletion_graph_consistency",
+    "missing_release_freeze_contract"
+  ],
+  "dependencies": [
+    "stripe_keys_and_webhook_secret",
+    "vapid_keypair_and_push_permissions",
+    "slo_monitoring_endpoint_and_token",
+    "feature_flag_runtime",
+    "background_worker_queue"
+  ],
+  "prs": [
+    {
+      "id": "PR1",
+      "title": "SRE foundation: SLO docs + freeze gate + synthetics",
+      "dod": [
+        "docs/sre core documents created",
+        "error budget status contract + gate script + tests",
+        "synthetic CUJ skeleton + workflow"
+      ],
+      "tests": [
+        "backend/tests/test_error_budget_freeze_gate.py",
+        "backend/tests/test_cuj_synthetics.py",
+        "backend/tests/test_slo_burn_rate_gate.py"
+      ],
+      "rollback": [
+        "revert workflow and scripts",
+        "set allow-missing in local gate"
+      ],
+      "observability": [
+        "docs/sre/evidence synthetic artifacts"
+      ]
+    },
+    {
+      "id": "PR2",
+      "title": "Billing correctness hardening"
+    },
+    {
+      "id": "PR3",
+      "title": "Notification multi-channel + web push skeleton"
+    },
+    {
+      "id": "PR4",
+      "title": "Growth instrumentation + feature flags + referral funnel"
+    },
+    {
+      "id": "PR5",
+      "title": "Gamification streak/love bar + anti-cheat"
+    },
+    {
+      "id": "PR6",
+      "title": "Security/legal operations hardening"
+    },
+    {
+      "id": "PR7",
+      "title": "AI personality/router/eval/drift"
+    },
+    {
+      "id": "PR8",
+      "title": "Ops resilience + CS panel + solo mode + cost monitor"
+    }
+  ],
+  "planned_files": [
+    "PLAN.md",
+    "PLAN.json",
+    "RELEASE_CHECKLIST.md",
+    "docs/sre/slo.md",
+    "docs/sre/error-budget.md",
+    "docs/sre/error-budget-status.json",
+    "docs/sre/alerts.md",
+    "docs/sre/postmortem.md",
+    "docs/sre/canary.md",
+    "docs/sre/degradation.md",
+    "docs/sre/synthetic-cuj.md",
+    "scripts/synthetics/run_cuj_synthetics.py",
+    "backend/scripts/check_error_budget_freeze_gate.py",
+    "backend/tests/test_error_budget_freeze_gate.py",
+    "backend/tests/test_cuj_synthetics.py",
+    ".github/workflows/cuj-synthetics.yml"
+  ]
+}

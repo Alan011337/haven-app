@@ -1,0 +1,84 @@
+name: SLO Burn Rate Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  slo-burn-rate-monitor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check SLO burn-rate gate
+        id: slo_gate
+        continue-on-error: true
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+          SLO_GATE_TIMEOUT_SECONDS: "10"
+        run: python scripts/check_slo_burn_rate_gate.py
+
+      - name: Open or Update Alert Issue
+        if: steps.slo_gate.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P0][SRE] SLO burn-rate gate failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Scheduled SLO burn-rate monitor failed.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Action items:",
+              "1) Inspect `/health/slo` WS/CUJ SLI + burn-rate evaluation payload.",
+              "2) Check recent WS rejection/message-block counters, CUJ failure reasons, and provider/network incidents.",
+              "3) If sustained, freeze feature deploy and mitigate per runbook."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail Job on SLO Gate Failure
+        if: steps.slo_gate.outcome == 'failure'
+        run: exit 1

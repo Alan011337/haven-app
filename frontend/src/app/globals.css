@@ -1,0 +1,693 @@
+/* frontend/src/app/globals.css */
+
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Design tokens: ART-DIRECTION palette (OKLCH L C H for alpha via oklch(var(--x) / <alpha-value>)) */
+  /* Light: Pearl White bg, Deep Charcoal text, Muted #8E8B87; Primary: Champagne Gold #D6A87C; Accent: Sage #899A8D */
+  --background: 0.988 0.002 86;
+  --foreground: 0.198 0.006 56;
+  --muted: 0.96 0.006 86;
+  --muted-foreground: 0.584 0.01 74;
+  --card: 0.985 0.003 86;
+  --card-foreground: 0.198 0.006 56;
+  --popover: 0.988 0.002 86;
+  --popover-foreground: 0.198 0.006 56;
+  --primary: 0.748 0.078 69.5;
+  --primary-foreground: 0.22 0.01 56;
+  --secondary: 0.96 0.006 86;
+  --secondary-foreground: 0.198 0.006 56;
+  --accent: 0.624 0.028 145;
+  --accent-foreground: 0.22 0.01 56;
+  --destructive: 0.577 0.245 27.325;
+  --destructive-foreground: 0.98 0.005 86;
+  /* Border: ART-DIRECTION alpha ≤15% to avoid harsh lines. */
+  --border: 0.92 0.008 86 / 0.12;
+  --input: 0.92 0.008 86;
+  --ring: 0.748 0.078 69.5;
+  /* Spacing: white space & rhythm (P2-A Phase 1 — 留白與神聖感) */
+  --space-page: 1.5rem;
+  --space-section: 1.25rem;
+  --space-block: 0.75rem;
+  /* Radius: ART-DIRECTION base 1.5rem (24px) */
+  --radius: 1.5rem;
+  --radius-card: 1.5rem;
+  --radius-button: 9999px;
+  --radius-input: 0.75rem;
+  /* Shadows: ART-DIRECTION max 3 styles — soft (cards), lift (hover), modal (dialogs). */
+  --shadow-soft: 0 4px 12px -2px rgb(0 0 0 / 0.06), 0 2px 6px -2px rgb(0 0 0 / 0.04);
+  --shadow-lift: 0 20px 40px -10px rgb(214 168 124 / 0.12), 0 8px 16px -4px rgb(0 0 0 / 0.06);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.18);
+  /* Legacy aliases for existing usage. */
+  --shadow-card: var(--shadow-soft);
+  --shadow-card-hover: var(--shadow-lift);
+  /* Filter drop-shadow (icons/decoration); single semantic to match soft elevation. */
+  --drop-shadow-soft: 0 2px 8px rgb(0 0 0 / 0.06);
+  /* Phase 4: Glass edge and input focus glow (semantic; no arbitrary shadows in components). */
+  --shadow-glass-inset: inset 0 1px 1px rgb(255 255 255 / 0.5);
+  --shadow-focus-glow: 0 0 30px -5px oklch(0.748 0.078 69.5 / 0.2);
+  --shadow-hero-glass: var(--shadow-soft), var(--shadow-glass-inset);
+  /* Phase 5: Satin button (slight bottom shadow); luxury lift easing. */
+  --shadow-satin-button: 0 2px 8px -2px rgb(0 0 0 / 0.08);
+  --ease-haven-lift: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Typography: size scale (font stacks from next/font via layout className) */
+  --text-display: 2.25rem;
+  --text-title: 1.5rem;
+  --text-body: 1rem;
+  --text-caption: 0.875rem;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* Google Fonts via <link> in layout (avoids next/font loader bug in Next 16 + webpack) */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-art: "Playfair Display", Georgia, serif;
+  --chart-1: 0.646 0.222 41.116;
+  --chart-2: 0.6 0.118 184.704;
+  --chart-3: 0.398 0.07 227.392;
+  --chart-4: 0.828 0.189 84.429;
+  --chart-5: 0.769 0.188 70.08;
+  --sidebar: 0.985 0.003 86;
+  --sidebar-foreground: 0.198 0.006 56;
+  --sidebar-primary: 0.748 0.078 69.5;
+  --sidebar-primary-foreground: 0.22 0.01 56;
+  --sidebar-accent: 0.96 0.006 86;
+  --sidebar-accent-foreground: 0.198 0.006 56;
+  --sidebar-border: 0.92 0.008 86;
+  --sidebar-ring: 0.748 0.078 69.5;
+  /* P2-A-4: Glass blur tokens for primitives only. */
+  --glass-blur-1: 1rem;
+  --glass-blur-2: 2rem;
+  --glass-blur-3: 3rem;
+  /* Hero decorative orbs (filter blur only; no arbitrary blur in components). */
+  --blur-hero-orb: 5rem;
+  --blur-hero-orb-sm: 3.75rem;
+  /* Depth level accents (semantic; no arbitrary colors in components). */
+  --depth-1: 0.65 0.08 165;
+  --depth-2: 0.72 0.12 75;
+  --depth-3: 0.55 0.12 295;
+}
+
+@theme inline {
+  --color-background: oklch(var(--background));
+  --color-foreground: oklch(var(--foreground));
+  --color-primary: oklch(var(--primary));
+  --color-primary-foreground: oklch(var(--primary-foreground));
+  --color-muted: oklch(var(--muted));
+  --color-muted-foreground: oklch(var(--muted-foreground));
+  --color-accent: oklch(var(--accent));
+  --color-accent-foreground: oklch(var(--accent-foreground));
+  --color-destructive: oklch(var(--destructive));
+  --color-destructive-foreground: oklch(var(--destructive-foreground));
+  --color-card: oklch(var(--card));
+  --color-card-foreground: oklch(var(--card-foreground));
+  --color-border: oklch(var(--border));
+  --color-input: oklch(var(--input));
+  --color-ring: oklch(var(--ring));
+  --radius-card: var(--radius-card);
+  --radius-button: var(--radius-button);
+  --radius-input: var(--radius-input);
+  --font-sans: var(--font-sans);
+  --font-art: var(--font-art);
+  --font-mono: var(--font-mono);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --text-display: var(--text-display);
+  --text-title: var(--text-title);
+  --text-body: var(--text-body);
+  --text-caption: var(--text-caption);
+  --space-page: var(--space-page);
+  --space-section: var(--space-section);
+  --space-block: var(--space-block);
+  --color-sidebar-ring: oklch(var(--sidebar-ring));
+  --color-sidebar-border: oklch(var(--sidebar-border));
+  --color-sidebar-accent-foreground: oklch(var(--sidebar-accent-foreground));
+  --color-sidebar-accent: oklch(var(--sidebar-accent));
+  --color-sidebar-primary-foreground: oklch(var(--sidebar-primary-foreground));
+  --color-sidebar-primary: oklch(var(--sidebar-primary));
+  --color-sidebar-foreground: oklch(var(--sidebar-foreground));
+  --color-sidebar: oklch(var(--sidebar));
+  --color-chart-5: oklch(var(--chart-5));
+  --color-chart-4: oklch(var(--chart-4));
+  --color-chart-3: oklch(var(--chart-3));
+  --color-chart-2: oklch(var(--chart-2));
+  --color-chart-1: oklch(var(--chart-1));
+  --color-secondary-foreground: oklch(var(--secondary-foreground));
+  --color-secondary: oklch(var(--secondary));
+  --color-popover-foreground: oklch(var(--popover-foreground));
+  --color-popover: oklch(var(--popover));
+  --color-depth-1: oklch(var(--depth-1));
+  --color-depth-2: oklch(var(--depth-2));
+  --color-depth-3: oklch(var(--depth-3));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  /* Haven Motion System (DS-02): 3–5 standard curves. Single source for animation. */
+  /* Ease: Apple-style ease-out; spring for ritual/reveal with slight overshoot. */
+  --ease-haven: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-haven-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Duration: fast / normal / slow / ritual (card flip, reveal). */
+  --duration-haven-fast: 200ms;
+  --duration-haven: 220ms;
+  --duration-haven-slow: 320ms;
+  --duration-haven-ritual: 500ms;
+}
+
+/* P2-K: Dynamic Type — respect user font size preference for accessibility. */
+html {
+  font-size: 100%;
+}
+@media (min-width: 768px) {
+  @media (prefers-contrast: more) {
+    html { font-size: 106%; }
+  }
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-body);
+  line-height: 1.625; /* ART-DIRECTION: leading-relaxed for body */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Premium scrollbar — thin, elegant, matches brand */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--primary) / 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--primary) / 0.35);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(var(--primary) / 0.25);
+}
+
+/* Text selection — branded highlight */
+::selection {
+  background: oklch(var(--primary) / 0.18);
+  color: oklch(var(--foreground));
+}
+.dark ::selection {
+  background: oklch(var(--primary) / 0.25);
+}
+
+/* P2-K: Color blindness — optional class .color-blind-safe on body; adds outlines so state is not color-only. */
+.color-blind-safe [class*="bg-green"] { outline: 2px solid currentColor; }
+.color-blind-safe [class*="bg-red"] { outline: 2px dashed currentColor; }
+.color-blind-safe [class*="text-green"] { text-decoration: underline; }
+.color-blind-safe [class*="text-red"] { text-decoration: underline; }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-art), var(--font-sans), serif;
+  letter-spacing: -0.025em; /* ART-DIRECTION: tracking-tight for h1/h2 */
+  line-height: 1.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* P2-A-4: Glass blur levels (use via primitives only). */
+@layer utilities {
+  .glass-blur-1 {
+    backdrop-filter: blur(var(--glass-blur-1));
+    -webkit-backdrop-filter: blur(var(--glass-blur-1));
+  }
+  .glass-blur-2 {
+    backdrop-filter: blur(var(--glass-blur-2));
+    -webkit-backdrop-filter: blur(var(--glass-blur-2));
+  }
+  .glass-blur-3 {
+    backdrop-filter: blur(var(--glass-blur-3));
+    -webkit-backdrop-filter: blur(var(--glass-blur-3));
+  }
+  .blur-hero-orb {
+    filter: blur(var(--blur-hero-orb));
+  }
+  .blur-hero-orb-sm {
+    filter: blur(var(--blur-hero-orb-sm));
+  }
+}
+/* ART-DIRECTION §5: Glass Panel recipe — bg-background/40 backdrop-blur-2xl border border-foreground/10 shadow-soft */
+@layer utilities {
+  .glass-panel-art {
+    background-color: oklch(var(--background) / 0.4);
+    backdrop-filter: blur(1.5rem);
+    -webkit-backdrop-filter: blur(1.5rem);
+    border: 1px solid oklch(var(--foreground) / 0.1);
+    box-shadow: var(--shadow-soft);
+  }
+  .dark .glass-panel-art {
+    background-color: oklch(var(--background) / 0.4);
+    border-color: oklch(var(--foreground) / 0.1);
+  }
+}
+
+/* P2-A: Glassmorphism — ART-DIRECTION; use via GlassCard/GlassPanel/GlassModal. */
+@layer utilities {
+  .glass {
+    background-color: rgb(255 255 255 / 0.4);
+    backdrop-filter: blur(var(--glass-blur-2));
+    -webkit-backdrop-filter: blur(var(--glass-blur-2));
+    border: 1px solid rgb(255 255 255 / 0.2);
+  }
+  .dark .glass {
+    background-color: rgb(0 0 0 / 0.4);
+    border-color: rgb(255 255 255 / 0.1);
+  }
+  .glass-card {
+    background-color: rgb(255 255 255 / 0.5);
+    backdrop-filter: blur(var(--glass-blur-2));
+    -webkit-backdrop-filter: blur(var(--glass-blur-2));
+    border: 1px solid rgb(255 255 255 / 0.25);
+    box-shadow: var(--shadow-card);
+  }
+  .dark .glass-card {
+    background-color: rgb(0 0 0 / 0.35);
+    border-color: rgb(255 255 255 / 0.1);
+  }
+  .glass-modal {
+    background-color: rgb(255 255 255 / 0.6);
+    backdrop-filter: blur(var(--glass-blur-3));
+    -webkit-backdrop-filter: blur(var(--glass-blur-3));
+    border: 1px solid rgb(255 255 255 / 0.25);
+    box-shadow: var(--shadow-modal);
+  }
+  .dark .glass-modal {
+    background-color: rgb(0 0 0 / 0.5);
+    border-color: rgb(255 255 255 / 0.1);
+  }
+  .drop-shadow-soft {
+    filter: drop-shadow(var(--drop-shadow-soft));
+  }
+  /* Phase 4: Glass edge and focus halo (semantic tokens only). */
+  .shadow-glass-inset {
+    box-shadow: var(--shadow-glass-inset);
+  }
+  .shadow-focus-glow {
+    box-shadow: var(--shadow-focus-glow);
+  }
+  .shadow-hero-glass {
+    box-shadow: var(--shadow-hero-glass);
+  }
+  /* Phase 4: Hero mesh — Champagne Gold + Dusty Rose / Sage at low opacity. */
+  .hero-mesh-gradient {
+    background: radial-gradient(ellipse 120% 80% at 50% 0%, oklch(var(--primary) / 0.35) 0%, oklch(var(--primary) / 0.12) 40%, oklch(var(--accent) / 0.08) 70%, transparent 100%);
+  }
+  .dark .hero-mesh-gradient {
+    background: radial-gradient(ellipse 120% 80% at 50% 0%, oklch(var(--primary) / 0.25) 0%, oklch(var(--primary) / 0.08) 40%, oklch(var(--accent) / 0.06) 70%, transparent 100%);
+  }
+  /* Phase 5: Ethereal background clouds (token definitions in globals only). */
+  .bg-ethereal-mesh {
+    background-color: oklch(var(--muted) / 0.4);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 0% 0%, oklch(0.95 0.02 60 / 0.1) 0%, transparent 70%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.92 0.04 300 / 0.05) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 40% at 20% 100%, oklch(0.93 0.02 85 / 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 20%, oklch(0.92 0.03 280 / 0.05) 0%, transparent 55%);
+  }
+  .dark .bg-ethereal-mesh {
+    background-color: oklch(var(--muted) / 0.4);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 0% 0%, oklch(0.35 0.04 60 / 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.35 0.05 300 / 0.06) 0%, transparent 65%);
+  }
+  /* Phase 5: Satin CTA shadow (semantic). */
+  .shadow-satin-button {
+    box-shadow: var(--shadow-satin-button);
+  }
+  /* Phase 5: Page enter keyframes (20px Y, luxury lift); respects prefers-reduced-motion. */
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-enter {
+    animation: page-enter var(--duration-haven-slow) var(--ease-haven-lift) both;
+  }
+  .animate-page-enter-delay-1 {
+    animation: page-enter var(--duration-haven-slow) var(--ease-haven-lift) 80ms both;
+  }
+  .animate-page-enter-delay-2 {
+    animation: page-enter var(--duration-haven-slow) var(--ease-haven-lift) 160ms both;
+  }
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+  /* P2-A Phase 1: White space & rhythm — use for page/section consistency */
+  .space-page {
+    padding-left: var(--space-page);
+    padding-right: var(--space-page);
+    padding-top: var(--space-page);
+    padding-bottom: var(--space-page);
+  }
+  .space-section-y {
+    padding-top: var(--space-section);
+    padding-bottom: var(--space-section);
+  }
+  .gap-block {
+    gap: var(--space-block);
+  }
+  /* P2-A: Card back patterns (CSS-only; no animation — safe for prefers-reduced-motion). */
+  .pattern-card-dots {
+    background-image: radial-gradient(rgb(255 255 255 / 0.15) 1px, transparent 1px);
+    background-size: 8px 8px;
+  }
+  .pattern-card-lines {
+    background-image: repeating-linear-gradient(-45deg, transparent, transparent 6px, rgb(255 255 255 / 0.08) 6px, rgb(255 255 255 / 0.08) 12px);
+  }
+  .pattern-card-grid {
+    background-image: linear-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.1) 1px, transparent 1px);
+    background-size: 12px 12px;
+  }
+
+  /* ══════════════════════════════════════════════
+     PREMIUM UI SYSTEM — Shimmer, Scrollbar, Float
+     ══════════════════════════════════════════════ */
+
+  /* Shimmer skeleton: luxury loading state replacing plain pulse */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(var(--muted)) 0%,
+      oklch(var(--muted) / 0.4) 40%,
+      oklch(var(--muted)) 80%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+  .dark .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(var(--muted)) 0%,
+      oklch(var(--muted) / 0.6) 40%,
+      oklch(var(--muted)) 80%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Floating animation for decorative orbs */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-12px) scale(1.02); }
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float 7s ease-in-out 2s infinite;
+  }
+  .animate-float-slow {
+    animation: float 8s ease-in-out 1s infinite;
+  }
+
+  /* Gentle breathing glow for key elements */
+  @keyframes breathe-glow {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+  }
+  .animate-breathe {
+    animation: breathe-glow 4s ease-in-out infinite;
+  }
+
+  /* Stagger entrance: children appear one by one */
+  @keyframes stagger-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-stagger-up {
+    animation: stagger-up 0.5s var(--ease-haven-lift) both;
+  }
+  .animate-stagger-up-1 { animation: stagger-up 0.5s var(--ease-haven-lift) 60ms both; }
+  .animate-stagger-up-2 { animation: stagger-up 0.5s var(--ease-haven-lift) 120ms both; }
+  .animate-stagger-up-3 { animation: stagger-up 0.5s var(--ease-haven-lift) 180ms both; }
+  .animate-stagger-up-4 { animation: stagger-up 0.5s var(--ease-haven-lift) 240ms both; }
+
+  /* Scale-in reveal */
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-scale-in {
+    animation: scale-in 0.4s var(--ease-haven-spring) both;
+  }
+
+  /* Gradient text shimmer for hero headings */
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg,
+      oklch(var(--primary)) 0%,
+      oklch(0.82 0.10 75) 25%,
+      oklch(var(--primary)) 50%,
+      oklch(0.70 0.06 55) 75%,
+      oklch(var(--primary)) 100%
+    );
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Noise texture overlay for depth */
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+  }
+
+  /* Divider line with fade edges */
+  .divider-fade {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(var(--border)), transparent);
+  }
+
+  /* Glow ring for interactive focus states */
+  .glow-ring-primary {
+    box-shadow: 0 0 0 3px oklch(var(--primary) / 0.15), 0 0 20px -4px oklch(var(--primary) / 0.2);
+  }
+
+  /* Login/Register cinematic background */
+  .bg-auth-gradient {
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, oklch(var(--primary) / 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, oklch(var(--accent) / 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 60% 10%, oklch(0.85 0.06 300 / 0.04) 0%, transparent 60%),
+      oklch(var(--muted) / 0.4);
+  }
+  .dark .bg-auth-gradient {
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, oklch(var(--primary) / 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, oklch(var(--accent) / 0.05) 0%, transparent 70%),
+      oklch(var(--muted) / 0.3);
+  }
+
+  /* ══════════════════════════════════════════════
+     PREMIUM ELEVATION — Phase 6 utility classes
+     ══════════════════════════════════════════════ */
+
+  /* Slide-up-fade: lightweight card content entrance */
+  @keyframes slide-up-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up-fade {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) both;
+  }
+  .animate-slide-up-fade-1 {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) 40ms both;
+  }
+  .animate-slide-up-fade-2 {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) 80ms both;
+  }
+  .animate-slide-up-fade-3 {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) 120ms both;
+  }
+  .animate-slide-up-fade-4 {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) 160ms both;
+  }
+  .animate-slide-up-fade-5 {
+    animation: slide-up-fade 400ms var(--ease-haven-lift) 200ms both;
+  }
+
+  /* Glow pulse: subtle ring glow for active/unread indicators */
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(var(--primary) / 0.15); }
+    50% { box-shadow: 0 0 12px 4px oklch(var(--primary) / 0.08); }
+  }
+  .animate-glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  /* Card accent bar: premium top gradient line (requires relative + overflow-hidden on parent) */
+  .card-accent-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, oklch(var(--primary) / 0.25), transparent);
+    pointer-events: none;
+  }
+
+  /* Icon badge: standardized icon container for card headers */
+  .icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(to bottom right, oklch(var(--primary) / 0.12), oklch(var(--primary) / 0.04));
+    border: 1px solid oklch(var(--primary) / 0.08);
+  }
+
+  /* Stat box: premium data display container */
+  .stat-box {
+    border-radius: var(--radius-card);
+    border: 1px solid oklch(var(--border));
+    background: linear-gradient(to bottom right, oklch(var(--muted) / 0.5), oklch(var(--card) / 0.8));
+    padding: 1rem 1.25rem;
+    transition: all var(--duration-haven) var(--ease-haven);
+  }
+  .stat-box:hover {
+    border-color: oklch(var(--primary) / 0.15);
+    box-shadow: var(--shadow-soft);
+  }
+  .dark .stat-box {
+    background: linear-gradient(to bottom right, oklch(var(--muted) / 0.3), oklch(var(--card) / 0.5));
+  }
+
+  /* List item premium: appreciation/suggestion items with hover */
+  .list-item-premium {
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    border-left: 2px solid oklch(var(--primary) / 0.2);
+    transition: all var(--duration-haven) var(--ease-haven);
+  }
+  .list-item-premium:hover {
+    background: oklch(var(--primary) / 0.04);
+    border-left-color: oklch(var(--primary) / 0.4);
+  }
+  .dark .list-item-premium:hover {
+    background: oklch(var(--primary) / 0.06);
+  }
+
+  /* Section divider: enhanced gradient separator */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(to right,
+      transparent,
+      oklch(var(--border) / 0.6),
+      oklch(var(--primary) / 0.15),
+      oklch(var(--border) / 0.6),
+      transparent
+    );
+    margin: 1rem 0;
+  }
+
+  /* Premium select: styled native select element */
+  .select-premium {
+    appearance: none;
+    border-radius: var(--radius-input);
+    border: 1px solid oklch(var(--input));
+    background-color: oklch(var(--card));
+    color: oklch(var(--foreground));
+    padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+    font-size: var(--text-body);
+    line-height: 1.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    transition: all var(--duration-haven) var(--ease-haven);
+  }
+  .select-premium:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus-glow), 0 0 0 2px oklch(var(--ring));
+    border-color: transparent;
+  }
+  .dark .select-premium {
+    background-color: oklch(var(--card));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23aaa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  }
+}
+
+.dark {
+  /* Dark: Obsidian bg #1A1918, Warm Ash text #EAE5DF, Muted #8E8B87; Primary Champagne Gold; no pure black/white */
+  --background: 0.113 0.005 56;
+  --foreground: 0.908 0.012 86;
+  --card: 0.14 0.006 56;
+  --card-foreground: 0.908 0.012 86;
+  --popover: 0.14 0.006 56;
+  --popover-foreground: 0.908 0.012 86;
+  --primary: 0.748 0.078 69.5;
+  --primary-foreground: 0.22 0.01 56;
+  --secondary: 0.22 0.008 56;
+  --secondary-foreground: 0.908 0.012 86;
+  --muted: 0.22 0.008 56;
+  --muted-foreground: 0.584 0.01 74;
+  --accent: 0.28 0.02 145;
+  --accent-foreground: 0.908 0.012 86;
+  --destructive: 0.704 0.191 22.216;
+  --destructive-foreground: 0.98 0.005 86;
+  --border: 0.28 0.01 56 / 0.15;
+  --input: 0.28 0.01 56 / 0.5;
+  --ring: 0.748 0.078 69.5;
+  --chart-1: 0.488 0.243 264.376;
+  --chart-2: 0.696 0.17 162.48;
+  --chart-3: 0.769 0.188 70.08;
+  --chart-4: 0.627 0.265 303.9;
+  --chart-5: 0.645 0.246 16.439;
+  --sidebar: 0.14 0.006 56;
+  --sidebar-foreground: 0.908 0.012 86;
+  --sidebar-primary: 0.748 0.078 69.5;
+  --sidebar-primary-foreground: 0.22 0.01 56;
+  --sidebar-accent: 0.22 0.008 56;
+  --sidebar-accent-foreground: 0.908 0.012 86;
+  --sidebar-border: 0.28 0.01 56 / 0.4;
+  --sidebar-ring: 0.748 0.078 69.5;
+}

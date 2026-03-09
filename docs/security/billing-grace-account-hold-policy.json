@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "billing-grace-account-hold-policy",
+  "providers": {
+    "stripe": {
+      "past_due_event": "invoice.payment_failed",
+      "past_due_state": "PAST_DUE",
+      "account_hold_event": "invoice.payment_failed",
+      "account_hold_state": "GRACE_PERIOD",
+      "recover_event": "invoice.paid",
+      "recover_state": "ACTIVE",
+      "cancel_event": "customer.subscription.deleted",
+      "cancel_state": "CANCELED"
+    },
+    "google_play": {
+      "account_hold_event": "googleplay.subscription.on_hold",
+      "account_hold_state": "GRACE_PERIOD",
+      "recover_event": "googleplay.subscription.recovered",
+      "recover_state": "ACTIVE",
+      "cancel_event": "customer.subscription.deleted",
+      "cancel_state": "CANCELED"
+    },
+    "app_store": {
+      "account_hold_event": "appstore.subscription.billing_retry",
+      "account_hold_state": "GRACE_PERIOD",
+      "recover_event": "appstore.subscription.recovered",
+      "recover_state": "ACTIVE",
+      "cancel_event": "customer.subscription.deleted",
+      "cancel_state": "CANCELED"
+    }
+  },
+  "entitlement_rules": {
+    "allowed_states": [
+      "TRIAL",
+      "ACTIVE",
+      "PAST_DUE",
+      "GRACE_PERIOD",
+      "CANCELED"
+    ],
+    "account_hold_state": "GRACE_PERIOD",
+    "recovery_state": "ACTIVE",
+    "cancellation_state": "CANCELED"
+  },
+  "references": {
+    "billing_router": "backend/app/api/routers/billing.py",
+    "billing_webhook_tests": "backend/tests/test_billing_webhook_security.py",
+    "billing_idempotency_tests": "backend/tests/test_billing_idempotency_api.py",
+    "billing_doc": "docs/billing/monetization-engine.md"
+  }
+}

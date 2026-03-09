@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "abuse-model-policy",
+  "surfaces": {
+    "api": {
+      "threats": [
+        "credential_stuffing",
+        "automated_spam",
+        "resource_exhaustion"
+      ],
+      "controls": [
+        "token_auth",
+        "endpoint_rate_limit",
+        "ip_rate_limit"
+      ]
+    },
+    "websocket": {
+      "threats": [
+        "connection_flood",
+        "message_flood",
+        "cross_user_impersonation"
+      ],
+      "controls": [
+        "jwt_subject_match",
+        "connection_limit",
+        "message_limit"
+      ]
+    },
+    "ai_prompt": {
+      "threats": [
+        "prompt_injection",
+        "policy_evasion",
+        "toxic_content_flood"
+      ],
+      "controls": [
+        "prompt_abuse_detection",
+        "moderation_precheck",
+        "safety_circuit_breaker"
+      ]
+    }
+  },
+  "response_playbook": {
+    "requires_runbook": true,
+    "requires_evidence": true,
+    "max_detection_to_mitigation_minutes": 30
+  },
+  "references": {
+    "runbook": "RUNBOOK.md",
+    "security": "SECURITY.md",
+    "prompt_abuse_policy": "docs/security/prompt-abuse-policy.json"
+  }
+}

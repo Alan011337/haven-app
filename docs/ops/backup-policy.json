@@ -1,0 +1,27 @@
+{
+  "artifact_kind": "backup-policy",
+  "schema_version": "1.0.0",
+  "storage": {
+    "type": "offsite_encrypted_object_storage",
+    "encryption_required": true,
+    "encryption_algorithm": "AES-256"
+  },
+  "scheduling": {
+    "automated_backup_cron": "0 3 * * *",
+    "restore_drill_cron": "0 4 1 */3 *"
+  },
+  "retention": {
+    "full_backup_days": 35,
+    "restore_drill_evidence_days": 120
+  },
+  "restore_drill": {
+    "frequency": "quarterly",
+    "requires_nonprod_dry_run": true,
+    "requires_report": true
+  },
+  "references": {
+    "runbook": "docs/ops/backup-restore-runbook.md",
+    "incident_playbook": "docs/ops/incident-response-playbook.md",
+    "workflow": ".github/workflows/backup-restore-drill.yml"
+  }
+}

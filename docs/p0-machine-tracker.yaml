@@ -1,0 +1,408 @@
+tracker:
+  id: haven-v2-p0
+  version: 2
+  scope: p0_critical_path_v2
+  generated_at: '2026-02-19T00:00:00Z'
+  source_of_truth:
+  - docs/p0-execution-protocol.md
+  - docs/security/owasp-api-top10-mapping.md
+  - ".github/workflows/release-gate.yml"
+  - ".github/workflows/p0-drill.yml"
+  - ".github/workflows/billing-reconciliation.yml"
+  - ".github/workflows/audit-log-retention.yml"
+  status_enum:
+  - done
+  - in_progress
+  - blocked
+  - todo
+items:
+- id: META-01
+  title: Priority protocol (P0/P1/P2)
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: keep unchanged unless priority policy is revised
+- id: META-02
+  title: Definition of Done template
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: enforce DoD fields on all new P0 tickets
+- id: META-03
+  title: Critical path graph
+  owner: platform
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  next_action: keep billing/data-rights/security as blockers
+- id: P0-A
+  title: Release gate baseline
+  owner: platform
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - scripts/release-gate.sh
+  - ".github/workflows/release-gate.yml"
+  - backend/scripts/security-gate.sh
+  verify_commands:
+  - "./scripts/release-gate.sh"
+  - cd backend && ./scripts/security-gate.sh
+  gate_snapshot:
+    backend_security_passed: 258
+    backend_full_passed: 379
+    frontend_env: ok
+    frontend_typecheck: ok
+  next_action: confirm first PR run in GitHub Actions is green
+- id: P0-B
+  title: Security gate v1 (OWASP API Top 10 baseline)
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/scripts/security-gate.sh
+  - backend/scripts/check_endpoint_authorization_matrix.py
+  - backend/scripts/check_read_authorization_matrix.py
+  - backend/scripts/check_api_inventory_owner_attestation.py
+  - docs/security/endpoint-authorization-matrix.json
+  - docs/security/read-authorization-matrix.json
+  - backend/tests/test_read_authorization_matrix_policy.py
+  - docs/security/api-inventory-owner-attestation.json
+  - docs/security/api-inventory-owner-attestation.md
+  - ".github/CODEOWNERS"
+  - ".github/workflows/api-inventory-attestation.yml"
+  - docs/security/owasp-api-top10-mapping.md
+  - docs/p0-execution-protocol.md
+  verify_commands:
+  - cd backend && ./scripts/security-gate.sh
+  next_action: keep write/read matrix + owner attestation contracts green for all
+    critical routes
+- id: P0-B-API1
+  title: API1 BOLA matrix for core write/read paths
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/tests/test_user_authorization_matrix.py
+  - backend/tests/test_user_pairing_authorization_matrix.py
+  - backend/tests/test_journal_authorization_matrix.py
+  - backend/tests/test_card_authorization_matrix.py
+  - backend/tests/test_card_deck_authorization_matrix.py
+  - backend/tests/test_card_read_authorization_matrix.py
+  - backend/tests/test_notification_authorization_matrix.py
+  - backend/tests/test_data_rights_api.py
+  - backend/tests/test_billing_authorization_matrix.py
+  - backend/scripts/check_endpoint_authorization_matrix.py
+  - backend/scripts/check_read_authorization_matrix.py
+  - docs/security/endpoint-authorization-matrix.json
+  - docs/security/read-authorization-matrix.json
+  - backend/tests/test_endpoint_authorization_matrix_policy.py
+  - backend/tests/test_read_authorization_matrix_policy.py
+  next_action: keep write/read matrix rows + test refs updated whenever endpoint authorization
+    behavior is introduced or changed
+- id: P0-B-API2
+  title: API2 token misuse regression suite
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/login.py
+  - backend/app/api/deps.py
+  - backend/tests/test_auth_token_endpoint_security.py
+  - backend/tests/test_auth_token_misuse_regression.py
+  - backend/tests/test_auth_token_misuse_write_paths.py
+  - backend/tests/test_websocket_auth_guard.py
+  next_action: add token-misuse tests for every new auth entrypoint
+- id: P0-B-API3
+  title: API3 overposting rejection on critical writes
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/tests/test_user_field_level_authorization.py
+  - backend/tests/test_journal_authorization_matrix.py
+  - backend/tests/test_billing_idempotency_api.py
+  next_action: keep schema strictness aligned as request models evolve
+- id: P0-B-API4
+  title: API4 resource-consumption guards
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/tests/test_card_resource_consumption_guard.py
+  - backend/tests/test_card_deck_resource_consumption_guard.py
+  - backend/app/api/routers/card_decks.py
+  - backend/app/api/routers/users.py
+  next_action: add formal abuse budgets and CI assertions for defaults
+- id: P0-B-OBS
+  title: Structured telemetry for high-risk read/write endpoints
+  owner: backend
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/routers/card_decks.py
+  - backend/app/api/routers/users.py
+  - backend/tests/test_card_deck_resource_consumption_guard.py
+  - backend/tests/test_notification_authorization_matrix.py
+  next_action: standardize request_id propagation and PII redaction policy
+- id: P0-C
+  title: Data rights foundation (Access/Export/Erase)
+  owner: backend-privacy
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/routers/users.py
+  - backend/scripts/security-gate.sh
+  - backend/scripts/check_data_rights_contract.py
+  - backend/scripts/check_data_retention_contract.py
+  - backend/scripts/check_data_classification_contract.py
+  - backend/scripts/check_data_deletion_lifecycle_contract.py
+  - backend/app/services/data_deletion_lifecycle.py
+  - backend/alembic/versions/ab8c9d0e1f3a_add_deleted_at_columns_for_soft_delete.py
+  - backend/scripts/validate_security_evidence.py
+  - backend/tests/test_data_rights_api.py
+  - backend/tests/test_data_rights_contract_policy.py
+  - backend/tests/test_data_retention_contract_policy.py
+  - backend/tests/test_data_classification_contract_policy.py
+  - backend/tests/test_data_deletion_lifecycle_contract_policy.py
+  - docs/security/data-rights-export-package-spec.json
+  - docs/security/data-rights-deletion-graph.json
+  - docs/security/data-retention-policy.json
+  - docs/security/data-classification-policy.json
+  - docs/security/data-deletion-lifecycle-policy.json
+  - docs/security/data-rights-fire-drill.md
+  - ".github/workflows/p0-drill.yml"
+  verify_commands:
+  - "./scripts/p0-drill.sh"
+  - python3 backend/scripts/validate_security_evidence.py --kind p0-drill --contract-mode
+    strict
+  - python3 backend/scripts/validate_security_evidence.py --kind p0-drill --contract-mode
+    strict --max-age-days 35
+  next_action: keep export/deletion + retention + classification + deletion-lifecycle
+    contract gates and monthly fire-drill freshness gate green
+- id: P0-C-EVIDENCE
+  title: Latest local data-rights drill evidence
+  owner: backend-privacy
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/security/evidence/p0-drill-20260217T022550Z.json
+  - docs/security/evidence/p0-drill-20260217T022550Z.md
+  next_action: keep monthly cadence
+- id: P0-D
+  title: Billing correctness foundation
+  owner: backend-billing
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - backend/app/api/routers/billing.py
+  - backend/tests/test_billing_idempotency_api.py
+  - backend/tests/test_billing_webhook_security.py
+  - backend/tests/test_billing_authorization_matrix.py
+  - ".github/workflows/billing-reconciliation.yml"
+  - backend/scripts/security-gate.sh
+  - backend/scripts/validate_security_evidence.py
+  verify_commands:
+  - "./scripts/billing-reconciliation.sh"
+  - python3 backend/scripts/validate_security_evidence.py --kind billing-reconciliation
+    --contract-mode strict
+  - python3 backend/scripts/validate_security_evidence.py --kind billing-reconciliation
+    --contract-mode strict --max-age-days 14
+  next_action: keep daily reconciliation cadence and freshness gate green
+- id: P0-D-EVIDENCE
+  title: Latest local billing reconciliation evidence
+  owner: backend-billing
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/security/evidence/billing-reconciliation-20260217T044702Z.json
+  - docs/security/evidence/billing-reconciliation-20260217T044702Z.md
+  next_action: keep daily workflow green and reconcile any alert issue
+- id: LAUNCH-01
+  title: Launch readiness gate
+  owner: platform
+  priority: P0
+  status: blocked
+  last_verified_at: '2026-02-17T09:10:25Z'
+  evidence_paths:
+  - docs/p0-execution-protocol.md
+  - ".github/workflows/release-gate.yml"
+  block_reasons:
+  - SLO/SLI production monitors are not yet implemented
+  - incident drill matrix (AI outage / WS storm) not yet completed
+  - age gating + consent receipt integration pending verification
+  - AI safety red-team suite pending completion
+  next_action: finish SLO instrumentation, verify age gate + consent, complete red-team tests
+- id: SLO-OBS
+  title: Product SLOs, error budget, and burn-rate alerting
+  owner: sre
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T04:25:55Z'
+  evidence_paths:
+  - backend/app/main.py
+  - backend/app/core/config.py
+  - backend/scripts/check_env.py
+  - backend/tests/test_health_endpoint.py
+  - backend/tests/test_backend_env_check.py
+  - backend/scripts/check_slo_burn_rate_gate.py
+  - backend/scripts/run_canary_guard.py
+  - backend/tests/test_canary_guard.py
+  - scripts/canary-guard.sh
+  - ".github/workflows/release-gate.yml"
+  - ".github/workflows/slo-burn-rate-monitor.yml"
+  - ".github/workflows/canary-guard.yml"
+  next_action: calibrate production threshold envs and decide when to enforce insufficient-data
+    as blocking
+- id: PUSH-P0
+  title: Web Push production baseline
+  owner: backend-notifications
+  priority: P0
+  status: todo
+  last_verified_at: 
+  evidence_paths: []
+  next_action: implement VAPID contract, subscription lifecycle, and delivery observability
+- id: LEGAL-FOUNDATION
+  title: Privacy/ToS/consent + age gating package
+  owner: legal-ops
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - docs/legal/PRIVACY_POLICY.md
+  - docs/legal/TERMS_OF_SERVICE.md
+  - docs/security/consent-receipt-policy.json
+  - docs/security/store-compliance-matrix.json
+  - backend/tests/test_user_consent_receipt_api.py
+  - backend/tests/test_store_compliance_contract_policy.py
+  - backend/tests/test_consent_receipt_contract_policy.py
+  - POLICY_AI.md
+  next_action: verify age gating UI checkbox + consent receipt DB integration
+- id: SEC-RATE-LIMIT
+  title: Formal rate-limit and abuse budget policy
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T03:46:03Z'
+  evidence_paths:
+  - docs/security/abuse-budget-policy.md
+  - backend/app/services/rate_limit.py
+  - backend/app/services/rate_limit_runtime_metrics.py
+  - backend/app/services/request_identity.py
+  - backend/tests/test_abuse_budget_policy.py
+  - backend/tests/test_rate_limit_runtime_metrics.py
+  - backend/tests/test_health_endpoint.py
+  - backend/tests/test_journal_notification_rules.py
+  - backend/tests/test_card_mode_isolation.py
+  - backend/scripts/security-gate.sh
+  next_action: calibrate per-scope limits against production traffic and wire burn-rate
+    alerts
+- id: SEC-04
+  title: Audit log baseline
+  owner: backend-security
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-17T02:04:33Z'
+  evidence_paths:
+  - backend/app/models/audit_event.py
+  - backend/app/services/audit_log.py
+  - backend/app/services/audit_log_retention.py
+  - backend/scripts/run_audit_log_retention.py
+  - backend/scripts/run_audit_log_retention_audit.py
+  - backend/tests/test_audit_log_baseline.py
+  - backend/tests/test_audit_log_security_controls.py
+  - backend/tests/test_audit_log_billing_notification_controls.py
+  - backend/tests/test_security_evidence_validation.py
+  - ".github/workflows/audit-log-retention.yml"
+  - scripts/audit-log-retention.sh
+  - docs/security/audit-log-retention-policy.md
+  - backend/scripts/security-gate.sh
+  - docs/security/evidence/audit-log-retention-20260217T044703Z.json
+  - docs/security/evidence/audit-log-retention-20260217T044703Z.md
+  next_action: keep retention audit cadence and freshness gate green
+- id: AI-SAFETY-POLICY
+  title: AI safety policy enforcement (non-impersonation, coaching boundaries, crisis consistency)
+  owner: ai-safety
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - backend/app/core/prompts.py
+  - backend/app/services/ai_safety.py
+  - backend/app/services/prompt_abuse.py
+  - backend/tests/test_ai_safety_redteam.py
+  - backend/tests/test_safety_regression.py
+  - backend/tests/test_prompt_supply_chain.py
+  - POLICY_AI.md
+  - docs/safety/safety-ui-policy-v1.md
+  next_action: complete red-team test suite and verify prompt hash integrity
+- id: AI-EVAL
+  title: AI quality evaluation framework (CUJ + Human + Auto)
+  owner: ai-safety
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - docs/security/ai-eval-framework.json
+  - docs/ai-safety/evaluation-framework.md
+  - backend/tests/eval/test_cuj_eval.py
+  - backend/tests/test_ai_schema_contract.py
+  - backend/tests/test_ai_schema_fuzz.py
+  next_action: define human eval sampling protocol and schedule first review cycle
+- id: OBSERVABILITY-MIN
+  title: Structured logging + PII redaction + request_id propagation
+  owner: backend
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - backend/app/middleware/request_context.py
+  - backend/app/core/log_redaction.py
+  - backend/app/core/structured_logger.py
+  - backend/app/services/http_observability.py
+  - backend/app/services/trace_span.py
+  - backend/tests/test_log_redaction.py
+  - RUNBOOK.md
+  next_action: verify request_id appears in all critical path logs
+- id: SAFETY-UI-V1
+  title: Safety UI policy v1 implementation (SafetyTierGate + ForceLockBanner)
+  owner: frontend
+  priority: P0
+  status: done
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - frontend/src/lib/safety-policy.ts
+  - frontend/src/components/features/SafetyTierGate.tsx
+  - frontend/src/components/features/ForceLockBanner.tsx
+  - frontend/src/components/features/PartnerJournalCard.tsx
+  - docs/safety/safety-ui-policy-v1.md
+  next_action: monitor user feedback on cooldown duration
+- id: CONTENT-ENGINEERING
+  title: Content review policy and 8-deck validation
+  owner: content
+  priority: P0
+  status: in_progress
+  last_verified_at: '2026-02-19T00:00:00Z'
+  evidence_paths:
+  - docs/content/content-review-policy.md
+  - frontend/scripts/seed.ts
+  - frontend/src/lib/deck-meta.ts
+  next_action: complete AI-assisted content generation for CO_PILOT and LOVE_BLUEPRINT decks

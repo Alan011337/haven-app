@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "billing-console-drift-policy",
+  "provider": "stripe",
+  "expected": {
+    "require_webhook_secret": true,
+    "max_webhook_tolerance_seconds": 300,
+    "allowed_async_modes": [
+      true,
+      false
+    ]
+  },
+  "references": {
+    "store_compliance_matrix": "docs/security/store-compliance-matrix.json",
+    "store_compliance_doc": "docs/billing/store-compliance.md",
+    "billing_engine_doc": "docs/billing/monetization-engine.md",
+    "drift_runbook": "docs/billing/console-drift-monitor.md"
+  },
+  "owner": "backend-billing"
+}

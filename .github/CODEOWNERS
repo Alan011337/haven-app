@@ -1,0 +1,12 @@
+# Haven backend security ownership baseline
+# Keep this file aligned with docs/security/api-inventory-owner-attestation.json
+
+/backend/app/api/login.py @alanzeng
+/backend/app/api/routers/billing.py @alanzeng
+/backend/app/api/journals.py @alanzeng
+/backend/app/api/routers/users.py @alanzeng
+/backend/app/api/routers/cards.py @alanzeng
+/backend/app/api/routers/card_decks.py @alanzeng
+/backend/app/main.py @alanzeng
+/backend/app/core/socket_manager.py @alanzeng
+/backend/app/services/ws_abuse_guard.py @alanzeng

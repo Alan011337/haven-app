@@ -1,0 +1,26 @@
+{
+  "artifact_kind": "consent-receipt-policy",
+  "schema_version": "1.0.0",
+  "consent_events": [
+    {
+      "id": "register_age_and_terms_ack",
+      "description": "User confirms age and agrees to ToS/Privacy at registration UI",
+      "required_fields": [
+        "age_confirmed",
+        "terms_version",
+        "privacy_version",
+        "accepted_at_iso8601"
+      ],
+      "evidence_path": "frontend/src/app/register/page.tsx"
+    }
+  ],
+  "policy_versions": {
+    "terms_version": "v1.0",
+    "privacy_version": "v1.0"
+  },
+  "references": {
+    "terms_doc": "docs/legal/TERMS_OF_SERVICE.md",
+    "privacy_doc": "docs/legal/PRIVACY_POLICY.md",
+    "data_rights_doc": "DATA_RIGHTS.md"
+  }
+}

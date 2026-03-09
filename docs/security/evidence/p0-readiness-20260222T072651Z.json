@@ -1,0 +1,10 @@
+{
+  "generated_at_utc": "20260222T072651Z",
+  "run_runtime_gates": false,
+  "overall_ready": false,
+  "checks": [
+    {"id":"release_checklist_complete","status":"fail","detail":"RELEASE_CHECKLIST has 14 open items"},
+    {"id":"launch_gate_complete","status":"fail","detail":"P0 launch gate has 35 unchecked items"},
+    {"id":"release_gate_local_runtime","status":"skip","detail":"RUN_RUNTIME_GATES=1 to execute runtime gate"}
+  ]
+}

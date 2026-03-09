@@ -1,0 +1,26 @@
+{
+  "common": {
+    "loading": "載入中...",
+    "error": "發生錯誤",
+    "retry": "重試",
+    "cancel": "取消",
+    "confirm": "確認",
+    "save": "儲存",
+    "back": "返回"
+  },
+  "nav": {
+    "home": "首頁",
+    "decks": "牌組圖書館",
+    "notifications": "通知中心",
+    "analysis": "情緒分析",
+    "settings": "伴侶連結 / 設定",
+    "upgrade": "升級方案",
+    "logout": "登出"
+  },
+  "auth": {
+    "login": "登入",
+    "register": "註冊",
+    "email": "電子郵件",
+    "password": "密碼"
+  }
+}

@@ -1,0 +1,784 @@
+name: Release Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  backend-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///./test.db
+      OPENAI_API_KEY: test-key
+      SECRET_KEY: 01234567890123456789012345678901
+      ABUSE_GUARD_STORE_BACKEND: memory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Backend env check
+        run: python scripts/check_env.py
+
+      - name: Backend settings manifest check
+        run: python scripts/check_settings_manifest.py
+
+      - name: Setup Flyctl for deploy preflight
+        uses: superfly/flyctl-actions/setup-flyctl@v1.5
+        with:
+          version: '0.3.221'
+
+      - name: Deploy preflight gate (PR optional)
+        if: github.event_name == 'pull_request'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ vars.FLY_APP_NAME || 'haven-api-prod' }}
+          CORS_ORIGINS: '["https://example.com"]'
+          FLY_DEPLOY_PREFLIGHT_ONLY: "1"
+        run: |
+          if [ -z "${FLY_API_TOKEN}" ]; then
+            echo "[deploy-preflight] skipped: missing FLY_API_TOKEN"
+            exit 0
+          fi
+          bash ../scripts/deploy-fly-backend.sh
+
+      - name: Deploy preflight gate (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ vars.FLY_APP_NAME || 'haven-api-prod' }}
+          CORS_ORIGINS: '["https://example.com"]'
+          FLY_DEPLOY_PREFLIGHT_ONLY: "1"
+        run: bash ../scripts/deploy-fly-backend.sh
+
+      - name: Backend test profile SLA gate (smoke)
+        env:
+          BACKEND_PYTHON_BIN: python
+          TEST_PROFILE_SLA_ENFORCED: "1"
+          PYTEST_TIMEOUT_SECONDS: "900"
+        run: ./scripts/run-test-profile.sh smoke
+
+      - name: Backend security gate
+        run: ./scripts/security-gate.sh
+
+      - name: API contract snapshot gate (fail-closed)
+        run: python scripts/check_api_contract_snapshot.py
+
+      - name: Timeline perf baseline gate (PR internal required)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          python scripts/run_perf_baseline.py --iterations 8 --output /tmp/timeline-perf-baseline.json
+          python scripts/check_timeline_perf_baseline_gate.py \
+            --snapshot /tmp/timeline-perf-baseline.json \
+            --timeline-p95-budget-ms 300 \
+            --summary-path /tmp/timeline-perf-gate-summary.json
+
+      - name: Timeline perf baseline gate (PR fork optional)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          python scripts/run_perf_baseline.py --iterations 6 --output /tmp/timeline-perf-baseline.json
+          python scripts/check_timeline_perf_baseline_gate.py \
+            --snapshot /tmp/timeline-perf-baseline.json \
+            --timeline-p95-budget-ms 300 \
+            --allow-missing-snapshot \
+            --summary-path /tmp/timeline-perf-gate-summary.json
+
+      - name: Timeline perf baseline gate (main required)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          python scripts/run_perf_baseline.py --iterations 12 --output /tmp/timeline-perf-baseline.json
+          python scripts/check_timeline_perf_baseline_gate.py \
+            --snapshot /tmp/timeline-perf-baseline.json \
+            --timeline-p95-budget-ms 300 \
+            --fail-on-degraded \
+            --summary-path /tmp/timeline-perf-gate-summary.json
+
+      - name: Timeline perf baseline gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/timeline-perf-gate-summary.json")
+          lines = ["### Timeline perf baseline gate"]
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              meta = payload.get("meta") or {}
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- timeline_p95_ms: `{meta.get('timeline_p95_ms', 'unknown')}`")
+              lines.append(f"- budget_ms: `{meta.get('timeline_p95_budget_ms', 'unknown')}`")
+              reasons = payload.get("reasons") or []
+              lines.append("- reasons: `" + (", ".join(str(r) for r in reasons) if reasons else "none") + "`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: EVAL-01 golden set gate evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-eval-golden-set-summary.json")
+          lines = ["### EVAL-01 golden set gate evidence"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing` (gate may have failed before snapshot)")
+          else:
+              try:
+                  payload = json.loads(summary_file.read_text(encoding="utf-8"))
+                  result = payload.get("result", "unknown")
+                  reasons = payload.get("reasons") or []
+                  meta = payload.get("meta") or {}
+                  lines.append(f"- result: `{result}`")
+                  lines.append(f"- evaluated_cases: `{meta.get('evaluated_cases', 'unknown')}`")
+                  lines.append(f"- exact_match_rate: `{meta.get('exact_match_rate', 'unknown')}`")
+                  if reasons:
+                      lines.append("- reasons: `" + ", ".join(str(r) for r in reasons[:5]) + "`")
+                  else:
+                      lines.append("- reasons: `none`")
+              except Exception as e:
+                  lines.append(f"- result: `parse_error`")
+                  lines.append(f"- error: `{type(e).__name__}`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Backend tests
+        run: python -m pytest -q -p no:cacheprovider
+
+      - name: Release gate hotfix override contract (PR optional)
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_GATE_ALLOW_MISSING_SLO_URL: ${{ vars.RELEASE_GATE_ALLOW_MISSING_SLO_URL || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_LAUNCH_SIGNOFF: ${{ vars.RELEASE_GATE_ALLOW_MISSING_LAUNCH_SIGNOFF || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_CUJ_SYNTHETIC_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_CUJ_SYNTHETIC_EVIDENCE || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE || '0' }}
+          RELEASE_GATE_HOTFIX_OVERRIDE: ${{ vars.RELEASE_GATE_HOTFIX_OVERRIDE || '0' }}
+          RELEASE_GATE_OVERRIDE_REASON: ${{ vars.RELEASE_GATE_OVERRIDE_REASON || '' }}
+          RELEASE_GATE_OVERRIDE_REASON_PATTERN: ${{ vars.RELEASE_GATE_OVERRIDE_REASON_PATTERN || '' }}
+        run: python scripts/check_release_gate_override_contract.py --summary-path /tmp/release-gate-override-summary.json
+
+      - name: Release gate hotfix override contract (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          RELEASE_GATE_ALLOW_MISSING_SLO_URL: ${{ vars.RELEASE_GATE_ALLOW_MISSING_SLO_URL || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_LAUNCH_SIGNOFF: ${{ vars.RELEASE_GATE_ALLOW_MISSING_LAUNCH_SIGNOFF || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_CUJ_SYNTHETIC_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_CUJ_SYNTHETIC_EVIDENCE || '0' }}
+          RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE || '0' }}
+          RELEASE_GATE_HOTFIX_OVERRIDE: ${{ vars.RELEASE_GATE_HOTFIX_OVERRIDE || '0' }}
+          RELEASE_GATE_OVERRIDE_REASON: ${{ vars.RELEASE_GATE_OVERRIDE_REASON || '' }}
+          RELEASE_GATE_OVERRIDE_REASON_PATTERN: ${{ vars.RELEASE_GATE_OVERRIDE_REASON_PATTERN || '' }}
+        run: python scripts/check_release_gate_override_contract.py --summary-path /tmp/release-gate-override-summary.json
+
+      - name: Release gate hotfix override contract summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/release-gate-override-summary.json")
+          lines = ["### Release gate hotfix override contract"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              reasons = payload.get("reasons") or []
+              relaxations = payload.get("enabled_relaxations") or []
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- mode: `{payload.get('mode', 'unknown')}`")
+              lines.append(
+                  "- hotfix_override: `"
+                  + ("enabled" if payload.get("hotfix_override") else "disabled")
+                  + "`"
+              )
+              lines.append(
+                  "- override_reason_present: `"
+                  + ("yes" if payload.get("override_reason_present") else "no")
+                  + "`"
+              )
+              lines.append(
+                  "- override_reason_pattern: `"
+                  + str(payload.get("override_reason_pattern", "unknown"))
+                  + "`"
+              )
+              lines.append(
+                  "- override_reason: `"
+                  + str(payload.get("override_reason") or "none")
+                  + "`"
+              )
+              lines.append(
+                  "- enabled_relaxations: `"
+                  + (", ".join(str(item) for item in relaxations) if relaxations else "none")
+                  + "`"
+              )
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: SLO burn-rate gate (PR internal required)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+          SLO_GATE_TIMEOUT_SECONDS: "10"
+        run: python scripts/check_slo_burn_rate_gate.py --summary-path /tmp/slo-burn-rate-gate-summary.json
+
+      - name: SLO burn-rate gate (PR fork optional)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+          SLO_GATE_TIMEOUT_SECONDS: "10"
+        run: python scripts/check_slo_burn_rate_gate.py --allow-missing-url --summary-path /tmp/slo-burn-rate-gate-summary.json
+
+      - name: SLO burn-rate gate (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+          SLO_GATE_TIMEOUT_SECONDS: "10"
+        run: python scripts/check_slo_burn_rate_gate.py --summary-path /tmp/slo-burn-rate-gate-summary.json
+
+      - name: SLO burn-rate gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          
+          summary_file = Path("/tmp/slo-burn-rate-gate-summary.json")
+          lines = ["### SLO burn-rate gate"]
+          
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              statuses = payload.get("statuses") or {}
+              reasons = payload.get("reasons") or []
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- ws_status: `{statuses.get('ws', 'missing')}`")
+              lines.append(f"- ws_burn_rate_status: `{statuses.get('ws_burn_rate', 'missing')}`")
+              lines.append(f"- ai_router_burn_rate_status: `{statuses.get('ai_router_burn_rate', 'missing')}`")
+              lines.append(f"- cuj_status: `{statuses.get('cuj', 'missing')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+          
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Observability live contract gate (PR internal optional)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+        run: |
+          python scripts/check_observability_live_contract.py \
+            --health-slo-url "${SLO_GATE_HEALTH_SLO_URL}" \
+            --bearer-token "${SLO_GATE_BEARER_TOKEN}" \
+            --allow-missing-url \
+            --summary-path /tmp/observability-live-contract-summary.json
+
+      - name: Observability live contract gate (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+          SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
+        run: |
+          python scripts/check_observability_live_contract.py \
+            --health-slo-url "${SLO_GATE_HEALTH_SLO_URL}" \
+            --bearer-token "${SLO_GATE_BEARER_TOKEN}" \
+            --summary-path /tmp/observability-live-contract-summary.json
+
+      - name: Error budget freeze gate (PR optional)
+        if: github.event_name == 'pull_request'
+        run: python scripts/check_error_budget_freeze_gate.py --allow-missing-status
+
+      - name: Error budget freeze gate (main required)
+        if: github.ref == 'refs/heads/main'
+        run: python scripts/check_error_budget_freeze_gate.py
+
+      - name: Service tier budget gate (PR optional)
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_TARGET_TIER: ${{ vars.RELEASE_TARGET_TIER || 'tier_0' }}
+          RELEASE_INTENT: ${{ vars.RELEASE_INTENT || 'feature' }}
+          RELEASE_GATE_HOTFIX_OVERRIDE: ${{ vars.RELEASE_GATE_HOTFIX_OVERRIDE || '0' }}
+        run: python scripts/check_service_tier_budget_gate.py --allow-missing-status --summary-path /tmp/service-tier-gate-summary.json
+
+      - name: Service tier budget gate (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          RELEASE_TARGET_TIER: ${{ vars.RELEASE_TARGET_TIER || 'tier_0' }}
+          RELEASE_INTENT: ${{ vars.RELEASE_INTENT || 'feature' }}
+          RELEASE_GATE_HOTFIX_OVERRIDE: ${{ vars.RELEASE_GATE_HOTFIX_OVERRIDE || '0' }}
+        run: python scripts/check_service_tier_budget_gate.py --summary-path /tmp/service-tier-gate-summary.json
+
+      - name: Service tier budget gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/service-tier-gate-summary.json")
+          lines = ["### Service tier budget gate"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              reasons = payload.get("reasons") or []
+              meta = payload.get("meta") or {}
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- target_tier: `{meta.get('target_tier', 'unknown')}`")
+              lines.append(f"- release_intent: `{meta.get('release_intent', 'unknown')}`")
+              lines.append(
+                  "- release_freeze: `"
+                  + ("yes" if meta.get("release_freeze") else "no")
+                  + "`"
+              )
+              lines.append(
+                  "- tier_error_budget_freeze_enforced: `"
+                  + ("yes" if meta.get("tier_error_budget_freeze_enforced") else "no")
+                  + "`"
+              )
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Launch signoff artifact gate (PR optional)
+        if: github.event_name == 'pull_request'
+        run: python scripts/check_launch_signoff_gate.py --allow-missing-artifact --max-age-days 14 --summary-path /tmp/launch-signoff-gate-summary.json
+
+      - name: Launch signoff artifact gate (main required)
+        if: github.ref == 'refs/heads/main'
+        run: python scripts/check_launch_signoff_gate.py --require-ready --max-age-days 14 --summary-path /tmp/launch-signoff-gate-summary.json
+
+      - name: CUJ synthetic evidence gate (PR optional)
+        if: github.event_name == 'pull_request'
+        run: python scripts/check_cuj_synthetic_evidence_gate.py --allow-missing-evidence --require-pass --max-age-hours 36 --summary-path /tmp/cuj-synthetic-evidence-summary.json
+
+      - name: CUJ synthetic evidence gate (main required)
+        if: github.ref == 'refs/heads/main'
+        run: python scripts/check_cuj_synthetic_evidence_gate.py --require-pass --max-age-hours 36 --summary-path /tmp/cuj-synthetic-evidence-summary.json
+
+      - name: Fetch latest AI quality snapshot evidence (daily artifact)
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/fetch_latest_ai_quality_snapshot_evidence.py \
+            --output /tmp/ai-quality-snapshot-latest.json \
+            --allow-missing-evidence \
+            --summary-path /tmp/ai-quality-snapshot-fetch-summary.json
+
+      - name: AI quality snapshot freshness gate (PR optional)
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE || '0' }}
+        run: |
+          if [ "${RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE}" = "1" ]; then
+            python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence /tmp/ai-quality-snapshot-latest.json --allow-missing-evidence --max-age-hours 36 --summary-path /tmp/ai-quality-snapshot-gate-summary.json
+          else
+            python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence /tmp/ai-quality-snapshot-latest.json --max-age-hours 36 --summary-path /tmp/ai-quality-snapshot-gate-summary.json
+          fi
+
+      - name: AI quality snapshot freshness gate (main required)
+        if: github.ref == 'refs/heads/main'
+        env:
+          RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE: ${{ vars.RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE || '0' }}
+        run: |
+          if [ "${RELEASE_GATE_ALLOW_MISSING_AI_QUALITY_SNAPSHOT_EVIDENCE}" = "1" ]; then
+            python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence /tmp/ai-quality-snapshot-latest.json --allow-missing-evidence --max-age-hours 36 --summary-path /tmp/ai-quality-snapshot-gate-summary.json
+          else
+            python scripts/check_ai_quality_snapshot_freshness_gate.py --evidence /tmp/ai-quality-snapshot-latest.json --max-age-hours 36 --summary-path /tmp/ai-quality-snapshot-gate-summary.json
+          fi
+
+      - name: AI quality snapshot freshness gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/ai-quality-snapshot-gate-summary.json")
+          lines = ["### AI quality snapshot freshness gate"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              reasons = payload.get("reasons") or []
+              meta = payload.get("meta") or {}
+              lines.append(f"- result: `{payload.get('result', 'unknown')}`")
+              lines.append(f"- evaluation_result: `{meta.get('evaluation_result', 'unknown')}`")
+              lines.append(f"- evidence_age_hours: `{meta.get('age_hours', 'unknown')}`")
+              fetch_summary_file = Path("/tmp/ai-quality-snapshot-fetch-summary.json")
+              if fetch_summary_file.exists():
+                  fetch_payload = json.loads(fetch_summary_file.read_text(encoding="utf-8"))
+                  fetch_meta = fetch_payload.get("meta") or {}
+                  lines.append(
+                      f"- evidence_source_result: `{fetch_payload.get('result', 'unknown')}`"
+                  )
+                  lines.append(
+                      f"- evidence_source_run_id: `{fetch_meta.get('workflow_run_id', 'unknown')}`"
+                  )
+                  lines.append(
+                      f"- evidence_source_artifact_id: `{fetch_meta.get('artifact_id', 'unknown')}`"
+                  )
+              else:
+                  lines.append("- evidence_source_result: `unavailable`")
+                  lines.append("- evidence_source_run_id: `unknown`")
+                  lines.append("- evidence_source_artifact_id: `unknown`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+              lines.append(
+                  "- non_blocking_on_degraded: `"
+                  + ("yes" if payload.get("result") == "degraded" else "n/a")
+                  + "`"
+              )
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Core loop snapshot gate (PR optional)
+        if: github.event_name == 'pull_request'
+        run: |
+          python scripts/run_core_loop_snapshot.py \
+            --window-days 1 \
+            --output /tmp/core-loop-snapshot-latest.json \
+            --latest-path /tmp/core-loop-snapshot-latest.json
+
+      - name: Core loop snapshot gate (main required)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          python scripts/run_core_loop_snapshot.py \
+            --window-days 1 \
+            --output /tmp/core-loop-snapshot-latest.json \
+            --latest-path /tmp/core-loop-snapshot-latest.json
+
+      - name: Core loop snapshot gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/core-loop-snapshot-latest.json")
+          lines = ["### Core loop snapshot gate"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              snapshot = payload.get("snapshot") or {}
+              metrics = snapshot.get("metrics") or {}
+              counts = snapshot.get("counts") or {}
+              evaluation = payload.get("evaluation") or {}
+              reasons = evaluation.get("reasons") or []
+              evaluation_result = str(evaluation.get("status") or "unknown")
+              lines.append("- result: `" + ("pass" if evaluation_result in {"pass", "degraded", "insufficient_data"} else "fail") + "`")
+              lines.append(f"- evaluation_result: `{evaluation_result}`")
+              lines.append(f"- daily_loop_completion_rate: `{metrics.get('daily_loop_completion_rate', 'unknown')}`")
+              lines.append(f"- dual_reveal_pair_rate: `{metrics.get('dual_reveal_pair_rate', 'unknown')}`")
+              lines.append(f"- active_users_total: `{counts.get('active_users_total', 'unknown')}`")
+              lines.append("- non_blocking_on_degraded: `" + ("yes" if evaluation_result == "degraded" else "n/a") + "`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: CUJ synthetic evidence gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/cuj-synthetic-evidence-summary.json")
+          lines = ["### CUJ synthetic evidence gate"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              result = payload.get("result", "unknown")
+              reasons = payload.get("reasons") or []
+              meta = payload.get("meta") or {}
+              lines.append(f"- result: `{result}`")
+              lines.append(f"- failure_class: `{meta.get('failure_class', 'unknown')}`")
+              lines.append(f"- evidence_result: `{meta.get('result', 'unknown')}`")
+              lines.append(f"- evidence_age_hours: `{meta.get('age_hours', 'unknown')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+      - name: Launch signoff gate summary
+        if: always() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_file = Path("/tmp/launch-signoff-gate-summary.json")
+          lines = ["### Launch signoff artifact gate"]
+
+          if not summary_file.exists():
+              lines.append("- result: `unavailable`")
+              lines.append("- reason: `summary_file_missing`")
+          else:
+              payload = json.loads(summary_file.read_text(encoding="utf-8"))
+              result = payload.get("result", "unknown")
+              reasons = payload.get("reasons") or []
+              meta = payload.get("meta") or {}
+              lines.append(f"- result: `{result}`")
+              lines.append(f"- overall_ready: `{meta.get('overall_ready', 'unknown')}`")
+              lines.append(f"- artifact_age_hours: `{meta.get('age_hours', 'unknown')}`")
+              if reasons:
+                  lines.append("- reasons: `" + ", ".join(str(reason) for reason in reasons) + "`")
+              else:
+                  lines.append("- reasons: `none`")
+
+          summary_text = "\n".join(lines) + "\n"
+          github_step_summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if github_step_summary:
+              with open(github_step_summary, "a", encoding="utf-8") as fp:
+                  fp.write(summary_text)
+          print(summary_text)
+          PY
+
+  frontend-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+      CONTENT_REVIEW_MAX_COPILOT_WEAK: "180"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Frontend env check
+        run: npm run check:env
+
+      - name: Frontend API contract types check
+        run: npm run contract:types:check
+
+      - name: Frontend lint
+        run: npm run lint
+
+      - name: Frontend typecheck
+        run: TYPECHECK_TIMEOUT_MS=180000 npm run typecheck
+
+      - name: Deck content review gate
+        run: npm run seed:cards:review
+
+  # P0-I: CUJ e2e (smoke). PR allows soft-fail; main is required.
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+      E2E_BASE_URL: http://localhost:3000
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.playwright-browsers
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start server
+        run: npm run start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q 200 && break
+            sleep 2
+          done
+
+      - name: Run e2e (smoke + a11y axe)
+        run: |
+          set +e
+          npm run test:e2e 2>&1 | tee /tmp/frontend-e2e.log
+          e2e_exit_code=${PIPESTATUS[0]}
+          echo "E2E_EXIT_CODE=${e2e_exit_code}" >> "$GITHUB_ENV"
+          exit "${e2e_exit_code}"
+
+      - name: Frontend e2e summary
+        if: always()
+        run: |
+          node scripts/summarize-e2e-result.mjs \
+            --log-path /tmp/frontend-e2e.log \
+            --exit-code "${E2E_EXIT_CODE:-}" \
+            --summary-path /tmp/frontend-e2e-summary.json \
+            --summary-title "Frontend e2e smoke" \
+            --markdown-summary-path "${GITHUB_STEP_SUMMARY:-}"
+
+      - name: Frontend e2e summary schema gate
+        if: always()
+        run: |
+          node scripts/check-e2e-summary-schema.mjs \
+            --summary-path /tmp/frontend-e2e-summary.json \
+            --required-schema-version v1
+
+      - name: Upload frontend e2e log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-log
+          path: /tmp/frontend-e2e.log
+          if-no-files-found: ignore
+
+      - name: Upload frontend e2e summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-summary
+          path: /tmp/frontend-e2e-summary.json
+          if-no-files-found: ignore
+    continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}

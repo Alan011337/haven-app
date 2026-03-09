@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "default_target_tier": "tier_0",
+  "tiers": {
+    "tier_0": {
+      "display_name": "Core CUJ (Bind/Ritual/Journal/Unlock)",
+      "error_budget_freeze_enforced": true,
+      "allowed_release_intents_when_frozen": ["bugfix", "security", "hotfix"]
+    },
+    "tier_1": {
+      "display_name": "Non-core (Push/Growth/Admin)",
+      "error_budget_freeze_enforced": false,
+      "allowed_release_intents_when_frozen": ["feature", "bugfix", "security", "hotfix"]
+    }
+  }
+}

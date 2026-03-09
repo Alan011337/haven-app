@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "api-inventory-owner-attestation",
+  "generated_by": "manual",
+  "updated_at": "2026-02-17T03:15:00Z",
+  "max_attestation_age_days": 90,
+  "min_attestation_days_remaining": 14,
+  "owners": [
+    {
+      "owner_team": "backend-auth",
+      "attested_by": "backend-security@haven.local",
+      "attested_at": "2026-02-17T03:15:00Z",
+      "codeowners_refs": [
+        "/backend/app/api/login.py"
+      ],
+      "notes": "Auth token issuance flow owner confirmed"
+    },
+    {
+      "owner_team": "backend-billing",
+      "attested_by": "backend-security@haven.local",
+      "attested_at": "2026-02-17T03:15:00Z",
+      "codeowners_refs": [
+        "/backend/app/api/routers/billing.py"
+      ],
+      "notes": "Billing state-change/webhook/reconciliation owner confirmed"
+    },
+    {
+      "owner_team": "backend-core",
+      "attested_by": "backend-security@haven.local",
+      "attested_at": "2026-02-17T03:15:00Z",
+      "codeowners_refs": [
+        "/backend/app/api/journals.py",
+        "/backend/app/api/routers/users.py",
+        "/backend/app/api/routers/cards.py",
+        "/backend/app/api/routers/card_decks.py"
+      ],
+      "notes": "Core journals/users/cards/card-decks owner confirmed"
+    },
+    {
+      "owner_team": "backend-platform",
+      "attested_by": "backend-security@haven.local",
+      "attested_at": "2026-02-17T03:15:00Z",
+      "codeowners_refs": [
+        "/backend/app/main.py"
+      ],
+      "notes": "Platform root/health route owner confirmed"
+    },
+    {
+      "owner_team": "backend-realtime",
+      "attested_by": "backend-security@haven.local",
+      "attested_at": "2026-02-17T03:15:00Z",
+      "codeowners_refs": [
+        "/backend/app/core/socket_manager.py",
+        "/backend/app/services/ws_abuse_guard.py"
+      ],
+      "notes": "WebSocket ownership confirmed"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "legal-compliance-bundle",
+  "documents": {
+    "privacy_policy": {
+      "path": "docs/legal/PRIVACY_POLICY.md",
+      "version": "1.0.0"
+    },
+    "terms_of_service": {
+      "path": "docs/legal/TERMS_OF_SERVICE.md",
+      "version": "1.0.0"
+    },
+    "ai_policy": {
+      "path": "POLICY_AI.md",
+      "version": "1.0.0"
+    }
+  },
+  "age_gating": {
+    "minimum_age": 18,
+    "register_page_path": "frontend/src/app/register/page.tsx",
+    "required_links": [
+      "/legal/terms",
+      "/legal/privacy"
+    ]
+  },
+  "consent_receipt": {
+    "event_action": "USER_CONSENT_ACK",
+    "api_test_path": "backend/tests/test_user_consent_receipt_api.py"
+  },
+  "references": {
+    "store_compliance": "docs/security/store-compliance-matrix.json",
+    "consent_contract": "docs/security/consent-receipt-policy.json",
+    "launch_gate": "docs/P0-LAUNCH-GATE.md"
+  }
+}

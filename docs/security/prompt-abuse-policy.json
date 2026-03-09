@@ -1,0 +1,32 @@
+{
+  "artifact_kind": "prompt-abuse-policy",
+  "schema_version": "1.0.0",
+  "mode": "block_and_fallback",
+  "patterns": [
+    {
+      "id": "ignore_system_prompt",
+      "severity": "high",
+      "description": "Attempts to ignore or override hidden instructions"
+    },
+    {
+      "id": "reveal_hidden_prompt",
+      "severity": "high",
+      "description": "Attempts to reveal hidden prompt, policy, or guardrails"
+    },
+    {
+      "id": "jailbreak_roleplay",
+      "severity": "medium",
+      "description": "Known jailbreak roleplay markers (DAN/developer mode)"
+    }
+  ],
+  "enforcement": {
+    "service": "backend/app/services/prompt_abuse.py",
+    "entrypoint": "backend/app/services/ai.py",
+    "on_match": "return_fallback_response_with_safety_tier_2",
+    "log_contract": "pattern_ids_only_no_raw_content"
+  },
+  "tests": [
+    "backend/tests/test_prompt_abuse_policy.py",
+    "backend/tests/test_ai_safety_logic.py"
+  ]
+}

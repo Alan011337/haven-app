@@ -1,0 +1,60 @@
+{
+  "artifact_kind": "data-classification-policy",
+  "schema_version": "1.0.0",
+  "sensitivity_mapping": {
+    "public": "non_sensitive",
+    "operational": "non_sensitive",
+    "account_sensitive": "pii_sensitive",
+    "relationship_sensitive": "intimate_sensitive",
+    "billing_sensitive": "financial_sensitive"
+  },
+  "taxonomy": [
+    {
+      "id": "non_sensitive",
+      "description": "Non-PII operational or public metadata"
+    },
+    {
+      "id": "pii_sensitive",
+      "description": "Account-linked personal data and identifiers"
+    },
+    {
+      "id": "intimate_sensitive",
+      "description": "Relationship and emotional content with high privacy risk"
+    },
+    {
+      "id": "financial_sensitive",
+      "description": "Billing or payment-related data under stricter controls"
+    }
+  ],
+  "handling_rules": {
+    "non_sensitive": {
+      "log_redaction_required": false,
+      "encryption_at_rest_required": false,
+      "third_party_transfer_allowed": true,
+      "auditable_access_required": false
+    },
+    "pii_sensitive": {
+      "log_redaction_required": true,
+      "encryption_at_rest_required": true,
+      "third_party_transfer_allowed": false,
+      "auditable_access_required": true
+    },
+    "intimate_sensitive": {
+      "log_redaction_required": true,
+      "encryption_at_rest_required": true,
+      "third_party_transfer_allowed": false,
+      "auditable_access_required": true
+    },
+    "financial_sensitive": {
+      "log_redaction_required": true,
+      "encryption_at_rest_required": true,
+      "third_party_transfer_allowed": true,
+      "auditable_access_required": true
+    }
+  },
+  "references": {
+    "retention_policy": "docs/security/data-retention-policy.json",
+    "export_package_spec": "docs/security/data-rights-export-package-spec.json",
+    "deletion_graph_spec": "docs/security/data-rights-deletion-graph.json"
+  }
+}

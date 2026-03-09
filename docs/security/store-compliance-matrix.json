@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "store-compliance-matrix",
+  "platforms": {
+    "ios_app_store": {
+      "age_rating": "18+",
+      "privacy_policy_url": "/legal/privacy",
+      "terms_url": "/legal/terms",
+      "data_deletion_url": "/users/me/data",
+      "contact_email": "security@haven.local",
+      "ai_disclosure": true
+    },
+    "google_play": {
+      "age_rating": "18+",
+      "privacy_policy_url": "/legal/privacy",
+      "terms_url": "/legal/terms",
+      "data_deletion_url": "/users/me/data",
+      "contact_email": "security@haven.local",
+      "ai_disclosure": true
+    }
+  },
+  "evidence": {
+    "last_self_check_at": "2026-02-19T00:00:00Z",
+    "owner": "platform-launch"
+  },
+  "references": {
+    "privacy_policy": "docs/legal/PRIVACY_POLICY.md",
+    "terms_of_service": "docs/legal/TERMS_OF_SERVICE.md",
+    "data_rights": "DATA_RIGHTS.md",
+    "ai_policy": "POLICY_AI.md",
+    "entitlement_parity_test": "backend/tests/test_billing_entitlement_parity.py"
+  }
+}

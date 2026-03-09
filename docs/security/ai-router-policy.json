@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "ai-router-policy",
+  "supported_providers": [
+    "openai",
+    "gemini"
+  ],
+  "routing": {
+    "default_primary_provider": "openai",
+    "allow_fallback": true,
+    "fallback_mode": "primary_then_fallback",
+    "degradation_policy": "fallback_to_openai_when_provider_unavailable",
+    "analysis_task": "l2_deep_reasoning",
+    "task_policy": {
+      "l1_classify_extract": {
+        "primary_provider": "gemini",
+        "fallback_provider": "openai",
+        "mode": "fast_low_cost"
+      },
+      "l2_deep_reasoning": {
+        "primary_provider": "openai",
+        "fallback_provider": "gemini",
+        "mode": "high_quality"
+      }
+    }
+  },
+  "runtime_policy": {
+    "free_tier_first_enabled": true,
+    "idempotency": {
+      "mismatch_action": "bypass_and_continue",
+      "status_precedence": [
+        "inflight_conflict_409",
+        "fingerprint_mismatch_422",
+        "ok"
+      ]
+    },
+    "retry": {
+      "max_attempts_per_profile": 2,
+      "max_total_attempts": 4,
+      "max_elapsed_ms": 6500,
+      "rate_limit_failover_threshold_seconds": 2.0,
+      "backoff": {
+        "base_ms": 400,
+        "max_ms": 8000,
+        "jitter": "full"
+      }
+    },
+    "result_cache": {
+      "enabled": true,
+      "mode": "success_only",
+      "ttl_success_s_by_request_class": {
+        "journal_analysis": 180,
+        "cooldown_rewrite": 45
+      },
+      "ttl_failure_s": 5,
+      "do_not_cache": [
+        "elevated_safety_tier",
+        "fallback_marker_output"
+      ]
+    },
+    "duplicate_handling": {
+      "poll_interval_ms": 80,
+      "poll_jitter_ms_max": 20,
+      "poll_max_consecutive_miss": 3,
+      "fast_yield_remaining_budget_ms": 200,
+      "exit_action": "graceful_fallback"
+    },
+    "schema_cooldown": {
+      "failure_threshold": 3,
+      "window_seconds": 60,
+      "cooldown_seconds": 120,
+      "shared_store_required": "redis"
+    },
+    "degraded_mode": {
+      "disable_result_cache": true,
+      "disable_inflight_poll": true,
+      "disable_cooldown_enforce": true,
+      "force_max_total_attempts": 2,
+      "force_backoff_base_ms": 0,
+      "force_backoff_max_ms": 0
+    },
+    "metrics": {
+      "enforce_enum_labels": true,
+      "forbid_dynamic_unknown_mapping": true,
+      "unknown_bucket": "unknown"
+    }
+  },
+  "budget_guardrails": {
+    "token_budget_enforced": false,
+    "cost_guard_mode": "observe_only"
+  },
+  "references": {
+    "router_service": "backend/app/services/ai_router.py",
+    "analysis_service": "backend/app/services/ai.py",
+    "router_doc": "docs/ai/router-policy-v1.md",
+    "router_tests": "backend/tests/test_ai_router_runtime.py",
+    "contract_tests": "backend/tests/test_ai_router_policy_contract.py"
+  }
+}

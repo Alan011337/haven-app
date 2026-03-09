@@ -1,0 +1,71 @@
+{
+  "artifact_kind": "abuse-economics-policy",
+  "schema_version": "1.0.0",
+  "currency": "USD",
+  "vectors": [
+    {
+      "id": "token_drain_journal_analysis",
+      "description": "Repeated journal submissions to force AI analysis spend",
+      "unit_cost_usd": 0.003,
+      "max_events_per_user_per_day": 300,
+      "max_events_per_ip_per_day": 900,
+      "mapped_controls": [
+        "backend/app/services/rate_limit.py",
+        "docs/security/abuse-budget-policy.md"
+      ]
+    },
+    {
+      "id": "ws_storm",
+      "description": "High-rate websocket connect/send spam",
+      "unit_cost_usd": 0.0002,
+      "max_events_per_user_per_day": 20000,
+      "max_events_per_ip_per_day": 60000,
+      "mapped_controls": [
+        "backend/app/services/ws_abuse_guard.py",
+        "backend/tests/test_ws_abuse_guard.py"
+      ]
+    },
+    {
+      "id": "pairing_bruteforce",
+      "description": "Invite-code brute-force and repeated pair attempts",
+      "unit_cost_usd": 0.0001,
+      "max_events_per_user_per_day": 500,
+      "max_events_per_ip_per_day": 1500,
+      "mapped_controls": [
+        "backend/app/services/pairing_abuse_guard.py",
+        "backend/tests/test_pairing_rate_limit_api.py"
+      ]
+    },
+    {
+      "id": "push_notification_spam",
+      "description": "Repeated actions triggering email/push notifications to drain Resend quota",
+      "unit_cost_usd": 0.001,
+      "max_events_per_user_per_day": 600,
+      "max_events_per_ip_per_day": 1800,
+      "mapped_controls": [
+        "backend/app/services/notification.py",
+        "backend/app/services/rate_limit.py"
+      ]
+    },
+    {
+      "id": "signup_abuse",
+      "description": "Mass account creation to consume DB resources and verification emails",
+      "unit_cost_usd": 0.002,
+      "max_events_per_user_per_day": 10,
+      "max_events_per_ip_per_day": 30,
+      "mapped_controls": [
+        "backend/app/api/login.py",
+        "backend/app/services/rate_limit.py"
+      ]
+    }
+  ],
+  "escalation_thresholds": {
+    "warn_daily_total_usd": 20.0,
+    "block_daily_total_usd": 80.0
+  },
+  "references": {
+    "runbook": "RUNBOOK.md",
+    "launch_gate": "docs/P0-LAUNCH-GATE.md",
+    "incident_playbook": "docs/ops/incident-response-playbook.md"
+  }
+}

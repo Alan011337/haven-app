@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "pricing-experiment-policy",
+  "experiment_key": "pricing_paywall_copy_v1",
+  "owner": "growth-billing",
+  "feature_flags": {
+    "required": [
+      "growth_ab_experiment_enabled",
+      "growth_pricing_experiment_enabled"
+    ],
+    "kill_switches": [
+      "disable_pricing_experiment"
+    ]
+  },
+  "variants": [
+    {
+      "name": "control",
+      "weight": 50
+    },
+    {
+      "name": "pricing_variant_a",
+      "weight": 50
+    }
+  ],
+  "success_metrics": [
+    "pricing.experiment.checkout_start_rate",
+    "pricing.experiment.checkout_complete_rate",
+    "pricing.experiment.trial_to_active_rate"
+  ],
+  "guardrail_metrics": [
+    "pricing.experiment.refund_rate",
+    "pricing.experiment.chargeback_rate",
+    "pricing.experiment.p0_cuj_failure_rate",
+    "pricing.experiment.support_ticket_rate"
+  ],
+  "guardrail_policy": {
+    "refund_rate_max": 0.03,
+    "chargeback_rate_max": 0.01,
+    "p0_cuj_failure_rate_max": 0.001,
+    "support_ticket_rate_max": 0.05
+  },
+  "references": {
+    "plan_doc": "docs/growth/pricing-experiment-plan.md",
+    "events_doc": "docs/data/events.md",
+    "feature_flag_service": "backend/app/services/feature_flags.py",
+    "allocator_service": "backend/app/services/pricing_experiment_runtime.py",
+    "dry_run_script": "backend/scripts/run_pricing_experiment_dry_run.py",
+    "guardrail_snapshot_script": "backend/scripts/run_pricing_experiment_guardrail_snapshot.py",
+    "guardrail_workflow": ".github/workflows/pricing-experiment-guardrail.yml"
+  }
+}

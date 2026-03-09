@@ -1,0 +1,124 @@
+name: Canary Guard
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_seconds:
+        description: "Canary observation duration (seconds)"
+        required: false
+        default: "300"
+      interval_seconds:
+        description: "Sampling interval (seconds)"
+        required: false
+        default: "30"
+      max_failures:
+        description: "Fail sample count to trigger rollback"
+        required: false
+        default: "1"
+      target_percent:
+        description: "Canary rollout target percent"
+        required: false
+        default: "1"
+      require_sufficient_data:
+        description: "Treat insufficient_data as failure"
+        required: false
+        default: false
+        type: boolean
+      dry_run_hooks:
+        description: "Do not call rollout/rollback hooks"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary-guard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      CANARY_GUARD_HEALTH_SLO_URL: ${{ secrets.CANARY_GUARD_HEALTH_SLO_URL }}
+      CANARY_GUARD_BEARER_TOKEN: ${{ secrets.CANARY_GUARD_BEARER_TOKEN }}
+      CANARY_GUARD_ROLLOUT_HOOK_URL: ${{ secrets.CANARY_GUARD_ROLLOUT_HOOK_URL }}
+      CANARY_GUARD_ROLLBACK_HOOK_URL: ${{ secrets.CANARY_GUARD_ROLLBACK_HOOK_URL }}
+      CANARY_GUARD_HOOK_BEARER_TOKEN: ${{ secrets.CANARY_GUARD_HOOK_BEARER_TOKEN }}
+      CANARY_GUARD_HOOK_TIMEOUT_SECONDS: "10"
+      CANARY_GUARD_TIMEOUT_SECONDS: "10"
+      CANARY_GUARD_DURATION_SECONDS: ${{ inputs.duration_seconds }}
+      CANARY_GUARD_INTERVAL_SECONDS: ${{ inputs.interval_seconds }}
+      CANARY_GUARD_MAX_FAILURES: ${{ inputs.max_failures }}
+      CANARY_GUARD_TARGET_PERCENT: ${{ inputs.target_percent }}
+      CANARY_GUARD_REQUIRE_SUFFICIENT_DATA: ${{ inputs.require_sufficient_data }}
+      DRY_RUN_HOOKS: ${{ inputs.dry_run_hooks }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run canary guard
+        id: guard
+        continue-on-error: true
+        run: |
+          if [[ "${DRY_RUN_HOOKS}" == "true" ]]; then
+            python scripts/run_canary_guard.py --dry-run-hooks
+          else
+            python scripts/run_canary_guard.py
+          fi
+
+      - name: Open or Update Alert Issue
+        if: steps.guard.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const titlePrefix = "[P0][SRE] Canary guard failed";
+            const today = new Date().toISOString().slice(0, 10);
+            const title = `${titlePrefix} (${today})`;
+            const body = [
+              "Canary guard workflow failed.",
+              "",
+              `- Workflow run: ${runUrl}`,
+              `- Ref: ${context.ref}`,
+              `- SHA: ${context.sha}`,
+              "",
+              "Action items:",
+              "1) Verify `/health/slo` WS SLI + burn-rate details.",
+              "2) If dry-run was disabled, confirm rollback hook execution.",
+              "3) Pause rollout and investigate WS/provider regressions before resume."
+            ].join("\n");
+
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = openIssues.find((issue) => issue.title.startsWith(titlePrefix));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail Job on Canary Guard Failure
+        if: steps.guard.outcome == 'failure'
+        run: exit 1

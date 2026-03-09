@@ -1,0 +1,54 @@
+app = "haven-api-prod"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile.fly"
+
+[env]
+  ENV = "production"
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  PYTHONUTF8 = "1"
+  PYTHONPATH = "."
+  NOTIFICATION_OUTBOX_ENABLED = "true"
+  AI_ROUTER_SHARED_STATE_BACKEND = "redis"
+  ABUSE_GUARD_STORE_BACKEND = "redis"
+
+[deploy]
+  release_command = "./scripts/run-alembic.sh upgrade head"
+
+[processes]
+  app = "./scripts/run-prod.sh"
+  worker = "python scripts/run_notification_outbox_dispatch.py --loop --interval-seconds 15 --limit 200"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 80
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health/live"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"
+  processes = ["worker"]

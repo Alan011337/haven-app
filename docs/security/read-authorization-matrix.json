@@ -1,0 +1,199 @@
+{
+  "artifact_kind": "read-authorization-matrix",
+  "schema_version": "1.0.0",
+  "generated_by": "backend/scripts/check_read_authorization_matrix.py",
+  "entries": [
+    {
+      "method": "GET",
+      "path": "/api/billing/reconciliation",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-billing",
+      "test_ref": "backend/tests/test_billing_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/card-decks/history",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/card-decks/{deck_id}/draw",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/card-decks/history/summary",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/card-decks/stats",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/backlog",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/daily-status",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/draw",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards/{card_id}/conversation",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me/data-export",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_data_rights_api.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/gamification-summary",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_gamification_summary_api.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_user_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/notifications",
+      "auth_mode": "authenticated",
+      "subject_scope": "notification_owner",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_notification_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/notifications/stats",
+      "auth_mode": "authenticated",
+      "subject_scope": "notification_owner",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_notification_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/{user_id}",
+      "auth_mode": "authenticated",
+      "subject_scope": "self_or_partner",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_user_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mediation/status",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mediation/repair/status",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_repair_flow_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cooldown/status",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/love-map/cards",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/love-map/notes",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/blueprint/",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/blueprint/date-suggestions",
+      "auth_mode": "authenticated",
+      "subject_scope": "pair_member",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/weekly",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-core",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    }
+  ]
+}
