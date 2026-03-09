@@ -8,6 +8,7 @@ RUN_RUNTIME_GATES="${RUN_RUNTIME_GATES:-0}"
 P0_READINESS_MODE="${P0_READINESS_MODE:-contract}" # contract | checklist
 CUJ_SYNTHETIC_EVIDENCE_MAX_AGE_HOURS="${CUJ_SYNTHETIC_EVIDENCE_MAX_AGE_HOURS:-36}"
 P0_READINESS_LOG_DIR="${P0_READINESS_LOG_DIR:-/tmp/p0-readiness-audit}"
+BACKEND_DIR="${ROOT_DIR}/backend"
 
 mkdir -p "${EVIDENCE_DIR}"
 mkdir -p "${P0_READINESS_LOG_DIR}"
@@ -46,6 +47,24 @@ run_contract_check() {
   return 1
 }
 
+resolve_backend_python() {
+  local candidate
+  for candidate in "${BACKEND_DIR}/.venv-gate/bin/python" "${BACKEND_DIR}/venv/bin/python" "python3"; do
+    if [[ "${candidate}" == "python3" ]]; then
+      if command -v python3 >/dev/null 2>&1; then
+        printf '%s\n' "python3"
+        return 0
+      fi
+      continue
+    fi
+    if [[ -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -69,6 +88,8 @@ collect_launch_open_items() {
 collect_release_open_items
 collect_launch_open_items
 
+BACKEND_PYTHON="$(resolve_backend_python)"
+
 release_open_items="${#release_open_lines[@]}"
 launch_open_items="${#launch_open_lines[@]}"
 
@@ -88,18 +109,18 @@ else
   run_contract_check \
     "release_checklist_complete" \
     "backend security gate passed; release checklist open items=${release_open_items} (non-blocking in contract mode)" \
-    env PYTHONUTF8=1 PYTHONPATH="${ROOT_DIR}/backend${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${ROOT_DIR}/backend' && ./scripts/security-gate.sh"
+    env PYTHONUTF8=1 PYTHONPATH="${BACKEND_DIR}${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${BACKEND_DIR}' && ./scripts/security-gate.sh"
 
   run_contract_check \
     "launch_gate_complete" \
     "launch contract gates passed (strict CUJ evidence + override contract); launch gate open items=${launch_open_items} (non-blocking in contract mode)" \
-    env PYTHONUTF8=1 PYTHONPATH="${ROOT_DIR}/backend${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${ROOT_DIR}/backend' && .venv-gate/bin/python scripts/check_release_gate_override_contract.py && .venv-gate/bin/python scripts/check_cuj_synthetic_evidence_gate.py --require-pass --max-age-hours '${CUJ_SYNTHETIC_EVIDENCE_MAX_AGE_HOURS}'"
+    env PYTHONUTF8=1 PYTHONPATH="${BACKEND_DIR}${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${BACKEND_DIR}' && '${BACKEND_PYTHON}' scripts/check_release_gate_override_contract.py && '${BACKEND_PYTHON}' scripts/check_cuj_synthetic_evidence_gate.py --require-pass --max-age-hours '${CUJ_SYNTHETIC_EVIDENCE_MAX_AGE_HOURS}'"
 fi
 
 run_contract_check \
   "store_compliance_contract_passed" \
   "store compliance contract passed (BILL-STORE-01)" \
-  env PYTHONUTF8=1 PYTHONPATH="${ROOT_DIR}/backend${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${ROOT_DIR}/backend' && if [[ -x .venv-gate/bin/python ]]; then .venv-gate/bin/python scripts/check_store_compliance_contract.py; elif [[ -x venv/bin/python ]]; then venv/bin/python scripts/check_store_compliance_contract.py; else python3 scripts/check_store_compliance_contract.py; fi"
+  env PYTHONUTF8=1 PYTHONPATH="${BACKEND_DIR}${PYTHONPATH:+:${PYTHONPATH}}" bash -lc "cd '${BACKEND_DIR}' && '${BACKEND_PYTHON}' scripts/check_store_compliance_contract.py"
 
 if [[ "${RUN_RUNTIME_GATES}" == "1" ]]; then
   if RELEASE_GATE_ALLOW_MISSING_LAUNCH_SIGNOFF=1 \
