@@ -716,7 +716,7 @@ jobs:
       run:
         working-directory: frontend
     env:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
       NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
       CONTENT_REVIEW_MAX_COPILOT_WEAK: "180"
     steps:
@@ -755,7 +755,7 @@ jobs:
       run:
         working-directory: frontend
     env:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
       NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
       E2E_BASE_URL: http://localhost:3000
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/frontend/.playwright-browsers

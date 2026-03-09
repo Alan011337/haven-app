@@ -466,6 +466,8 @@ class ReleaseGateWorkflowContractTests(unittest.TestCase):
     def test_release_gate_workflow_frontend_e2e_has_playwright_cache_contract(self) -> None:
         text = RELEASE_GATE_WORKFLOW_PATH.read_text(encoding="utf-8")
         self.assertIn("frontend-e2e:", text)
+        self.assertIn("NEXT_PUBLIC_API_URL: http://localhost:8000/api", text)
+        self.assertIn("NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws", text)
         self.assertIn(
             "continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}",
             text,
