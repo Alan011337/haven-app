@@ -46,7 +46,7 @@ jobs:
         run: python scripts/check_settings_manifest.py
 
       - name: Setup Flyctl for deploy preflight
-        uses: superfly/flyctl-actions/setup-flyctl@v1.5
+        uses: superfly/flyctl-actions/setup-flyctl@master
         with:
           version: '0.3.221'
 

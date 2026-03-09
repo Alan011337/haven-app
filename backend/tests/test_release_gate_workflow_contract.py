@@ -34,7 +34,7 @@ class ReleaseGateWorkflowContractTests(unittest.TestCase):
     def test_release_gate_workflow_contains_deploy_preflight_gate_steps(self) -> None:
         text = RELEASE_GATE_WORKFLOW_PATH.read_text(encoding="utf-8")
         self.assertIn("name: Setup Flyctl for deploy preflight", text)
-        self.assertIn("superfly/flyctl-actions/setup-flyctl@v1.5", text)
+        self.assertIn("superfly/flyctl-actions/setup-flyctl@master", text)
         self.assertIn("version: '0.3.221'", text)
         self.assertIn("name: Deploy preflight gate (PR optional)", text)
         self.assertIn("name: Deploy preflight gate (main required)", text)
