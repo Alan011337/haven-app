@@ -23,7 +23,7 @@ jobs:
     env:
       DATABASE_URL: sqlite:///./test.db
       OPENAI_API_KEY: test-key
-      SECRET_KEY: 01234567890123456789012345678901
+      SECRET_KEY: "01234567890123456789012345678901"
       ABUSE_GUARD_STORE_BACKEND: memory
     steps:
       - name: Checkout
