@@ -202,6 +202,10 @@ class ReleaseGateWorkflowContractTests(unittest.TestCase):
         self,
     ) -> None:
         text = RELEASE_GATE_WORKFLOW_PATH.read_text(encoding="utf-8")
+        self.assertIn("name: Default SLO health URL", text)
+        self.assertIn('FLY_APP_NAME: ${{ vars.FLY_APP_NAME || \'haven-api-prod\' }}', text)
+        self.assertIn('SLO_GATE_HEALTH_SLO_URL=https://${FLY_APP_NAME}.fly.dev/health/slo', text)
+        self.assertIn("[release-gate] defaulted SLO_GATE_HEALTH_SLO_URL from FLY_APP_NAME", text)
         self.assertIn("name: SLO burn-rate gate (main required)", text)
         self.assertIn(
             "python scripts/check_slo_burn_rate_gate.py --summary-path /tmp/slo-burn-rate-gate-summary.json",

@@ -271,10 +271,22 @@ jobs:
           print(summary_text)
           PY
 
+      - name: Default SLO health URL
+        env:
+          FLY_APP_NAME: ${{ vars.FLY_APP_NAME || 'haven-api-prod' }}
+          SLO_GATE_HEALTH_SLO_URL_SECRET: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
+        run: |
+          if [ -n "${SLO_GATE_HEALTH_SLO_URL_SECRET}" ]; then
+            echo "SLO_GATE_HEALTH_SLO_URL=${SLO_GATE_HEALTH_SLO_URL_SECRET}" >> "${GITHUB_ENV}"
+            echo "[release-gate] using configured SLO_GATE_HEALTH_SLO_URL secret"
+          else
+            echo "SLO_GATE_HEALTH_SLO_URL=https://${FLY_APP_NAME}.fly.dev/health/slo" >> "${GITHUB_ENV}"
+            echo "[release-gate] defaulted SLO_GATE_HEALTH_SLO_URL from FLY_APP_NAME"
+          fi
+
       - name: SLO burn-rate gate (PR internal required)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
-          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
           SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
           SLO_GATE_TIMEOUT_SECONDS: "10"
         run: python scripts/check_slo_burn_rate_gate.py --summary-path /tmp/slo-burn-rate-gate-summary.json
@@ -282,7 +294,6 @@ jobs:
       - name: SLO burn-rate gate (PR fork optional)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         env:
-          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
           SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
           SLO_GATE_TIMEOUT_SECONDS: "10"
         run: python scripts/check_slo_burn_rate_gate.py --allow-missing-url --summary-path /tmp/slo-burn-rate-gate-summary.json
@@ -290,7 +301,6 @@ jobs:
       - name: SLO burn-rate gate (main required)
         if: github.ref == 'refs/heads/main'
         env:
-          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
           SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
           SLO_GATE_TIMEOUT_SECONDS: "10"
         run: python scripts/check_slo_burn_rate_gate.py --summary-path /tmp/slo-burn-rate-gate-summary.json
@@ -334,7 +344,6 @@ jobs:
       - name: Observability live contract gate (PR internal optional)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
-          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
           SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
         run: |
           python scripts/check_observability_live_contract.py \
@@ -346,7 +355,6 @@ jobs:
       - name: Observability live contract gate (main required)
         if: github.ref == 'refs/heads/main'
         env:
-          SLO_GATE_HEALTH_SLO_URL: ${{ secrets.SLO_GATE_HEALTH_SLO_URL }}
           SLO_GATE_BEARER_TOKEN: ${{ secrets.SLO_GATE_BEARER_TOKEN }}
         run: |
           python scripts/check_observability_live_contract.py \
