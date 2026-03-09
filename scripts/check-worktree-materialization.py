@@ -49,16 +49,7 @@ def main() -> int:
     args = _parse_args()
     root = Path(args.root).resolve()
     rel_paths = tuple(args.paths) if args.paths else DEFAULT_PATHS
-
-    if platform.system().lower() != "darwin":
-        payload = {
-            "result": "skipped",
-            "reasons": ["unsupported_platform"],
-            "meta": {"platform": platform.system()},
-        }
-        _write_summary(args.summary_path, payload)
-        print("[worktree-materialization] result: skipped (unsupported_platform)")
-        return 0
+    is_darwin = platform.system().lower() == "darwin"
 
     missing: list[str] = []
     dataless: list[str] = []
@@ -68,9 +59,10 @@ def main() -> int:
         if not path.exists():
             missing.append(rel)
             continue
-        flags = _flag_string(path)
-        if "dataless" in flags:
-            dataless.append(rel)
+        if is_darwin:
+            flags = _flag_string(path)
+            if "dataless" in flags:
+                dataless.append(rel)
 
     reasons: list[str] = []
     if missing:
@@ -90,6 +82,8 @@ def main() -> int:
         "reasons": reasons,
         "meta": {
             "root": str(root),
+            "platform": platform.system(),
+            "dataless_check_supported": is_darwin,
             "checked_total": len(rel_paths),
             "missing_total": len(missing),
             "dataless_total": len(dataless),
