@@ -3,6 +3,22 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+
+const resolveApiProxyTarget = (): string | null => {
+  const raw = process.env.API_PROXY_TARGET?.trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return null;
+    }
+    return trimTrailingSlash(parsed.toString());
+  } catch {
+    return null;
+  }
+};
+
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
@@ -50,6 +66,18 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: securityHeaders,
+      },
+    ];
+  },
+  async rewrites() {
+    const apiProxyTarget = resolveApiProxyTarget();
+    if (!apiProxyTarget) {
+      return [];
+    }
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiProxyTarget}/:path*`,
       },
     ];
   },

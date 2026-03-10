@@ -3,6 +3,8 @@ FROM node:22-alpine AS builder
 WORKDIR /workspace
 ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN apk add --no-cache python3
+
 COPY frontend/package.json frontend/package-lock.json ./frontend/
 COPY packages/haven-shared ./packages/haven-shared
 
@@ -13,8 +15,10 @@ COPY frontend ./
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
+ARG API_PROXY_TARGET
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+ENV API_PROXY_TARGET=${API_PROXY_TARGET}
 
 RUN npm run build
 
