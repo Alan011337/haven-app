@@ -36,6 +36,18 @@ class FrontendFlyDeployContractTests(unittest.TestCase):
         dockerfile = (ROOT / "frontend" / "Dockerfile.fly").read_text(encoding="utf-8")
         self.assertIn("ENV SKIP_WORKTREE_MATERIALIZATION_CHECK=1", dockerfile)
 
+    def test_frontend_dockerfile_sets_runtime_env_in_runner_stage(self) -> None:
+        dockerfile = (ROOT / "frontend" / "Dockerfile.fly").read_text(encoding="utf-8")
+        runner_stage = dockerfile.split("FROM node:22-alpine AS runner", maxsplit=1)[1]
+
+        self.assertIn("ARG NEXT_PUBLIC_API_URL", runner_stage)
+        self.assertIn("ARG NEXT_PUBLIC_WS_URL", runner_stage)
+        self.assertIn("ARG API_PROXY_TARGET", runner_stage)
+        self.assertIn("ENV SKIP_WORKTREE_MATERIALIZATION_CHECK=1", runner_stage)
+        self.assertIn("ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}", runner_stage)
+        self.assertIn("ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}", runner_stage)
+        self.assertIn("ENV API_PROXY_TARGET=${API_PROXY_TARGET}", runner_stage)
+
 
 if __name__ == "__main__":
     unittest.main()
