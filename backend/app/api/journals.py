@@ -645,6 +645,7 @@ def _apply_journal_cursor_or_offset(statement, *, page_cursor: PageCursor, offse
     return statement.offset(offset)
 
 # 2. 讀取「自己」的日記 (支援 limit/offset 分頁) — P2-B: uses read replica when configured
+@router.get("", response_model=List[Dict[str, Any]], include_in_schema=False)
 @router.get("/", response_model=List[Dict[str, Any]])
 def read_my_journals(
     session: ReadSessionDep,

@@ -115,6 +115,15 @@ class JournalCursorPaginationTests(unittest.TestCase):
         self.assertEqual(len(third_items), 1)
         self.assertIsNone(third_page.headers.get("X-Next-Cursor"))
 
+    def test_slashless_journal_list_does_not_redirect(self) -> None:
+        for idx in range(2):
+            self._create_journal(f"journal-slashless-{idx}")
+
+        response = self.client.get("/api/journals?limit=2", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(len(response.json()), 2)
+
     def test_cursor_and_offset_cannot_be_combined(self) -> None:
         response = self.client.get("/api/journals/?cursor=abc&offset=1")
         self.assertEqual(response.status_code, 400)
