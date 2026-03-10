@@ -11,6 +11,7 @@ import sys
 import unittest
 from pathlib import Path
 from typing import Generator
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -22,6 +23,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.api import login  # noqa: E402
+from app.core.config import settings  # noqa: E402
 from app.core.security import get_password_hash  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.user import User  # noqa: E402
@@ -222,6 +224,75 @@ class CookieSecurityTests(unittest.TestCase):
         # 檢查是否設置了 Cookie
         # （詳細的 httpOnly/SameSite 檢查在集成測試中進行）
         self.assertIn(ACCESS_TOKEN_COOKIE_NAME, response.cookies)
+
+    def test_production_cookie_attributes_use_secure_samesite_none(self) -> None:
+        """✅ production/secure cookie 必須允許分網域前後端請求攜帶 session。"""
+        with patch.object(settings, "ENVIRONMENT", "production"), patch.object(
+            settings,
+            "COOKIE_SECURE",
+            False,
+        ):
+            response = self.client.post(
+                "/api/auth/token",
+                data={"username": "secure-user@example.com", "password": "secure-pass"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        set_cookie_headers = [header.lower() for header in response.headers.get_list("set-cookie")]
+        access_cookie_header = next(header for header in set_cookie_headers if header.startswith("access_token="))
+        refresh_cookie_header = next(header for header in set_cookie_headers if header.startswith("refresh_token="))
+
+        self.assertIn("httponly", access_cookie_header)
+        self.assertIn("secure", access_cookie_header)
+        self.assertIn("samesite=none", access_cookie_header)
+        self.assertIn("secure", refresh_cookie_header)
+        self.assertIn("samesite=none", refresh_cookie_header)
+
+    def test_development_cookie_attributes_keep_samesite_lax(self) -> None:
+        """✅ 本地開發維持 SameSite=Lax，避免不必要放寬。"""
+        with patch.object(settings, "ENVIRONMENT", "development"), patch.object(
+            settings,
+            "COOKIE_SECURE",
+            False,
+        ):
+            response = self.client.post(
+                "/api/auth/token",
+                data={"username": "secure-user@example.com", "password": "secure-pass"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        set_cookie_headers = [header.lower() for header in response.headers.get_list("set-cookie")]
+        access_cookie_header = next(header for header in set_cookie_headers if header.startswith("access_token="))
+
+        self.assertIn("httponly", access_cookie_header)
+        self.assertIn("samesite=lax", access_cookie_header)
+        self.assertNotIn("samesite=none", access_cookie_header)
+
+    def test_production_logout_clears_cookie_with_samesite_none(self) -> None:
+        """✅ production 登出時要用同一個 cookie policy 清除 session。"""
+        with patch.object(settings, "ENVIRONMENT", "production"), patch.object(
+            settings,
+            "COOKIE_SECURE",
+            False,
+        ):
+            login_response = self.client.post(
+                "/api/auth/token",
+                data={"username": "secure-user@example.com", "password": "secure-pass"},
+            )
+            self.assertEqual(login_response.status_code, 200)
+
+            logout_response = self.client.post("/api/auth/logout")
+
+        self.assertEqual(logout_response.status_code, 200)
+        delete_cookie_headers = [header.lower() for header in logout_response.headers.get_list("set-cookie")]
+        access_cookie_header = next(header for header in delete_cookie_headers if header.startswith("access_token="))
+        refresh_cookie_header = next(header for header in delete_cookie_headers if header.startswith("refresh_token="))
+
+        self.assertIn("max-age=0", access_cookie_header)
+        self.assertIn("samesite=none", access_cookie_header)
+        self.assertIn("secure", access_cookie_header)
+        self.assertIn("max-age=0", refresh_cookie_header)
+        self.assertIn("samesite=none", refresh_cookie_header)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,14 @@ def _get_cookie_secure() -> bool:
     return settings.ENVIRONMENT == "production" or settings.COOKIE_SECURE
 
 
+def _get_cookie_samesite() -> str:
+    """為跨站前後端部署選擇兼容的 SameSite 策略。"""
+    if _get_cookie_secure():
+        # Production uses separate web/api fly.dev hosts; cross-site XHR needs SameSite=None.
+        return "none"
+    return "lax"
+
+
 def set_auth_cookies(
     response: Response,
     access_token: str,
@@ -54,6 +62,7 @@ def set_auth_cookies(
     """
     secure = _get_cookie_secure()
     domain = _get_cookie_domain()
+    samesite = _get_cookie_samesite()
     
     # 設置訪問令牌 Cookie
     response.set_cookie(
@@ -63,7 +72,7 @@ def set_auth_cookies(
         expires=int(access_token_expires_delta.total_seconds()),
         httponly=True,  # 防止 JavaScript 訪問
         secure=secure,  # HTTPS only（生產環境）
-        samesite="lax",  # CSRF 防護
+        samesite=samesite,
         domain=domain,
     )
     
@@ -76,7 +85,7 @@ def set_auth_cookies(
             expires=int(refresh_token_expires_delta.total_seconds()),
             httponly=True,
             secure=secure,
-            samesite="lax",
+            samesite=samesite,
             domain=domain,
         )
     
@@ -85,16 +94,17 @@ def set_auth_cookies(
 
 def clear_auth_cookies(response: Response) -> None:
     """清除認證 Cookie。"""
+    samesite = _get_cookie_samesite()
     response.delete_cookie(
         key=ACCESS_TOKEN_COOKIE_NAME,
         secure=_get_cookie_secure(),
-        samesite="lax",
+        samesite=samesite,
         domain=_get_cookie_domain(),
     )
     response.delete_cookie(
         key=REFRESH_TOKEN_COOKIE_NAME,
         secure=_get_cookie_secure(),
-        samesite="lax",
+        samesite=samesite,
         domain=_get_cookie_domain(),
     )
     logger.info("Auth cookies cleared")
