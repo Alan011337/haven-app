@@ -11,17 +11,17 @@ FRONTEND_NEXT_CONFIG = ROOT / "frontend" / "next.config.ts"
 
 
 class FrontendFlyDeployContractTests(unittest.TestCase):
-    def test_frontend_fly_config_uses_direct_backend_api_url(self) -> None:
+    def test_frontend_fly_config_uses_same_origin_api_url_and_internal_proxy(self) -> None:
         config = tomllib.loads(FRONTEND_FLY_TOML.read_text(encoding="utf-8"))
         build_args = config["build"]["args"]
         env = config["env"]
 
-        self.assertEqual(build_args["NEXT_PUBLIC_API_URL"], "https://haven-api-prod.fly.dev/api")
-        self.assertEqual(env["NEXT_PUBLIC_API_URL"], "https://haven-api-prod.fly.dev/api")
+        self.assertEqual(build_args["NEXT_PUBLIC_API_URL"], "https://haven-web-prod.fly.dev/api")
+        self.assertEqual(env["NEXT_PUBLIC_API_URL"], "https://haven-web-prod.fly.dev/api")
         self.assertEqual(build_args["NEXT_PUBLIC_WS_URL"], "wss://haven-api-prod.fly.dev")
         self.assertEqual(env["NEXT_PUBLIC_WS_URL"], "wss://haven-api-prod.fly.dev")
-        self.assertEqual(build_args["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
-        self.assertEqual(env["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
+        self.assertEqual(build_args["API_PROXY_TARGET"], "http://haven-api-prod.internal:8080/api")
+        self.assertEqual(env["API_PROXY_TARGET"], "http://haven-api-prod.internal:8080/api")
 
     def test_next_config_rewrites_api_to_proxy_target(self) -> None:
         text = FRONTEND_NEXT_CONFIG.read_text(encoding="utf-8")
