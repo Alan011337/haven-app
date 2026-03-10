@@ -2,6 +2,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /workspace
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_WORKTREE_MATERIALIZATION_CHECK=1
 
 RUN apk add --no-cache python3
 

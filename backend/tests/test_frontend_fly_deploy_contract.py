@@ -32,6 +32,10 @@ class FrontendFlyDeployContractTests(unittest.TestCase):
         dockerfile = (ROOT / "frontend" / "Dockerfile.fly").read_text(encoding="utf-8")
         self.assertIn("apk add --no-cache python3", dockerfile)
 
+    def test_frontend_dockerfile_skips_worktree_materialization_in_builder(self) -> None:
+        dockerfile = (ROOT / "frontend" / "Dockerfile.fly").read_text(encoding="utf-8")
+        self.assertIn("ENV SKIP_WORKTREE_MATERIALIZATION_CHECK=1", dockerfile)
+
 
 if __name__ == "__main__":
     unittest.main()
