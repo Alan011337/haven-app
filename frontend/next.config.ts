@@ -4,6 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+const trimApiSuffix = (value: string): string => value.replace(/\/api\/?$/, '');
 
 const resolveApiProxyTarget = (): string | null => {
   const raw = process.env.API_PROXY_TARGET?.trim();
@@ -17,6 +18,14 @@ const resolveApiProxyTarget = (): string | null => {
   } catch {
     return null;
   }
+};
+
+const resolveHealthProxyTarget = (): string | null => {
+  const apiProxyTarget = resolveApiProxyTarget();
+  if (!apiProxyTarget) {
+    return null;
+  }
+  return trimApiSuffix(apiProxyTarget);
 };
 
 const securityHeaders = [
@@ -71,15 +80,23 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const apiProxyTarget = resolveApiProxyTarget();
+    const healthProxyTarget = resolveHealthProxyTarget();
     if (!apiProxyTarget) {
       return [];
     }
-    return [
+    const rewrites = [
       {
         source: '/api/:path*',
         destination: `${apiProxyTarget}/:path*`,
       },
     ];
+    if (healthProxyTarget) {
+      rewrites.push({
+        source: '/health/:path*',
+        destination: `${healthProxyTarget}/health/:path*`,
+      });
+    }
+    return rewrites;
   },
 };
 

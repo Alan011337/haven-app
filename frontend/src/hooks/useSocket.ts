@@ -35,6 +35,18 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 const DEFAULT_MAX_RECONNECT_ATTEMPTS = 8;
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
+const trimWebSocketSuffix = (value: string): string => value.replace(/\/ws\/?$/, '');
+
+const normalizeWebSocketBaseUrl = (value: string): string => {
+  const trimmed = trimTrailingSlash(value);
+  try {
+    const parsed = new URL(trimmed);
+    parsed.pathname = trimWebSocketSuffix(parsed.pathname);
+    return trimTrailingSlash(parsed.toString());
+  } catch {
+    return trimWebSocketSuffix(trimmed);
+  }
+};
 
 const resolveWsEndpointForLog = (wsBaseUrl: string): string => {
   try {
@@ -48,7 +60,7 @@ const resolveWsEndpointForLog = (wsBaseUrl: string): string => {
 const resolveWebSocketBaseUrl = (): string => {
   const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
   if (rawWsUrl) {
-    return trimTrailingSlash(rawWsUrl);
+    return normalizeWebSocketBaseUrl(rawWsUrl);
   }
 
   const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();

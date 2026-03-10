@@ -18,14 +18,19 @@ class FrontendFlyDeployContractTests(unittest.TestCase):
 
         self.assertEqual(build_args["NEXT_PUBLIC_API_URL"], "https://haven-web-prod.fly.dev/api")
         self.assertEqual(env["NEXT_PUBLIC_API_URL"], "https://haven-web-prod.fly.dev/api")
+        self.assertEqual(build_args["NEXT_PUBLIC_WS_URL"], "wss://haven-api-prod.fly.dev")
+        self.assertEqual(env["NEXT_PUBLIC_WS_URL"], "wss://haven-api-prod.fly.dev")
         self.assertEqual(build_args["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
         self.assertEqual(env["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
 
     def test_next_config_rewrites_api_to_proxy_target(self) -> None:
         text = FRONTEND_NEXT_CONFIG.read_text(encoding="utf-8")
         self.assertIn("resolveApiProxyTarget", text)
+        self.assertIn("resolveHealthProxyTarget", text)
         self.assertIn("source: '/api/:path*'", text)
         self.assertIn("destination: `${apiProxyTarget}/:path*`", text)
+        self.assertIn("source: '/health/:path*'", text)
+        self.assertIn("destination: `${healthProxyTarget}/health/:path*`", text)
         self.assertIn("process.env.API_PROXY_TARGET", text)
 
     def test_frontend_dockerfile_installs_python_for_env_check(self) -> None:
