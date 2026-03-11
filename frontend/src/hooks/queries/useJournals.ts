@@ -11,14 +11,14 @@ import {
 /** 1 minute: avoid refetch on every focus when user navigates back to home. */
 const JOURNALS_STALE_TIME_MS = 60_000;
 
-export function useJournals() {
+export function useJournals(enabled = true) {
   const { user } = useAuth();
   // ✅ 使用 AuthContext 檢查用戶是否登入，而不是 localStorage
   
   return useQuery({
     queryKey: queryKeys.journals(),
     queryFn: () => fetchJournals({ limit: JOURNALS_INITIAL_LIMIT, offset: 0 }),
-    enabled: !!user,
+    enabled: !!user && enabled,
     staleTime: JOURNALS_STALE_TIME_MS,
   });
 }

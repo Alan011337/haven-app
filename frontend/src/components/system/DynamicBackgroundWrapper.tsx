@@ -20,7 +20,7 @@ export default function DynamicBackgroundWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: flags } = useFeatureFlags();
+  const { data: flags } = useFeatureFlags(ENV_DYNAMIC_BG);
   const latestMoodLabel = useAppearanceStore((s) => s.latestMoodLabel);
   const serverEnabled = !!flags?.flags?.dynamic_background_enabled;
   const enabled =

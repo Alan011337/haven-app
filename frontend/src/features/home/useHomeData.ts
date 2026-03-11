@@ -20,6 +20,7 @@ import {
   invalidateHomeHeaderQueries,
   sortJournalsDesc,
 } from '@/features/home/home-data-utils';
+import { buildHomeBootstrapPlan, type HomeTab } from '@/lib/home-bootstrap-plan';
 import {
   acknowledgeFirstDelight,
   deliverSyncNudge,
@@ -78,8 +79,6 @@ export const DEFAULT_FIRST_DELIGHT: FirstDelightResponse = {
   metadata: {},
 };
 
-export type HomeTab = 'mine' | 'partner' | 'card';
-
 const VALID_TABS: ReadonlySet<HomeTab> = new Set(['mine', 'partner', 'card']);
 
 function tabFromSearchParams(searchParams: URLSearchParams): HomeTab {
@@ -92,20 +91,38 @@ export function useHomeData() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const activeTab: HomeTab = tabFromSearchParams(searchParams);
+  const [nonCriticalDelayElapsed, setNonCriticalDelayElapsed] = useState(false);
+  const initialHomeBootstrapPlan = buildHomeBootstrapPlan(activeTab, false);
 
   const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus();
-  const journalsQuery = useJournals();
-  const partnerJournalsQuery = usePartnerJournals();
-  const gamificationQuery = useGamificationSummary();
-  const onboardingQuery = useOnboardingQuest();
-  const syncNudgesQuery = useSyncNudges();
-  const firstDelightQuery = useFirstDelight();
+  const journalsQuery = useJournals(initialHomeBootstrapPlan.loadMineJournals);
+  const partnerJournalsQuery = usePartnerJournals(initialHomeBootstrapPlan.loadPartnerJournals);
+  const criticalTabDataReady =
+    activeTab === 'mine'
+      ? journalsQuery.isFetched
+      : activeTab === 'partner'
+        ? partnerJournalsQuery.isFetched
+        : true;
+  const homeBootstrapPlan = buildHomeBootstrapPlan(
+    activeTab,
+    nonCriticalDelayElapsed && criticalTabDataReady,
+  );
+  const gamificationQuery = useGamificationSummary(homeBootstrapPlan.loadHeaderEnhancements);
+  const onboardingQuery = useOnboardingQuest(homeBootstrapPlan.loadHeaderEnhancements);
+  const syncNudgesQuery = useSyncNudges(homeBootstrapPlan.loadHeaderEnhancements);
+  const firstDelightQuery = useFirstDelight(homeBootstrapPlan.loadHeaderEnhancements);
 
   const [partnerReadAtVersion, setPartnerReadAtVersion] = useState(0);
   const statusRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
 
-  const activeTab: HomeTab = tabFromSearchParams(searchParams);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNonCriticalDelayElapsed(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -222,7 +239,7 @@ export function useHomeData() {
       hiddenMultiplier: 4,
       jitterRatio: 0.1,
       offlineRetryMs: 5000,
-      runImmediately: true,
+      runImmediately: false,
       onTick: checkStatus,
       onError: (error) => {
         logClientError('home-status-polling-failed', error);
@@ -307,6 +324,26 @@ export function useHomeData() {
   const primarySyncNudge = syncNudges.nudges.find((item: SyncNudgeItem) => item.eligible);
   const showFirstDelightCard =
     firstDelight.enabled && firstDelight.eligible && Boolean(firstDelight.dedupe_key);
+  const previousTabRef = useRef<HomeTab | null>(null);
+
+  useEffect(() => {
+    if (previousTabRef.current === activeTab) {
+      return;
+    }
+    previousTabRef.current = activeTab;
+    if (activeTab !== 'partner' && activeTab !== 'card') {
+      return;
+    }
+    const notificationScope = activeTab === 'partner' ? 'journal' : 'card';
+    void (async () => {
+      try {
+        await markNotificationsRead(notificationScope);
+        await refetchPartnerStatus();
+      } catch (error) {
+        logClientError(`home-mark-${notificationScope}-notifications-read-failed`, error);
+      }
+    })();
+  }, [activeTab, refetchPartnerStatus]);
 
   const acknowledgeSyncNudge = useCallback(async () => {
     if (!primarySyncNudge) return;
@@ -333,10 +370,6 @@ export function useHomeData() {
       logClientError('home-first-delight-acknowledge-failed', error);
     }
   }, [firstDelight.dedupe_key, queryClient]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const handleDismissPartnerSafetyBanner = useCallback(() => {
     setPartnerSafetyBanner((current) => {
@@ -392,6 +425,7 @@ export function useHomeData() {
     nextOnboardingStep,
     primarySyncNudge,
     showFirstDelightCard,
+    secondaryContentReady: homeBootstrapPlan.loadMineSecondaryCards,
     loadData,
     handleTabChange,
     getTabStyle,

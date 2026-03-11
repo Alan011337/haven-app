@@ -28,16 +28,19 @@ export default function Sidebar() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let active = true;
+    const scheduleNextPoll = () => {
+      const nextInterval = getAdaptiveIntervalMs(30_000, { hiddenMultiplier: 4 });
+      timer = setTimeout(poll, nextInterval === false ? 5_000 : nextInterval);
+    };
     const poll = async () => {
       if (!active) return;
       try {
         await refetchPartnerStatus();
       } finally {
-        const nextInterval = getAdaptiveIntervalMs(30_000, { hiddenMultiplier: 4 });
-        timer = setTimeout(poll, nextInterval === false ? 5_000 : nextInterval);
+        scheduleNextPoll();
       }
     };
-    void poll();
+    scheduleNextPoll();
     return () => {
       active = false;
       if (timer) clearTimeout(timer);

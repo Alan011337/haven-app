@@ -42,6 +42,7 @@ function HomeContent() {
     nextOnboardingStep,
     primarySyncNudge,
     showFirstDelightCard,
+    secondaryContentReady,
     loadData,
     handleTabChange,
     getTabStyle,
@@ -83,44 +84,48 @@ function HomeContent() {
           </div>
 
           {/* Panel-enter/reveal: long duration (700ms) is intentional for tab content reveal; excluded from Haven micro-motion tokens (200–240ms) by design. */}
-          <div
-            id="home-tabpanel-mine"
-            role="tabpanel"
-            aria-labelledby="home-tab-mine"
-            hidden={activeTab !== 'mine'}
-            className={activeTab === 'mine' ? 'animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards' : undefined}
-          >
-            <MineTabContent
-              myJournals={myJournals}
-              loading={loading}
-              onJournalCreated={loadData}
-              onJournalDeleted={loadData}
-            />
-          </div>
-          <div
-            id="home-tabpanel-partner"
-            role="tabpanel"
-            aria-labelledby="home-tab-partner"
-            hidden={activeTab !== 'partner'}
-            className={activeTab === 'partner' ? 'animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards' : undefined}
-          >
-            <PartnerTabContent
-              partnerJournals={partnerJournals}
-              loading={loading}
-              partnerSafetyBanner={partnerSafetyBanner}
-              onRefresh={loadData}
-              onDismissSafetyBanner={handleDismissPartnerSafetyBanner}
-            />
-          </div>
-          <div
-            id="home-tabpanel-card"
-            role="tabpanel"
-            aria-labelledby="home-tab-card"
-            hidden={activeTab !== 'card'}
-            className={activeTab === 'card' ? 'animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards' : undefined}
-          >
-            <CardTabContent />
-          </div>
+          {activeTab === 'mine' ? (
+            <div
+              id="home-tabpanel-mine"
+              role="tabpanel"
+              aria-labelledby="home-tab-mine"
+              className="animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards"
+            >
+              <MineTabContent
+                myJournals={myJournals}
+                loading={loading}
+                secondaryContentReady={secondaryContentReady}
+                onJournalCreated={loadData}
+                onJournalDeleted={loadData}
+              />
+            </div>
+          ) : null}
+          {activeTab === 'partner' ? (
+            <div
+              id="home-tabpanel-partner"
+              role="tabpanel"
+              aria-labelledby="home-tab-partner"
+              className="animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards"
+            >
+              <PartnerTabContent
+                partnerJournals={partnerJournals}
+                loading={loading}
+                partnerSafetyBanner={partnerSafetyBanner}
+                onRefresh={loadData}
+                onDismissSafetyBanner={handleDismissPartnerSafetyBanner}
+              />
+            </div>
+          ) : null}
+          {activeTab === 'card' ? (
+            <div
+              id="home-tabpanel-card"
+              role="tabpanel"
+              aria-labelledby="home-tab-card"
+              className="animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out fill-mode-forwards"
+            >
+              <CardTabContent />
+            </div>
+          ) : null}
         </div>
       </main>
     </div>

@@ -6,6 +6,7 @@ import { fetchDegradationStatus, type DegradationStatus } from '@/lib/degradatio
 import { getAdaptiveIntervalMs } from '@/lib/polling-policy';
 
 const POLL_INTERVAL_MS = 60_000;
+const INITIAL_POLL_DELAY_MS = 1_500;
 
 export default function DegradationBanner() {
   const [state, setState] = useState<DegradationStatus | null>(null);
@@ -13,14 +14,17 @@ export default function DegradationBanner() {
   useEffect(() => {
     let mounted = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedulePoll = (waitMs: number) => {
+      timer = setTimeout(poll, waitMs);
+    };
     const poll = async () => {
       const result = await fetchDegradationStatus();
       if (mounted) setState(result);
       if (!mounted) return;
       const nextInterval = getAdaptiveIntervalMs(POLL_INTERVAL_MS, { hiddenMultiplier: 3 });
-      timer = setTimeout(poll, nextInterval === false ? 10_000 : nextInterval);
+      schedulePoll(nextInterval === false ? 10_000 : nextInterval);
     };
-    void poll();
+    schedulePoll(INITIAL_POLL_DELAY_MS);
     return () => {
       mounted = false;
       if (timer) clearTimeout(timer);

@@ -17,6 +17,7 @@ import { Journal } from '@/types';
 interface MineTabContentProps {
   myJournals: Journal[];
   loading: boolean;
+  secondaryContentReady: boolean;
   onJournalCreated: () => void;
   onJournalDeleted?: () => void;
 }
@@ -24,6 +25,7 @@ interface MineTabContentProps {
 export default function MineTabContent({
   myJournals,
   loading,
+  secondaryContentReady,
   onJournalCreated,
   onJournalDeleted,
 }: MineTabContentProps) {
@@ -39,11 +41,26 @@ export default function MineTabContent({
   return (
     <div className="flex flex-col gap-[var(--space-section)]">
       <section className="animate-page-enter-delay-1">
-        <MediationEntryBanner />
-        <DailySyncCard />
-        <DateSuggestionCard />
-        <AppreciationCard />
-        <LoveLanguageWeeklyCard />
+        {secondaryContentReady ? (
+          <>
+            <MediationEntryBanner />
+            <DailySyncCard />
+            <DateSuggestionCard />
+            <AppreciationCard />
+            <LoveLanguageWeeklyCard />
+          </>
+        ) : (
+          <GlassCard className="mb-6 p-6 md:p-8">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-11 w-11 shrink-0 rounded-2xl" />
+              <div className="flex-1 space-y-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-full max-w-lg" />
+                <Skeleton className="h-24 w-full rounded-card" />
+              </div>
+            </div>
+          </GlassCard>
+        )}
         <JournalInput onJournalCreated={onJournalCreated} />
       </section>
 
