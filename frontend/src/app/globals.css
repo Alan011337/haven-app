@@ -47,6 +47,8 @@
   --shadow-card-hover: var(--shadow-lift);
   /* Filter drop-shadow (icons/decoration); single semantic to match soft elevation. */
   --drop-shadow-soft: 0 2px 8px rgb(0 0 0 / 0.06);
+  /* Hero text shadow — stronger for dark-gradient hero readability. */
+  --drop-shadow-hero: 0 2px 12px rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.15);
   /* Phase 4: Glass edge and input focus glow (semantic; no arbitrary shadows in components). */
   --shadow-glass-inset: inset 0 1px 1px rgb(255 255 255 / 0.5);
   --shadow-focus-glow: 0 0 30px -5px oklch(0.748 0.078 69.5 / 0.2);
@@ -303,6 +305,12 @@ h1, h2, h3, h4, h5, h6 {
   .drop-shadow-soft {
     filter: drop-shadow(var(--drop-shadow-soft));
   }
+  .drop-shadow-hero {
+    filter: drop-shadow(var(--drop-shadow-hero));
+  }
+  .hero-gold-accent {
+    box-shadow: inset 0 -1px 0 0 oklch(var(--primary) / 0.25);
+  }
   /* Phase 4: Glass edge and focus halo (semantic tokens only). */
   .shadow-glass-inset {
     box-shadow: var(--shadow-glass-inset);
@@ -313,12 +321,20 @@ h1, h2, h3, h4, h5, h6 {
   .shadow-hero-glass {
     box-shadow: var(--shadow-hero-glass);
   }
-  /* Phase 4: Hero mesh — Champagne Gold + Dusty Rose / Sage at low opacity. */
+  /* Phase 4: Hero mesh — Rose-gold luxury gradient (warm, luminous, not muddy). */
   .hero-mesh-gradient {
-    background: radial-gradient(ellipse 120% 80% at 50% 0%, oklch(var(--primary) / 0.35) 0%, oklch(var(--primary) / 0.12) 40%, oklch(var(--accent) / 0.08) 70%, transparent 100%);
+    background:
+      radial-gradient(ellipse 120% 80% at 75% -10%, oklch(0.55 0.10 70 / 0.7) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 70% at 5% 110%, oklch(0.45 0.04 145 / 0.25) 0%, transparent 45%),
+      radial-gradient(ellipse 80% 60% at 50% 60%, oklch(0.42 0.06 45 / 0.3) 0%, transparent 50%),
+      linear-gradient(135deg, oklch(0.40 0.05 55) 0%, oklch(0.45 0.07 65) 40%, oklch(0.38 0.04 50) 100%);
   }
   .dark .hero-mesh-gradient {
-    background: radial-gradient(ellipse 120% 80% at 50% 0%, oklch(var(--primary) / 0.25) 0%, oklch(var(--primary) / 0.08) 40%, oklch(var(--accent) / 0.06) 70%, transparent 100%);
+    background:
+      radial-gradient(ellipse 120% 80% at 75% -10%, oklch(0.40 0.08 70 / 0.6) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 70% at 5% 110%, oklch(0.25 0.03 145 / 0.2) 0%, transparent 45%),
+      radial-gradient(ellipse 80% 60% at 50% 60%, oklch(0.25 0.05 45 / 0.25) 0%, transparent 50%),
+      linear-gradient(135deg, oklch(0.20 0.04 55) 0%, oklch(0.25 0.05 65) 40%, oklch(0.18 0.03 50) 100%);
   }
   /* Phase 5: Ethereal background clouds (token definitions in globals only). */
   .bg-ethereal-mesh {

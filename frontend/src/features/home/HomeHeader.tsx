@@ -25,7 +25,7 @@ interface HomeHeaderProps {
 }
 
 const badgeClass =
-  'inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 backdrop-blur-md shadow-glass-inset px-3 py-1.5 text-xs font-semibold text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02]';
+  'inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/18 backdrop-blur-md shadow-glass-inset px-3 py-1.5 text-xs font-semibold text-white tabular-nums transition-all duration-haven ease-haven hover:bg-white/25 hover:scale-[1.02]';
 
 export default function HomeHeader({
   savingsScore,
@@ -100,25 +100,25 @@ export default function HomeHeader({
   return (
     <>
       {/* ── SECTION 1: Compact Hero Banner ── */}
-      <header className="relative overflow-hidden rounded-card shadow-lift group">
+      <header className="relative overflow-hidden rounded-card shadow-lift group hero-gold-accent noise-overlay">
         <div className="absolute inset-0 rounded-card hero-mesh-gradient" aria-hidden />
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-10 rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3 pointer-events-none animate-float" aria-hidden />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-accent opacity-25 rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4 pointer-events-none animate-float-delayed" aria-hidden />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-[0.10] rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3 pointer-events-none animate-float" aria-hidden />
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-primary opacity-[0.20] rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4 pointer-events-none animate-float-delayed" aria-hidden />
 
-        <div className="relative z-10 glass-panel-art rounded-card border border-white/40 shadow-hero-glass px-[var(--space-section)] py-4 md:px-[var(--space-page)] md:py-5 text-white">
+        <div className="relative z-10 rounded-card border border-white/10 px-[var(--space-section)] py-4 md:px-[var(--space-page)] md:py-5 text-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* LEFT: Greeting + subtitle */}
             <div className="space-y-1.5 min-w-0">
               <div className="flex items-center gap-3">
-                <h2 className="font-art text-3xl md:text-4xl font-bold tracking-tight text-white drop-shadow-soft">
+                <h2 className="font-art text-3xl md:text-4xl font-bold tracking-tight text-gradient-gold drop-shadow-hero">
                   早安，朋友
                 </h2>
-                <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:bg-white/20 cursor-default select-none">
+                <div className="flex items-center gap-1.5 bg-white/18 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:bg-white/25 cursor-default select-none">
                   <Heart className="w-3.5 h-3.5 text-white/70 fill-white/70" aria-hidden />
                   <span className="text-sm font-bold tracking-wide text-white tabular-nums">{savingsScore}</span>
                 </div>
               </div>
-              <p className="text-white/85 font-light text-sm md:text-base max-w-md leading-relaxed">
+              <p className="text-white/90 font-light text-sm md:text-base max-w-md leading-relaxed">
                 今天的你過得好嗎？無論發生什麼，這裡都是你的避風港。
               </p>
             </div>
@@ -141,9 +141,9 @@ export default function HomeHeader({
                   <span className="tracking-wider text-[10px]">愛情值</span>
                   <span className="tabular-nums">{Math.round(gamificationSummary.love_bar_percent)}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/15 shadow-glass-inset overflow-hidden">
+                <div className="h-2 rounded-full bg-white/20 shadow-glass-inset overflow-hidden">
                   <div
-                    className="h-2 rounded-full bg-gradient-to-r from-white/90 via-white/70 to-white/50 transition-all duration-haven ease-haven"
+                    className="h-2 rounded-full bg-gradient-to-r from-primary/90 via-primary/60 to-white/50 transition-all duration-haven ease-haven"
                     style={{ width: `${gamificationSummary.love_bar_percent}%` }}
                     aria-hidden
                   />

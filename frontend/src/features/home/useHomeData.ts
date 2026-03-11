@@ -13,7 +13,6 @@ import {
   useFirstDelight,
 } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
-import { startAdaptivePolling } from '@/lib/adaptive-polling';
 import { getJournalSafetyBand } from '@/lib/safety';
 import { logClientError } from '@/lib/safe-error-log';
 import {
@@ -235,20 +234,6 @@ export function useHomeData() {
       statusRefreshInFlightRef.current = null;
     }
   }, [refetchPartnerStatus]);
-
-  useEffect(() => {
-    return startAdaptivePolling({
-      baseIntervalMs: 30_000,
-      hiddenMultiplier: 4,
-      jitterRatio: 0.1,
-      offlineRetryMs: 5000,
-      runImmediately: false,
-      onTick: checkStatus,
-      onError: (error) => {
-        logClientError('home-status-polling-failed', error);
-      },
-    });
-  }, [checkStatus]);
 
   useEffect(() => {
     const data = partnerJournalsQuery.data;
