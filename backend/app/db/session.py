@@ -1,12 +1,13 @@
 import logging
 import time
-import hashlib
 from threading import Lock
 from typing import Any
 
 from sqlalchemy import event, text
 from sqlmodel import create_engine, SQLModel, Session
 from app.core.config import settings
+from app.db.slow_query_labels import classify_slow_query_kind, query_fingerprint
+from app.middleware.request_context import mode_var, request_id_var, route_var
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ _DB_RUNTIME_COUNTERS: dict[str, int] = {
 }
 _DB_RUNTIME_STATE: dict[str, Any] = {
     "last_slow_query_fingerprint": "-",
+    "last_slow_query_kind": "-",
+    "last_slow_query_route": "-",
+    "last_slow_query_request_id": "-",
     "last_slow_query_duration_ms": 0,
 }
 
@@ -91,23 +95,30 @@ def _attach_engine_runtime_hooks(db_engine, *, apply_statement_timeout: bool) ->
             return
         _increment_runtime_counter("slow_query_total")
         fingerprint = _query_fingerprint(str(recorded_statement or ""))
+        query_kind = classify_slow_query_kind(str(recorded_statement or ""))
+        route = str(route_var.get() or "-")[:160]
+        request_id = str(request_id_var.get() or "-")[:128]
+        mode = str(mode_var.get() or "-")[:32]
         with _DB_RUNTIME_LOCK:
             _DB_RUNTIME_STATE["last_slow_query_fingerprint"] = fingerprint
+            _DB_RUNTIME_STATE["last_slow_query_kind"] = query_kind
+            _DB_RUNTIME_STATE["last_slow_query_route"] = route
+            _DB_RUNTIME_STATE["last_slow_query_request_id"] = request_id
             _DB_RUNTIME_STATE["last_slow_query_duration_ms"] = duration_ms
         logger.warning(
-            "DB slow query detected: fingerprint=%s duration_ms=%d threshold_ms=%d",
+            "DB slow query detected: fingerprint=%s kind=%s route=%s mode=%s request_id=%s duration_ms=%d threshold_ms=%d",
             fingerprint,
+            query_kind,
+            route,
+            mode,
+            request_id,
             duration_ms,
             _database_slow_query_ms(),
         )
 
 
 def _query_fingerprint(statement: str) -> str:
-    normalized = " ".join((statement or "").strip().lower().split())
-    if not normalized:
-        return "empty"
-    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-    return digest[:16]
+    return query_fingerprint(statement)
 
 
 def get_db_pool_runtime_snapshot() -> dict[str, Any]:
@@ -141,6 +152,9 @@ def get_db_query_runtime_snapshot() -> dict[str, Any]:
         "query_total": int(counters.get("query_total", 0)),
         "slow_query_total": int(counters.get("slow_query_total", 0)),
         "last_slow_query_fingerprint": str(state.get("last_slow_query_fingerprint", "-")),
+        "last_slow_query_kind": str(state.get("last_slow_query_kind", "-")),
+        "last_slow_query_route": str(state.get("last_slow_query_route", "-")),
+        "last_slow_query_request_id": str(state.get("last_slow_query_request_id", "-")),
         "last_slow_query_duration_ms": int(state.get("last_slow_query_duration_ms", 0)),
     }
 

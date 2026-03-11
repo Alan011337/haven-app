@@ -95,6 +95,87 @@ def get_today_range():
     return _get_today_range_helper(now_utc=now)
 
 
+def _resolve_partner_name(session: SessionDep, *, partner_id: Optional[uuid.UUID]) -> str:
+    if not partner_id:
+        return "伴侶"
+    partner_row = session.exec(
+        select(User.full_name, User.email).where(
+            User.id == partner_id,
+            User.deleted_at.is_(None),
+        )
+    ).first()
+    if not partner_row:
+        return "伴侶"
+    full_name, email = partner_row
+    return full_name or str(email).split("@")[0]
+
+
+def _get_daily_session_with_card(
+    session: SessionDep,
+    *,
+    user_id: uuid.UUID,
+    start_of_day,
+    end_of_day,
+) -> tuple[Optional[CardSession], Optional[Card]]:
+    row = session.exec(
+        select(CardSession, Card)
+        .join(Card, Card.id == CardSession.card_id, isouter=True)
+        .where(
+            CardSession.mode == CardSessionMode.DAILY_RITUAL,
+            or_(
+                CardSession.creator_id == user_id,
+                CardSession.partner_id == user_id,
+            ),
+            CardSession.created_at >= start_of_day,
+            CardSession.created_at <= end_of_day,
+            CardSession.deleted_at.is_(None),
+        )
+        .order_by(col(CardSession.created_at).desc())
+    ).first()
+    if not row:
+        return None, None
+    card_session, target_card = row
+    return card_session, target_card
+
+
+def _get_session_responses_by_user(
+    session: SessionDep,
+    *,
+    session_id: uuid.UUID,
+    user_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, CardResponse]:
+    if not user_ids:
+        return {}
+    responses = session.exec(
+        select(CardResponse).where(
+            CardResponse.session_id == session_id,
+            CardResponse.user_id.in_(user_ids),
+            CardResponse.deleted_at.is_(None),
+        )
+    ).all()
+    return {response.user_id: response for response in responses}
+
+
+def _get_legacy_daily_response(
+    session: SessionDep,
+    *,
+    user_id: Optional[uuid.UUID],
+    card_id: uuid.UUID,
+    start_of_day,
+) -> Optional[CardResponse]:
+    if not user_id:
+        return None
+    return session.exec(
+        select(CardResponse).where(
+            CardResponse.user_id == user_id,
+            CardResponse.card_id == card_id,
+            CardResponse.session_id.is_(None),
+            CardResponse.created_at >= start_of_day,
+            CardResponse.deleted_at.is_(None),
+        )
+    ).first()
+
+
 def _count_answered_cards_in_library(
     session: SessionDep,
     *,
@@ -182,28 +263,15 @@ def get_daily_status(
     """
     檢查今日卡片狀態。直接對接前端需要的 state。
     """
-    # 🔥 優先獲取伴侶名字
-    partner_name = "伴侶"
-    if current_user.partner_id:
-        partner_user = session.get(User, current_user.partner_id)
-        if partner_user and partner_user.deleted_at is None:
-            partner_name = partner_user.full_name or partner_user.email.split('@')[0]
+    partner_name = _resolve_partner_name(session, partner_id=current_user.partner_id)
 
     start_of_day, end_of_day = get_today_range()
-    
-    # 找今天的 session
-    card_session = session.exec(
-        select(CardSession).where(
-            CardSession.mode == CardSessionMode.DAILY_RITUAL,
-            or_(
-                CardSession.creator_id == current_user.id,
-                CardSession.partner_id == current_user.id
-            ),
-            CardSession.created_at >= start_of_day,
-            CardSession.created_at <= end_of_day,
-            CardSession.deleted_at.is_(None),
-        ).order_by(col(CardSession.created_at).desc())
-    ).first()
+    card_session, target_card = _get_daily_session_with_card(
+        session,
+        user_id=current_user.id,
+        start_of_day=start_of_day,
+        end_of_day=end_of_day,
+    )
 
     # 情況 A: 今天還沒抽卡
     if not card_session:
@@ -214,7 +282,6 @@ def get_daily_status(
             "session_id": None,
         }
 
-    target_card = session.get(Card, card_session.card_id)
     if not target_card:
         return {
             "state": "IDLE",
@@ -223,44 +290,33 @@ def get_daily_status(
             "session_id": str(card_session.id),
         }
 
-    # 檢查我是否已回答
-    my_response_statement = select(CardResponse).where(
-        CardResponse.user_id == current_user.id,
-        CardResponse.session_id == card_session.id,
-        CardResponse.deleted_at.is_(None),
+    session_responses = _get_session_responses_by_user(
+        session,
+        session_id=card_session.id,
+        user_ids=[
+            current_user.id,
+            *([current_user.partner_id] if current_user.partner_id else []),
+        ],
     )
-    my_response = session.exec(my_response_statement).first()
+    my_response = session_responses.get(current_user.id)
     if not my_response:
-        # 向後相容：舊資料可能沒有 session_id，fallback 以 card_id 查詢。
-        my_response = session.exec(
-            select(CardResponse).where(
-                CardResponse.user_id == current_user.id,
-                CardResponse.card_id == target_card.id,
-                CardResponse.session_id.is_(None),
-                CardResponse.created_at >= start_of_day,
-                CardResponse.deleted_at.is_(None),
-            )
-        ).first()
+        my_response = _get_legacy_daily_response(
+            session,
+            user_id=current_user.id,
+            card_id=target_card.id,
+            start_of_day=start_of_day,
+        )
 
     # 情況 B: 雙方皆完成
     if card_session.status == CardSessionStatus.COMPLETED:
-        partner_response = session.exec(
-            select(CardResponse).where(
-                CardResponse.user_id == current_user.partner_id,
-                CardResponse.session_id == card_session.id,
-                CardResponse.deleted_at.is_(None),
-            )
-        ).first()
+        partner_response = session_responses.get(current_user.partner_id) if current_user.partner_id else None
         if not partner_response:
-            partner_response = session.exec(
-                select(CardResponse).where(
-                    CardResponse.user_id == current_user.partner_id,
-                    CardResponse.card_id == target_card.id,
-                    CardResponse.session_id.is_(None),
-                    CardResponse.created_at >= start_of_day,
-                    CardResponse.deleted_at.is_(None),
-                )
-            ).first()
+            partner_response = _get_legacy_daily_response(
+                session,
+                user_id=current_user.partner_id,
+                card_id=target_card.id,
+                start_of_day=start_of_day,
+            )
         return {
             "state": "COMPLETED",
             "card": target_card,

@@ -4,6 +4,7 @@ import { logServerError, redactSensitiveSegments } from '@/lib/safe-error-log';
 import {
   buildUpstreamUrl,
   redactProxyPath,
+  shouldLogSlowProxy,
   trimApiSuffix,
   trimTrailingSlash,
 } from '@/lib/upstream-proxy-utils';
@@ -173,6 +174,19 @@ async function proxyRequest({
     });
 
     const durationMs = Date.now() - startedAtMs;
+    const upstreamRequestId = upstreamResponse.headers.get('x-request-id') || 'unknown';
+    if (shouldLogSlowProxy(kind, upstreamResponse.status, durationMs)) {
+      logServerError('proxy-upstream-slow', {
+        kind,
+        method: request.method,
+        path: safePath,
+        status: upstreamResponse.status,
+        duration_ms: durationMs,
+        upstream: redactSensitiveSegments(upstreamUrl.split('?')[0] || upstreamUrl),
+        request_id: requestId,
+        upstream_request_id: upstreamRequestId,
+      });
+    }
     if (upstreamResponse.status >= 500) {
       logServerError('proxy-upstream-http-error', {
         kind,
@@ -182,11 +196,12 @@ async function proxyRequest({
         duration_ms: durationMs,
         upstream: redactSensitiveSegments(upstreamUrl.split('?')[0] || upstreamUrl),
         request_id: requestId,
+        upstream_request_id: upstreamRequestId,
       });
     }
 
     const headers = buildResponseHeaders(upstreamResponse.headers);
-    headers.set('x-request-id', upstreamResponse.headers.get('x-request-id') || requestId);
+    headers.set('x-request-id', upstreamRequestId === 'unknown' ? requestId : upstreamRequestId);
     const payload = await upstreamResponse.arrayBuffer();
     return new NextResponse(payload, {
       status: upstreamResponse.status,

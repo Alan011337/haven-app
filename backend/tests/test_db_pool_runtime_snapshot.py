@@ -16,6 +16,9 @@ class DbPoolRuntimeSnapshotContractTests(unittest.TestCase):
         self.assertIn('"query_total"', text)
         self.assertIn('"slow_query_total"', text)
         self.assertIn('"last_slow_query_fingerprint"', text)
+        self.assertIn('"last_slow_query_kind"', text)
+        self.assertIn('"last_slow_query_route"', text)
+        self.assertIn('"last_slow_query_request_id"', text)
         self.assertIn('"last_slow_query_duration_ms"', text)
 
     def test_runtime_counter_keys_include_query_and_slow_query(self) -> None:

@@ -1,6 +1,7 @@
 const UUID_SEGMENT_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LONG_ID_SEGMENT_RE = /^(?:\d{6,}|[0-9a-f]{16,})$/i;
+export const SLOW_API_PROXY_THRESHOLD_MS = 1_000;
 
 export function trimTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
@@ -35,4 +36,12 @@ export function buildUpstreamUrl(base: URL, segments: string[], search: string):
   url.pathname = pathname.startsWith('/') ? pathname : `/${pathname}`;
   url.search = search;
   return url.toString();
+}
+
+export function shouldLogSlowProxy(
+  kind: 'api' | 'health',
+  status: number,
+  durationMs: number,
+): boolean {
+  return kind === 'api' && status < 500 && durationMs >= SLOW_API_PROXY_THRESHOLD_MS;
 }

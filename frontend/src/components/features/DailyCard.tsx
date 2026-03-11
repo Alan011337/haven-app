@@ -23,6 +23,10 @@ import { useAuth } from '@/hooks/use-auth';
 import useSocket from '@/hooks/useSocket';
 import { useAppearanceStore } from '@/stores/useAppearanceStore';
 import { startAdaptivePolling } from '@/lib/adaptive-polling';
+import {
+  DAILY_CARD_HIDDEN_MULTIPLIER,
+  resolveDailyCardPollingIntervalMs,
+} from '@/lib/daily-card-polling';
 
 // 小工具：取得名字首字
 const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : "P";
@@ -135,6 +139,7 @@ const DailyCard = () => {
   }, [refreshDailyStatus]);
 
   const socketRef = useSocket(user?.id, handleSocketMessage, handlePartnerAction);
+  const pollingIntervalMs = resolveDailyCardPollingIntervalMs(status);
 
   const sendTypingSignal = useCallback(
     (isTyping: boolean) => {
@@ -172,17 +177,12 @@ const DailyCard = () => {
 
   // 智慧輪詢邏輯（可見度/離線狀態自動降載）
   useEffect(() => {
-    const isAnswering = status?.card && (status.state === 'IDLE' || status.state === 'PARTNER_STARTED');
-    if (isAnswering) return undefined;
-    const shouldPoll =
-      status?.state === 'WAITING_PARTNER' ||
-      !status?.card;
-    if (!shouldPoll) return undefined;
+    if (!pollingIntervalMs) return undefined;
     return startAdaptivePolling({
-      baseIntervalMs: 5000,
-      hiddenMultiplier: 3,
+      baseIntervalMs: pollingIntervalMs,
+      hiddenMultiplier: DAILY_CARD_HIDDEN_MULTIPLIER,
       jitterRatio: 0.2,
-      offlineRetryMs: 3000,
+      offlineRetryMs: 5000,
       runImmediately: false,
       onTick: async () => {
         await refreshDailyStatus(1000);
@@ -191,7 +191,7 @@ const DailyCard = () => {
         logClientError('daily-card-polling-failed', error);
       },
     });
-  }, [refreshDailyStatus, status?.state, status?.card]);
+  }, [pollingIntervalMs, refreshDailyStatus]);
 
   useEffect(() => {
     if (status?.state === 'IDLE') {

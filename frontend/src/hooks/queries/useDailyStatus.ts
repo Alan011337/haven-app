@@ -10,5 +10,8 @@ export function useDailyStatus(enabled = true) {
     queryFn: () => cardService.getDailyStatus(),
     staleTime: 30_000,
     enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
