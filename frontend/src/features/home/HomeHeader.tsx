@@ -24,6 +24,9 @@ interface HomeHeaderProps {
   onAckFirstDelight: () => void;
 }
 
+const badgeClass =
+  'inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 backdrop-blur-md shadow-glass-inset px-3 py-1.5 text-xs font-semibold text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02]';
+
 export default function HomeHeader({
   savingsScore,
   gamificationSummary,
@@ -91,122 +94,71 @@ export default function HomeHeader({
     [focusedTab, onTabChange],
   );
 
-  return (
-    <header className="relative overflow-hidden rounded-card shadow-lift group">
-      {/* Background layer: Phase 4 mesh (Champagne Gold + accent hints) */}
-      <div className="absolute inset-0 rounded-card hero-mesh-gradient" aria-hidden />
-      <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-10 rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3 pointer-events-none animate-float" aria-hidden />
-      <div className="absolute bottom-0 left-0 w-60 h-60 bg-accent opacity-25 rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4 pointer-events-none animate-float-delayed" aria-hidden />
+  const showNotificationCards =
+    onboardingQuest.enabled || showFirstDelightCard || (syncNudges.enabled && primarySyncNudge);
 
-      {/* Glass content layer: frosted panel with double border + glass inset */}
-      <div className="relative z-10 glass-panel-art rounded-card border border-white/40 shadow-hero-glass p-[var(--space-section)] md:p-[var(--space-page)] text-white">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div className="flex flex-col gap-[var(--space-section)]">
-            <div className="space-y-3">
-              <div className="flex items-center gap-4">
+  return (
+    <>
+      {/* ── SECTION 1: Compact Hero Banner ── */}
+      <header className="relative overflow-hidden rounded-card shadow-lift group">
+        <div className="absolute inset-0 rounded-card hero-mesh-gradient" aria-hidden />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-10 rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3 pointer-events-none animate-float" aria-hidden />
+        <div className="absolute bottom-0 left-0 w-60 h-60 bg-accent opacity-25 rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4 pointer-events-none animate-float-delayed" aria-hidden />
+
+        <div className="relative z-10 glass-panel-art rounded-card border border-white/40 shadow-hero-glass px-[var(--space-section)] py-4 md:px-[var(--space-page)] md:py-5 text-white">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* LEFT: Greeting + subtitle */}
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-3">
                 <h2 className="font-art text-3xl md:text-4xl font-bold tracking-tight text-white drop-shadow-soft">
                   早安，朋友
                 </h2>
-                <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:bg-white/20 cursor-default select-none">
-                  <Heart className="w-4 h-4 text-white/70 fill-white/70" aria-hidden />
+                <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:bg-white/20 cursor-default select-none">
+                  <Heart className="w-3.5 h-3.5 text-white/70 fill-white/70" aria-hidden />
                   <span className="text-sm font-bold tracking-wide text-white tabular-nums">{savingsScore}</span>
                 </div>
               </div>
-              <p className="text-white/85 font-light text-base md:text-lg max-w-lg leading-relaxed">
+              <p className="text-white/85 font-light text-sm md:text-base max-w-md leading-relaxed">
                 今天的你過得好嗎？無論發生什麼，這裡都是你的避風港。
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 backdrop-blur-md shadow-glass-inset px-3.5 py-1.5 text-xs font-semibold text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02] animate-slide-up-fade">
-                🔥 連續 {gamificationSummary.streak_days} 天
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 backdrop-blur-md shadow-glass-inset px-3.5 py-1.5 text-xs font-semibold text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02] animate-slide-up-fade-1">
-                🏅 Lv.{gamificationSummary.level} · {gamificationSummary.level_title}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 backdrop-blur-md shadow-glass-inset px-3.5 py-1.5 text-xs font-semibold text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02] animate-slide-up-fade-2">
-                ⭐ 最佳 {gamificationSummary.best_streak_days} 天
-              </span>
-            </div>
-          <div className="w-full max-w-xs">
-            <div className="mb-1.5 flex items-center justify-between text-xs text-white/75 font-medium">
-              <span className="tracking-wider uppercase text-[10px]">Love Bar</span>
-              <span className="tabular-nums">{Math.round(gamificationSummary.love_bar_percent)}%</span>
-            </div>
-            <div className="h-2.5 rounded-full bg-white/15 shadow-glass-inset overflow-hidden">
-              <div
-                className="h-2.5 rounded-full bg-gradient-to-r from-white/90 via-white/70 to-white/50 transition-all duration-haven ease-haven"
-                style={{ width: `${gamificationSummary.love_bar_percent}%` }}
-                aria-hidden
-              />
-            </div>
-          </div>
 
-          {onboardingQuest.enabled && (
-            <div className="w-full max-w-sm rounded-card border border-white/25 bg-white/15 p-4 backdrop-blur-md shadow-glass-inset animate-slide-up-fade-3">
-              <div className="mb-2 flex items-center justify-between text-xs font-semibold text-white/90">
-                <span>7-Day Quest</span>
-                <span className="tabular-nums">
-                  {onboardingQuest.completed_steps}/{onboardingQuest.total_steps}
+            {/* RIGHT (desktop): Gamification cluster + love bar */}
+            <div className="flex flex-col items-end gap-2.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`${badgeClass} animate-slide-up-fade`}>
+                  🔥 連續 {gamificationSummary.streak_days} 天
+                </span>
+                <span className={`${badgeClass} animate-slide-up-fade-1`}>
+                  🏅 Lv.{gamificationSummary.level} · {gamificationSummary.level_title}
+                </span>
+                <span className={`${badgeClass} animate-slide-up-fade-2`}>
+                  ⭐ 最佳 {gamificationSummary.best_streak_days} 天
                 </span>
               </div>
-              <div className="mb-2 h-2 rounded-full bg-white/20 shadow-glass-inset">
-                <div
-                  className="h-2 rounded-full bg-gradient-to-r from-accent to-accent/70 transition-all duration-haven ease-haven"
-                  style={{ width: `${onboardingQuest.progress_percent}%` }}
-                  aria-hidden
-                />
+              <div className="w-full max-w-[220px]">
+                <div className="mb-1 flex items-center justify-between text-xs text-white/75 font-medium">
+                  <span className="tracking-wider text-[10px]">愛情值</span>
+                  <span className="tabular-nums">{Math.round(gamificationSummary.love_bar_percent)}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/15 shadow-glass-inset overflow-hidden">
+                  <div
+                    className="h-2 rounded-full bg-gradient-to-r from-white/90 via-white/70 to-white/50 transition-all duration-haven ease-haven"
+                    style={{ width: `${gamificationSummary.love_bar_percent}%` }}
+                    aria-hidden
+                  />
+                </div>
               </div>
-              <p className="text-xs text-white/90">
-                {nextOnboardingStep
-                  ? `Day ${nextOnboardingStep.quest_day}: ${nextOnboardingStep.title}`
-                  : '7-Day Quest 已完成，持續保持互動節奏'}
-              </p>
             </div>
-          )}
-
-          {showFirstDelightCard && (
-            <div className="w-full max-w-sm rounded-card border border-white/25 bg-white/15 p-4 backdrop-blur-md shadow-glass-inset animate-slide-up-fade-4">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-white/90">
-                <span>First Delight</span>
-                <span>milestone</span>
-              </div>
-              <p className="text-xs text-white/95">{firstDelight.title ?? '你們達成第一個里程碑'}</p>
-              <p className="mt-1 text-xs text-white/80">
-                {firstDelight.description ?? '已完成首次雙人互動閉環，建議記錄這次成就。'}
-              </p>
-              <button
-                type="button"
-                onClick={onAckFirstDelight}
-                className="mt-2 inline-flex items-center rounded-full border border-white/40 bg-white/10 backdrop-blur-sm shadow-glass-inset px-3 py-1 text-xs font-semibold text-white transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02] active:scale-95"
-              >
-                已看見這個里程碑
-              </button>
-            </div>
-          )}
-
-          {syncNudges.enabled && primarySyncNudge && (
-            <div className="w-full max-w-sm rounded-card border border-white/25 bg-white/15 p-4 backdrop-blur-md shadow-glass-inset animate-slide-up-fade-5">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-white/90">
-                <span>同步提醒</span>
-                <span>{primarySyncNudge.nudge_type.replace(/_/g, ' ')}</span>
-              </div>
-              <p className="text-xs text-white/95">{primarySyncNudge.title}</p>
-              <p className="mt-1 text-xs text-white/80">{primarySyncNudge.description}</p>
-              <button
-                type="button"
-                onClick={onAckSyncNudge}
-                className="mt-2 inline-flex items-center rounded-full border border-white/40 bg-white/10 backdrop-blur-sm shadow-glass-inset px-3 py-1 text-xs font-semibold text-white transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02] active:scale-95"
-              >
-                我知道了
-              </button>
-            </div>
-          )}
+          </div>
         </div>
+      </header>
 
+      {/* ── SECTION 2: Tab Bar (outside gradient) ── */}
+      <nav className="mt-3" aria-label="主頁分頁">
         <div
           role="tablist"
-          aria-label="主頁分頁"
-          className="flex flex-wrap gap-1 p-1.5 bg-white/30 backdrop-blur-xl border border-white/40 rounded-full shadow-soft"
+          className="flex gap-1 p-1.5 bg-card/80 backdrop-blur-md border border-border rounded-full shadow-soft"
           onFocusCapture={handleTabListFocusCapture}
           onKeyDown={handleTabListKeyDown}
         >
@@ -266,8 +218,73 @@ export default function HomeHeader({
             <span>每日共感</span>
           </button>
         </div>
+      </nav>
+
+      {/* ── SECTION 3: Notification Cards (outside gradient) ── */}
+      {showNotificationCards && (
+        <div className="mt-3 space-y-2">
+          {onboardingQuest.enabled && (
+            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-3">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold text-card-foreground">
+                <span>7 日任務</span>
+                <span className="tabular-nums text-muted-foreground">
+                  {onboardingQuest.completed_steps}/{onboardingQuest.total_steps}
+                </span>
+              </div>
+              <div className="mb-2 h-2 rounded-full bg-muted shadow-glass-inset">
+                <div
+                  className="h-2 rounded-full bg-gradient-to-r from-accent to-accent/70 transition-all duration-haven ease-haven"
+                  style={{ width: `${onboardingQuest.progress_percent}%` }}
+                  aria-hidden
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {nextOnboardingStep
+                  ? `Day ${nextOnboardingStep.quest_day}: ${nextOnboardingStep.title}`
+                  : '7 日任務已完成，持續保持互動節奏'}
+              </p>
+            </div>
+          )}
+
+          {showFirstDelightCard && (
+            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-4">
+              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-card-foreground">
+                <span>首次驚喜</span>
+                <span className="text-muted-foreground">里程碑</span>
+              </div>
+              <p className="text-xs text-card-foreground">{firstDelight.title ?? '你們達成第一個里程碑'}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {firstDelight.description ?? '已完成首次雙人互動閉環，建議記錄這次成就。'}
+              </p>
+              <button
+                type="button"
+                onClick={onAckFirstDelight}
+                className="mt-2 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-foreground transition-all duration-haven ease-haven hover:bg-primary/10 hover:scale-[1.02] active:scale-95"
+              >
+                已看見這個里程碑
+              </button>
+            </div>
+          )}
+
+          {syncNudges.enabled && primarySyncNudge && (
+            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-5">
+              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-card-foreground">
+                <span>同步提醒</span>
+                <span className="text-muted-foreground">{primarySyncNudge.nudge_type.replace(/_/g, ' ')}</span>
+              </div>
+              <p className="text-xs text-card-foreground">{primarySyncNudge.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{primarySyncNudge.description}</p>
+              <button
+                type="button"
+                onClick={onAckSyncNudge}
+                className="mt-2 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-foreground transition-all duration-haven ease-haven hover:bg-primary/10 hover:scale-[1.02] active:scale-95"
+              >
+                我知道了
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
 }

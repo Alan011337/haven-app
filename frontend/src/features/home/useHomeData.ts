@@ -405,10 +405,10 @@ export function useHomeData() {
         'relative px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-haven-fast ease-haven';
 
       if (isActive) {
-        return `${baseStyle} bg-white text-foreground shadow-soft -translate-y-px hover:shadow-lift glow-ring-primary`;
+        return `${baseStyle} bg-primary/10 text-foreground shadow-soft border border-primary/15 -translate-y-px hover:shadow-lift`;
       }
 
-      return `${baseStyle} text-muted-foreground hover:text-foreground hover:bg-white/20 transition-colors`;
+      return `${baseStyle} text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors`;
     },
     [activeTab],
   );
