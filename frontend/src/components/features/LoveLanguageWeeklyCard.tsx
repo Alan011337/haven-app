@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Sparkles, Loader2, Check } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
+import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
 import {
   fetchWeeklyTask,
   completeWeeklyTask,
@@ -19,7 +20,7 @@ export default function LoveLanguageWeeklyCard() {
 
   const load = useCallback(async () => {
     try {
-      const t = await fetchWeeklyTask();
+      const t = await fetchWeeklyTask({ timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS });
       setTask(t ?? null);
     } catch (e) {
       logClientError("weekly-task-fetch-failed", e);

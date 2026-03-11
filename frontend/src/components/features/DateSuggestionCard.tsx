@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
+import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from '@/lib/home-performance';
 import { fetchDateSuggestions, type DateSuggestionPublic } from '@/services/api-client';
 import { logClientError } from '@/lib/safe-error-log';
 
@@ -13,7 +14,7 @@ export default function DateSuggestionCard() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetchDateSuggestions();
+      const res = await fetchDateSuggestions({ timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS });
       setData(res);
     } catch (e) {
       logClientError('date-suggestions-fetch-failed', e);

@@ -2,6 +2,7 @@ app = "haven-web-prod"
 primary_region = "nrt"
 
 [build]
+  dockerfile = "Dockerfile.fly"
 
   [build.args]
     NEXT_PUBLIC_API_URL = "https://haven-web-prod.fly.dev/api"

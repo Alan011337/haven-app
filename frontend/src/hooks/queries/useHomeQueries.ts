@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
+import { HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
 import { queryKeys } from '@/lib/query-keys';
 import {
   fetchFeatureFlags,
@@ -68,8 +69,13 @@ export function usePartnerJournals(enabled = true) {
   const { user } = useAuth();
   return useQuery({
     queryKey: queryKeys.partnerJournals(),
-    queryFn: () => fetchPartnerJournals({ limit: JOURNALS_INITIAL_LIMIT, offset: 0 }),
+    queryFn: () =>
+      fetchPartnerJournals(
+        { limit: JOURNALS_INITIAL_LIMIT, offset: 0 },
+        { timeout: HOME_TIMELINE_TIMEOUT_MS },
+      ),
     enabled: !!user && enabled,
     staleTime: PARTNER_JOURNALS_STALE_TIME_MS,
+    retry: false,
   });
 }

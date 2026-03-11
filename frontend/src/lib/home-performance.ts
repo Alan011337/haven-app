@@ -1,0 +1,3 @@
+export const HOME_OPTIONAL_DATA_TIMEOUT_MS = 3_500;
+export const HOME_STATUS_TIMEOUT_MS = 4_000;
+export const HOME_TIMELINE_TIMEOUT_MS = 6_000;

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { queryKeys } from '@/lib/query-keys';
+import { HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
 import {
   fetchJournals,
   JOURNALS_INITIAL_LIMIT,
@@ -17,8 +18,13 @@ export function useJournals(enabled = true) {
   
   return useQuery({
     queryKey: queryKeys.journals(),
-    queryFn: () => fetchJournals({ limit: JOURNALS_INITIAL_LIMIT, offset: 0 }),
+    queryFn: () =>
+      fetchJournals(
+        { limit: JOURNALS_INITIAL_LIMIT, offset: 0 },
+        { timeout: HOME_TIMELINE_TIMEOUT_MS },
+      ),
     enabled: !!user && enabled,
     staleTime: JOURNALS_STALE_TIME_MS,
+    retry: false,
   });
 }

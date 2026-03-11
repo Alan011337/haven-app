@@ -3,31 +3,6 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
-const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, '');
-const trimApiSuffix = (value: string): string => value.replace(/\/api\/?$/, '');
-
-const resolveApiProxyTarget = (): string | null => {
-  const raw = process.env.API_PROXY_TARGET?.trim();
-  if (!raw) return null;
-  try {
-    const parsed = new URL(raw);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return null;
-    }
-    return trimTrailingSlash(parsed.toString());
-  } catch {
-    return null;
-  }
-};
-
-const resolveHealthProxyTarget = (): string | null => {
-  const apiProxyTarget = resolveApiProxyTarget();
-  if (!apiProxyTarget) {
-    return null;
-  }
-  return trimApiSuffix(apiProxyTarget);
-};
-
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
@@ -77,26 +52,6 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
     ];
-  },
-  async rewrites() {
-    const apiProxyTarget = resolveApiProxyTarget();
-    const healthProxyTarget = resolveHealthProxyTarget();
-    if (!apiProxyTarget) {
-      return [];
-    }
-    const rewrites = [
-      {
-        source: '/api/:path*',
-        destination: `${apiProxyTarget}/:path*`,
-      },
-    ];
-    if (healthProxyTarget) {
-      rewrites.push({
-        source: '/health/:path*',
-        destination: `${healthProxyTarget}/health/:path*`,
-      });
-    }
-    return rewrites;
   },
 };
 

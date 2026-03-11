@@ -8,6 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_FLY_TOML = ROOT / "frontend" / "fly.toml"
 FRONTEND_NEXT_CONFIG = ROOT / "frontend" / "next.config.ts"
+FRONTEND_API_PROXY_ROUTE = ROOT / "frontend" / "src" / "app" / "api" / "[...path]" / "route.ts"
+FRONTEND_HEALTH_PROXY_ROUTE = ROOT / "frontend" / "src" / "app" / "health" / "[...path]" / "route.ts"
 
 
 class FrontendFlyDeployContractTests(unittest.TestCase):
@@ -23,15 +25,19 @@ class FrontendFlyDeployContractTests(unittest.TestCase):
         self.assertEqual(build_args["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
         self.assertEqual(env["API_PROXY_TARGET"], "https://haven-api-prod.fly.dev/api")
 
-    def test_next_config_rewrites_api_to_proxy_target(self) -> None:
-        text = FRONTEND_NEXT_CONFIG.read_text(encoding="utf-8")
-        self.assertIn("resolveApiProxyTarget", text)
-        self.assertIn("resolveHealthProxyTarget", text)
-        self.assertIn("source: '/api/:path*'", text)
-        self.assertIn("destination: `${apiProxyTarget}/:path*`", text)
-        self.assertIn("source: '/health/:path*'", text)
-        self.assertIn("destination: `${healthProxyTarget}/health/:path*`", text)
-        self.assertIn("process.env.API_PROXY_TARGET", text)
+    def test_frontend_fly_config_declares_explicit_dockerfile(self) -> None:
+        config = tomllib.loads(FRONTEND_FLY_TOML.read_text(encoding="utf-8"))
+        self.assertEqual(config["build"]["dockerfile"], "Dockerfile.fly")
+
+    def test_frontend_uses_route_handlers_for_api_and_health_proxy(self) -> None:
+        next_config = FRONTEND_NEXT_CONFIG.read_text(encoding="utf-8")
+        api_route = FRONTEND_API_PROXY_ROUTE.read_text(encoding="utf-8")
+        health_route = FRONTEND_HEALTH_PROXY_ROUTE.read_text(encoding="utf-8")
+
+        self.assertNotIn("source: '/api/:path*'", next_config)
+        self.assertNotIn("source: '/health/:path*'", next_config)
+        self.assertIn("proxyApiRequest", api_route)
+        self.assertIn("proxyHealthRequest", health_route)
 
     def test_frontend_dockerfile_installs_python_for_env_check(self) -> None:
         dockerfile = (ROOT / "frontend" / "Dockerfile.fly").read_text(encoding="utf-8")

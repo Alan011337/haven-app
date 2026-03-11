@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 
-function redactSensitiveSegments(input: string): string {
+export function redactSensitiveSegments(input: string): string {
   const withRedactedQuery = input.replace(
     /([?&][A-Za-z0-9_.-]*(?:token|authorization|api[_-]?key|password|secret|sig|signature)[A-Za-z0-9_.-]*=)([^&\s]+)/gi,
     '$1[redacted]',
@@ -49,4 +49,11 @@ export function logClientError(label: string, error: unknown): void {
     message = String(error ?? 'unknown');
   }
   console.error(`[${label}] ${redactSensitiveSegments(message)}`);
+}
+
+export function logServerError(label: string, details: Record<string, unknown>): void {
+  const parts = Object.entries(details)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${key}=${redactSensitiveSegments(String(value))}`);
+  console.error(`[${label}] ${parts.join(' ')}`);
 }

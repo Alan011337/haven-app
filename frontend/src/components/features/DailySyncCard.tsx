@@ -48,12 +48,16 @@ export default function DailySyncCard() {
     }
   };
 
-  if (loading || !status) {
+  if (loading) {
     return (
       <GlassCard className="mb-6 p-6 flex items-center justify-center min-h-[140px]">
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
       </GlassCard>
     );
+  }
+
+  if (!status) {
+    return null;
   }
 
   return (

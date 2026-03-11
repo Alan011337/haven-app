@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import api from '@/lib/api';
 import { Journal } from '@/types';
 import { buildIdempotencyHeaders } from '@/lib/idempotency';
@@ -37,10 +38,11 @@ export const fetchJournals = async (params?: {
   limit?: number;
   offset?: number;
   cursor?: string | null;
-}): Promise<Journal[]> => {
+}, config?: AxiosRequestConfig): Promise<Journal[]> => {
   const limit = params?.limit ?? JOURNALS_INITIAL_LIMIT;
   const offset = params?.offset ?? 0;
   const response = await api.get<Journal[]>('/journals/', {
+    ...config,
     params: {
       limit,
       ...(params?.cursor ? { cursor: params.cursor } : { offset }),
@@ -53,10 +55,11 @@ export const fetchJournalsPage = async (params?: {
   limit?: number;
   offset?: number;
   cursor?: string | null;
-}): Promise<CursorListResult<Journal>> => {
+}, config?: AxiosRequestConfig): Promise<CursorListResult<Journal>> => {
   const limit = params?.limit ?? JOURNALS_INITIAL_LIMIT;
   const offset = params?.offset ?? 0;
   const response = await api.get<Journal[]>('/journals/', {
+    ...config,
     params: {
       limit,
       ...(params?.cursor ? { cursor: params.cursor } : { offset }),
@@ -104,10 +107,11 @@ export const fetchPartnerJournals = async (params?: {
   limit?: number;
   offset?: number;
   cursor?: string | null;
-}): Promise<Journal[]> => {
+}, config?: AxiosRequestConfig): Promise<Journal[]> => {
   const limit = params?.limit ?? JOURNALS_INITIAL_LIMIT;
   const offset = params?.offset ?? 0;
   const response = await api.get<Journal[]>('/journals/partner', {
+    ...config,
     params: {
       limit,
       ...(params?.cursor ? { cursor: params.cursor } : { offset }),
@@ -120,10 +124,11 @@ export const fetchPartnerJournalsPage = async (params?: {
   limit?: number;
   offset?: number;
   cursor?: string | null;
-}): Promise<CursorListResult<Journal>> => {
+}, config?: AxiosRequestConfig): Promise<CursorListResult<Journal>> => {
   const limit = params?.limit ?? JOURNALS_INITIAL_LIMIT;
   const offset = params?.offset ?? 0;
   const response = await api.get<Journal[]>('/journals/partner', {
+    ...config,
     params: {
       limit,
       ...(params?.cursor ? { cursor: params.cursor } : { offset }),

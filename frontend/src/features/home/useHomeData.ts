@@ -203,6 +203,9 @@ export function useHomeData() {
     () => sortJournalsDesc(partnerJournalsQuery.data),
     [partnerJournalsQuery.data],
   );
+  const mineTimelineUnavailable = journalsQuery.isError && myJournals.length === 0;
+  const partnerTimelineUnavailable =
+    partnerJournalsQuery.isError && partnerJournals.length === 0;
 
   const loading =
     (activeTab === 'mine' && journalsQuery.isLoading) ||
@@ -415,6 +418,8 @@ export function useHomeData() {
     myJournals,
     partnerJournals,
     loading,
+    mineTimelineUnavailable,
+    partnerTimelineUnavailable,
     savingsScore,
     gamificationSummary,
     onboardingQuest,

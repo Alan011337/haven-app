@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiGet, apiPost } from '@/services/api-transport';
 
 export interface DailySyncStatusPublic {
@@ -15,8 +16,10 @@ export interface DailySyncStatusPublic {
   today_question_label: string | null;
 }
 
-export const fetchDailySyncStatus = async (): Promise<DailySyncStatusPublic> => {
-  return apiGet<DailySyncStatusPublic>('/daily-sync/status');
+export const fetchDailySyncStatus = async (
+  config?: AxiosRequestConfig,
+): Promise<DailySyncStatusPublic> => {
+  return apiGet<DailySyncStatusPublic>('/daily-sync/status', config);
 };
 
 export const submitDailySync = async (payload: {

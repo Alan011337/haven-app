@@ -32,6 +32,8 @@ function HomeContent() {
     myJournals,
     partnerJournals,
     loading,
+    mineTimelineUnavailable,
+    partnerTimelineUnavailable,
     savingsScore,
     gamificationSummary,
     onboardingQuest,
@@ -94,9 +96,11 @@ function HomeContent() {
               <MineTabContent
                 myJournals={myJournals}
                 loading={loading}
+                timelineUnavailable={mineTimelineUnavailable}
                 secondaryContentReady={secondaryContentReady}
                 onJournalCreated={loadData}
                 onJournalDeleted={loadData}
+                onRetryTimeline={loadData}
               />
             </div>
           ) : null}
@@ -110,6 +114,7 @@ function HomeContent() {
               <PartnerTabContent
                 partnerJournals={partnerJournals}
                 loading={loading}
+                timelineUnavailable={partnerTimelineUnavailable}
                 partnerSafetyBanner={partnerSafetyBanner}
                 onRefresh={loadData}
                 onDismissSafetyBanner={handleDismissPartnerSafetyBanner}

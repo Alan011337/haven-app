@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiGet, apiPost } from '@/services/api-transport';
 
 export interface AppreciationPublic {
@@ -11,8 +12,8 @@ export const fetchAppreciations = async (params?: {
   offset?: number;
   from_date?: string;
   to_date?: string;
-}): Promise<AppreciationPublic[]> => {
-  return apiGet<AppreciationPublic[]>('/appreciations', { params });
+}, config?: AxiosRequestConfig): Promise<AppreciationPublic[]> => {
+  return apiGet<AppreciationPublic[]>('/appreciations', { ...config, params });
 };
 
 export const createAppreciation = async (bodyText: string): Promise<AppreciationPublic> => {

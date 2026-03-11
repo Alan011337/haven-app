@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import { apiGet, apiPost, apiPut, getWithFallback } from '@/services/api-transport';
 export * from '@/services/notifications-api';
 export * from '@/services/engagement-api';
@@ -101,15 +102,19 @@ export const fetchCard = async (key: string): Promise<ActionCardData> => {
 };
 
 
-export const fetchPartnerStatus = async (): Promise<PartnerStatus> => {
+export const DEFAULT_PARTNER_STATUS: PartnerStatus = {
+  has_partner: false,
+  latest_journal_at: null,
+  current_score: 0,
+  unread_notification_count: 0,
+};
+
+export const fetchPartnerStatus = async (
+  config?: AxiosRequestConfig,
+): Promise<PartnerStatus> => {
   return getWithFallback({
-    action: () => apiGet<PartnerStatus>('/users/partner-status'),
-    fallbackValue: {
-      has_partner: false,
-      latest_journal_at: null,
-      current_score: 0,
-      unread_notification_count: 0,
-    },
+    action: () => apiGet<PartnerStatus>('/users/partner-status', config),
+    fallbackValue: DEFAULT_PARTNER_STATUS,
     errorTag: 'fetch-partner-status-failed',
   });
 };
@@ -136,8 +141,10 @@ export const putLoveLanguagePreference = async (preference: Record<string, unkno
   return apiPut<LoveLanguagePreferencePublic>('/love-languages/preference', { preference });
 };
 
-export const fetchWeeklyTask = async (): Promise<WeeklyTaskPublic | null> => {
-  return apiGet<WeeklyTaskPublic | null>('/love-languages/weekly-task');
+export const fetchWeeklyTask = async (
+  config?: AxiosRequestConfig,
+): Promise<WeeklyTaskPublic | null> => {
+  return apiGet<WeeklyTaskPublic | null>('/love-languages/weekly-task', config);
 };
 
 export const completeWeeklyTask = async (): Promise<WeeklyTaskPublic> => {
@@ -176,8 +183,10 @@ export interface MediationStatusPublic {
   next_sop?: string;
 }
 
-export const fetchMediationStatus = async (): Promise<MediationStatusPublic> => {
-  return apiGet<MediationStatusPublic>('/mediation/status');
+export const fetchMediationStatus = async (
+  config?: AxiosRequestConfig,
+): Promise<MediationStatusPublic> => {
+  return apiGet<MediationStatusPublic>('/mediation/status', config);
 };
 
 export const submitMediationAnswers = async (
@@ -321,8 +330,10 @@ export const addBlueprintItem = async (
   return apiPost<WishlistItemPublic>('/blueprint', { title, notes: notes ?? '' });
 };
 
-export const fetchDateSuggestions = async (): Promise<DateSuggestionPublic> => {
-  return apiGet<DateSuggestionPublic>('/blueprint/date-suggestions');
+export const fetchDateSuggestions = async (
+  config?: AxiosRequestConfig,
+): Promise<DateSuggestionPublic> => {
+  return apiGet<DateSuggestionPublic>('/blueprint/date-suggestions', config);
 };
 
 // --- Module D3: Weekly Report ---

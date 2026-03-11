@@ -5,11 +5,13 @@ import PartnerJournalCard from '@/components/features/PartnerJournalCard';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Skeleton from '@/components/ui/Skeleton';
 import PartnerSafetyBanner from '@/components/features/PartnerSafetyBanner';
+import { resolveHomeTimelineStage } from '@/lib/home-timeline-state';
 import { Journal } from '@/types';
 
 interface PartnerTabContentProps {
   partnerJournals: Journal[];
   loading: boolean;
+  timelineUnavailable: boolean;
   partnerSafetyBanner: { latestSevereId: string; severeCount: number } | null;
   onRefresh: () => void;
   onDismissSafetyBanner: () => void;
@@ -18,10 +20,18 @@ interface PartnerTabContentProps {
 export default function PartnerTabContent({
   partnerJournals,
   loading,
+  timelineUnavailable,
   partnerSafetyBanner,
   onRefresh,
   onDismissSafetyBanner,
 }: PartnerTabContentProps) {
+  const timelineStage = resolveHomeTimelineStage({
+    mounted: true,
+    loading,
+    unavailable: timelineUnavailable,
+    itemCount: partnerJournals.length,
+  });
+
   return (
     <section>
       <div className="flex items-center justify-between mb-6 px-2">
@@ -41,19 +51,26 @@ export default function PartnerTabContent({
         </button>
       </div>
 
-      {partnerSafetyBanner && !loading && (
+      {partnerSafetyBanner && timelineStage !== 'loading' && timelineStage !== 'deferred' && (
         <PartnerSafetyBanner
           severeCount={partnerSafetyBanner.severeCount}
           onDismiss={onDismissSafetyBanner}
         />
       )}
 
-      {loading ? (
+      {timelineStage === 'loading' ? (
         <div className="space-y-6">
           {[1, 2].map((i) => (
             <Skeleton key={i} className="h-40 w-full rounded-card" />
           ))}
         </div>
+      ) : timelineStage === 'deferred' ? (
+        <GlassCard className="flex flex-col items-center justify-center py-16 px-6 border border-dashed border-border animate-slide-up-fade">
+          <p className="text-card-foreground font-art font-semibold text-lg">伴侶日記暫時還沒同步過來</p>
+          <p className="text-muted-foreground text-sm mt-2 max-w-md text-center leading-relaxed">
+            這通常是網路或 upstream 回應太慢，先稍後再試，不影響其他首頁操作。
+          </p>
+        </GlassCard>
       ) : partnerJournals.length === 0 ? (
         <GlassCard className="flex flex-col items-center justify-center py-24 border border-dashed border-border animate-slide-up-fade">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/12 to-primary/4 border border-primary/8 flex items-center justify-center mb-5 shadow-soft">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Heart, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
+import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
 import {
   fetchAppreciations,
   createAppreciation,
@@ -39,8 +40,11 @@ export default function AppreciationCard() {
     try {
       const { from, to } = getWeekRange();
       const [data, weekData] = await Promise.all([
-        fetchAppreciations({ limit: 20 }),
-        fetchAppreciations({ from_date: from, to_date: to, limit: 50 }),
+        fetchAppreciations({ limit: 20 }, { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS }),
+        fetchAppreciations(
+          { from_date: from, to_date: to, limit: 50 },
+          { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
+        ),
       ]);
       setList(data);
       setWeekList(weekData);
