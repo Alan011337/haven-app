@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Feather, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Feather, Heart, RefreshCw, Sparkles } from 'lucide-react';
 import JournalCard from '@/components/features/JournalCard';
 import JournalInput from '@/components/features/JournalInput';
 import DailySyncCard from '@/components/features/DailySyncCard';
@@ -9,9 +9,18 @@ import DateSuggestionCard from '@/components/features/DateSuggestionCard';
 import MediationEntryBanner from '@/components/features/MediationEntryBanner';
 import AppreciationCard from '@/components/features/AppreciationCard';
 import LoveLanguageWeeklyCard from '@/components/features/LoveLanguageWeeklyCard';
-import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
+import {
+  EditorialDeferredState,
+  EditorialEmptyState,
+  EditorialPaperCard,
+  EditorialTimelineColumn,
+  HomeCoverStage,
+  HomeMosaicRail,
+  HomeSectionFrame,
+  TimelineDateRail,
+} from '@/features/home/HomePrimitives';
 import { resolveHomeTimelineStage } from '@/lib/home-timeline-state';
 import { Journal } from '@/types';
 
@@ -20,9 +29,28 @@ interface MineTabContentProps {
   loading: boolean;
   timelineUnavailable: boolean;
   secondaryContentReady: boolean;
+  relationshipPulse: {
+    score: number;
+    streakDays: number;
+    hasNewPartnerContent: boolean;
+  };
   onJournalCreated: () => void;
   onJournalDeleted?: () => void;
   onRetryTimeline: () => void;
+}
+
+function formatTimelineDate(value: string) {
+  const date = new Date(value);
+  return {
+    label: date.toLocaleDateString('zh-TW', {
+      month: 'long',
+      day: 'numeric',
+    }),
+    meta: date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      weekday: 'long',
+    }),
+  };
 }
 
 export default function MineTabContent({
@@ -30,11 +58,13 @@ export default function MineTabContent({
   loading,
   timelineUnavailable,
   secondaryContentReady,
+  relationshipPulse,
   onJournalCreated,
   onJournalDeleted,
   onRetryTimeline,
 }: MineTabContentProps) {
   const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
@@ -47,85 +77,190 @@ export default function MineTabContent({
     itemCount: myJournals.length,
   });
 
+  const pulseLine = useMemo(() => {
+    if (relationshipPulse.hasNewPartnerContent) {
+      return (
+        <>
+          伴侶今天也有新的內容，但它會先留在第二層。
+          <strong className="font-medium text-card-foreground"> 你先把自己的頁面寫完整，首頁才算真正打開。</strong>
+        </>
+      );
+    }
+    if (myJournals.length === 0) {
+      return (
+        <>
+          今天還沒有任何頁面。
+          <strong className="font-medium text-card-foreground"> 第一篇寫下去之後，這個首頁的時間感才會真正亮起。</strong>
+        </>
+      );
+    }
+    return (
+      <>
+        先寫自己，再靠近彼此。
+        <strong className="font-medium text-card-foreground"> 這一版首頁會刻意把你今天真正想留下的那句話放在最前景。</strong>
+      </>
+    );
+  }, [myJournals.length, relationshipPulse.hasNewPartnerContent]);
+
   return (
     <div className="flex flex-col gap-[var(--space-section)]">
-      <section className="animate-page-enter-delay-1">
-        {secondaryContentReady ? (
-          <>
-            <MediationEntryBanner />
-            <DailySyncCard />
-            <DateSuggestionCard />
-            <AppreciationCard />
-            <LoveLanguageWeeklyCard />
-          </>
-        ) : (
-          <GlassCard className="mb-6 p-6 md:p-8">
-            <div className="flex items-start gap-4">
-              <Skeleton className="h-11 w-11 shrink-0 rounded-2xl" />
-              <div className="flex-1 space-y-3">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-full max-w-lg" />
-                <Skeleton className="h-24 w-full rounded-card" />
+      <HomeCoverStage
+        eyebrow="My Journal"
+        title="把今天真正重要的那一句，放到首頁封面。"
+        description="這一屏不再要你同時處理所有 flow。它只替你的文字留出最好的前景，其他提醒則安靜退到更後面。"
+        pulse={pulseLine}
+        note={
+          <div className="space-y-4">
+            <EditorialPaperCard
+              eyebrow="Relationship Pulse"
+              title={`${relationshipPulse.score} 分的關係脈搏`}
+              description={`已連續互動 ${relationshipPulse.streakDays} 天。首頁先替你守住低噪音節奏，再讓彼此靠近。`}
+              tone="mist"
+              className="rounded-[2rem]"
+            >
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">先寫自己</Badge>
+                <Badge variant="success">
+                  {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
+                </Badge>
               </div>
+            </EditorialPaperCard>
+
+            <EditorialPaperCard
+              eyebrow="Editorial Rule"
+              title="先寫，再看；先留白，再靠近。"
+              description="首頁不再要求你同時回應每一張卡。當文字先被寫下來，其他互動自然會回到正確位置。"
+              tone="paper"
+              className="rounded-[2rem]"
+            >
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Heart className="h-4 w-4 text-primary" aria-hidden />
+                <span>把今天寫成一頁，比把所有提醒都處理完更重要。</span>
+              </div>
+            </EditorialPaperCard>
+          </div>
+        }
+      >
+        <JournalInput
+          onJournalCreated={onJournalCreated}
+          variant="cover"
+          className="border-white/55 bg-transparent shadow-none"
+        />
+      </HomeCoverStage>
+
+      <HomeSectionFrame
+        eyebrow="Second Layer"
+        title="其餘 flow 還在，只是退到了更安靜的位置。"
+        description="每日同步、約會提案、感恩便利貼與修復入口仍然存在，但不再搶走你首頁第一屏的注意力。"
+        aside={<Badge variant="outline">Editorial Mosaic</Badge>}
+        className="bg-[linear-gradient(180deg,rgba(255,252,248,0.76),rgba(248,244,238,0.66))]"
+      >
+        {secondaryContentReady ? (
+          <HomeMosaicRail className="md:grid-cols-[1.2fr_0.8fr]">
+            <div className="md:col-span-2">
+              <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
             </div>
-          </GlassCard>
+            <div className="md:row-span-2">
+              <DailySyncCard className="h-full border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
+            </div>
+            <DateSuggestionCard className="border-white/45 bg-[linear-gradient(180deg,rgba(248,252,248,0.92),rgba(242,247,242,0.88))]" />
+            <AppreciationCard className="border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
+            <div className="md:col-span-2">
+              <LoveLanguageWeeklyCard className="h-full border-white/45 bg-[linear-gradient(180deg,rgba(247,250,248,0.93),rgba(240,246,242,0.88))]" />
+            </div>
+          </HomeMosaicRail>
+        ) : (
+          <HomeMosaicRail className="md:grid-cols-[1.2fr_0.8fr]">
+            {[1, 2, 3, 4].map((item) => (
+              <EditorialPaperCard
+                key={item}
+                tone={item % 2 === 0 ? 'mist' : 'paper'}
+                className={item === 1 ? 'md:col-span-2 rounded-[2rem]' : 'rounded-[2rem]'}
+              >
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className={`w-full rounded-[1.6rem] ${item === 1 ? 'h-28' : 'h-20'}`} />
+                </div>
+              </EditorialPaperCard>
+            ))}
+          </HomeMosaicRail>
         )}
-        <JournalInput onJournalCreated={onJournalCreated} />
-      </section>
+      </HomeSectionFrame>
 
-      <section className="animate-page-enter-delay-2">
-        <div className="flex items-center justify-between mb-[var(--space-section)] px-2">
-          <h3 className="font-art text-xl font-bold text-card-foreground flex items-center gap-2">
-            <span className="icon-badge"><Feather className="w-4 h-4" aria-hidden /></span>
-            時光迴廊
-          </h3>
-          <Badge variant="default" size="md">
-            {myJournals.length} 篇日記
-          </Badge>
-        </div>
-
+      <EditorialTimelineColumn
+        eyebrow="Memory Lane"
+        title="時光迴廊"
+        description="現在它更像被編排的欄目，而不是一串功能卡。每篇日記都被留出自己的段落、日期與閱讀空氣。"
+        aside={<Badge variant="outline">{myJournals.length} 篇日記</Badge>}
+        className="bg-[linear-gradient(180deg,rgba(255,254,251,0.96),rgba(249,245,239,0.9))]"
+      >
         {timelineStage === 'loading' ? (
-          <div className="space-y-[var(--space-block)]">
+          <div className="space-y-8 pl-12">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-40 w-full rounded-card" />
+              <EditorialPaperCard key={i} tone="paper" className="rounded-[2rem]">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-32 w-full rounded-[1.6rem]" />
+                </div>
+              </EditorialPaperCard>
             ))}
           </div>
         ) : timelineStage === 'deferred' ? (
-          <GlassCard className="flex flex-col items-start gap-4 py-10 px-6 md:px-8 border border-dashed border-border animate-slide-up-fade">
-            <div className="space-y-2">
-              <p className="text-card-foreground font-art font-semibold text-lg">時光迴廊還在同步</p>
-              <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
-                首頁主體已可使用，你可以先寫日記；舊日記列表會在連線恢復後補上。
-              </p>
-            </div>
+          <div className="pl-12">
+            <EditorialDeferredState
+              icon={Sparkles}
+              title="時光迴廊還在安靜同步"
+              description="首頁主體已可使用。你可以先把今天寫下來，舊日記會在連線恢復後補上，不需要卡在這裡等待。"
+              actionLabel="重新同步日記"
+              onAction={onRetryTimeline}
+            />
+          </div>
+        ) : myJournals.length === 0 ? (
+          <div className="pl-12">
+            <EditorialEmptyState
+              icon={Feather}
+              title="第一篇日記，會從這裡開始發光。"
+              description="先寫下今天的一點心緒。當你開始留下內容，首頁就會從空白頁變成你們關係的編輯檯。"
+            />
+          </div>
+        ) : (
+          myJournals.map((journal, idx) => {
+            const timelineDate = formatTimelineDate(journal.created_at);
+
+            return (
+              <div key={journal.id} className="relative grid gap-4 pl-12 xl:grid-cols-[148px_minmax(0,1fr)] xl:gap-9 xl:pl-0">
+                <span
+                  className="absolute left-[18px] top-8 h-3 w-3 rounded-full border border-primary/25 bg-white shadow-soft xl:left-[214px]"
+                  aria-hidden
+                />
+                <TimelineDateRail
+                  eyebrow={`Chapter ${String(idx + 1).padStart(2, '0')}`}
+                  title={timelineDate.label}
+                  meta={timelineDate.meta}
+                />
+                <div className={idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : ''}>
+                  <JournalCard journal={journal} onDelete={onJournalDeleted} variant="timeline" />
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {timelineStage !== 'loading' && myJournals.length > 0 ? (
+          <div className="flex justify-end pl-12">
             <button
               type="button"
               onClick={onRetryTimeline}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-white/82 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
             >
               <RefreshCw className="h-4 w-4" aria-hidden />
-              重新同步日記
+              更新這條時間線
             </button>
-          </GlassCard>
-        ) : myJournals.length === 0 ? (
-          /* P2-A10+: Glass rollout — home empty state; GlassCard variant="solid" to revert. */
-          <GlassCard className="flex flex-col items-center justify-center py-20 border border-dashed border-border animate-slide-up-fade">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/12 to-primary/4 border border-primary/8 flex items-center justify-center mb-4">
-              <Feather className="w-8 h-8 text-primary" />
-            </div>
-            <p className="text-card-foreground font-art font-semibold text-lg">這裡還是一片空白</p>
-            <p className="text-muted-foreground text-sm mt-1">寫下第一篇日記，種下回憶的種子吧！🌱</p>
-          </GlassCard>
-        ) : (
-          <div className="grid gap-[var(--space-section)]">
-            {myJournals.map((journal, idx) => (
-              <div key={journal.id} className={idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : ''}>
-                <JournalCard journal={journal} onDelete={onJournalDeleted} />
-              </div>
-            ))}
           </div>
-        )}
-      </section>
+        ) : null}
+      </EditorialTimelineColumn>
     </div>
   );
 }

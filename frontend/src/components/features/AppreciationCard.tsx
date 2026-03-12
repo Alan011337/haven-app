@@ -13,6 +13,7 @@ import { logClientError } from "@/lib/safe-error-log";
 import { trackAppreciationSent } from "@/lib/relationship-events";
 import { capturePosthogEvent } from "@/lib/posthog";
 import { useToast } from "@/hooks/useToast";
+import { cn } from "@/lib/utils";
 
 function getWeekRange(): { from: string; to: string } {
   const now = new Date();
@@ -27,7 +28,7 @@ function getWeekRange(): { from: string; to: string } {
   };
 }
 
-export default function AppreciationCard() {
+export default function AppreciationCard({ className }: { className?: string }) {
   const [list, setList] = useState<AppreciationPublic[]>([]);
   const [weekList, setWeekList] = useState<AppreciationPublic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,14 +89,14 @@ export default function AppreciationCard() {
 
   if (loading) {
     return (
-      <GlassCard className="mb-6 p-6 flex items-center justify-center min-h-[100px]">
+      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[100px]", className)}>
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
       </GlassCard>
     );
   }
 
   return (
-    <GlassCard className="mb-6 p-6 md:p-8">
+    <GlassCard className={cn("p-6 md:p-8", className)}>
       <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge">
           <Heart className="w-5 h-5 text-primary" aria-hidden />

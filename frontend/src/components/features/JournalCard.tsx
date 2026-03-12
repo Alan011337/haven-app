@@ -13,9 +13,14 @@ import { getJournalSafetyBand } from '@/lib/safety';
 interface JournalCardProps {
   journal: Journal;
   onDelete?: () => void;
+  variant?: 'default' | 'timeline';
 }
 
-export default function JournalCard({ journal, onDelete }: JournalCardProps) {
+export default function JournalCard({
+  journal,
+  onDelete,
+  variant = 'default',
+}: JournalCardProps) {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const deleteJournalMutation = useDeleteJournal();
@@ -70,22 +75,24 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
 
   return (
     <article
-      className={`relative group rounded-card shadow-soft border overflow-hidden transition-all duration-haven ease-haven hover:shadow-lift hover:-translate-y-0.5
+      className={`relative group overflow-hidden rounded-[2rem] border shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift
       ${isCrisis
-        ? 'bg-destructive/5 border-destructive/20'
+        ? 'bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))] border-destructive/18'
         : isElevated
-          ? 'bg-primary/5 border-primary/15'
-          : 'glass-card border-border'
+          ? 'bg-[linear-gradient(180deg,rgba(255,250,245,0.96),rgba(255,252,248,0.92))] border-primary/15'
+          : variant === 'timeline'
+            ? 'border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.95))]'
+            : 'glass-card border-border'
       }`}
     >
       {/* Top accent line */}
-      <div className={`absolute top-0 left-0 right-0 h-0.5 ${isCrisis ? 'bg-gradient-to-r from-transparent via-destructive/40 to-transparent' : 'bg-gradient-to-r from-transparent via-primary/30 to-transparent'}`} aria-hidden />
+      <div className={`absolute left-0 right-0 top-0 h-px ${isCrisis ? 'bg-gradient-to-r from-transparent via-destructive/32 to-transparent' : 'bg-gradient-to-r from-transparent via-primary/24 to-transparent'}`} aria-hidden />
 
       {/* Delete button */}
       <button
         onClick={handleDelete}
-        className="absolute top-5 right-5 z-20 p-2 text-muted-foreground/60 bg-card/80 backdrop-blur-md rounded-full
-                   hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20
+        className="absolute right-5 top-5 z-20 rounded-full border border-transparent bg-card/80 p-2 text-muted-foreground/60 backdrop-blur-md
+                   hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive
                    transition-all duration-haven-fast ease-haven opacity-100 md:opacity-0 md:group-hover:opacity-100"
         title="刪除日記"
         aria-label="刪除日記"
@@ -95,22 +102,22 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
         </svg>
       </button>
 
-      <div className="p-8 md:p-10">
+      <div className="p-7 md:p-9">
          {/* Header: date + mood badge */}
-         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pr-8">
+         <div className="mb-6 flex flex-col justify-between gap-3 pr-8 sm:flex-row sm:items-center">
              <div className="flex items-center gap-3">
-               <div className="h-8 w-0.5 shrink-0 rounded-full bg-gradient-to-b from-primary/50 to-primary/10" aria-hidden />
+               <div className={`h-10 w-0.5 shrink-0 rounded-full ${variant === 'timeline' ? 'bg-gradient-to-b from-primary/32 to-primary/6' : 'bg-gradient-to-b from-primary/42 to-primary/8'}`} aria-hidden />
                <div className="flex flex-col">
-                 <span className={`text-[11px] font-semibold tracking-widest uppercase tabular-nums ${isCrisis ? 'text-destructive' : 'text-muted-foreground/60'}`}>
+                 <span className={`text-[11px] font-semibold uppercase tracking-[0.24em] tabular-nums ${isCrisis ? 'text-destructive' : 'text-muted-foreground/60'}`}>
                     {dateStr}
                  </span>
-                 <span className="text-[11px] text-muted-foreground/50 font-medium mt-0.5 tracking-wide tabular-nums">
+                 <span className="mt-0.5 text-[11px] font-medium tracking-wide tabular-nums text-muted-foreground/50">
                     {timeStr}
                  </span>
                </div>
              </div>
 
-             <span className={`inline-flex items-center px-3.5 py-1 rounded-full text-[11px] font-bold self-start sm:self-auto
+             <span className={`inline-flex items-center self-start rounded-full px-3.5 py-1.5 text-[11px] font-bold shadow-soft sm:self-auto
                 ${isCrisis
                   ? 'bg-destructive/10 text-destructive border border-destructive/20'
                   : isElevated
@@ -122,9 +129,9 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
          </div>
 
          {/* Journal content */}
-         <div className="mb-8">
-           <p className="text-card-foreground leading-[1.85] text-[15px] whitespace-pre-wrap font-sans">
-            {journal.content}
+         <div className={`mb-8 rounded-[1.7rem] border px-5 py-6 ${variant === 'timeline' ? 'border-[rgba(219,204,187,0.4)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,247,242,0.94))]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(252,248,243,0.7))]'} shadow-glass-inset`}>
+           <p className="whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
+             {journal.content}
            </p>
          </div>
 
@@ -133,7 +140,7 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
           
           {/* 1. 嚴重警示區 (Crisis Mode) */}
           {isSevere && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-5 animate-slide-up-fade">
+            <div className="rounded-[1.4rem] border border-destructive/24 bg-destructive/8 p-5 animate-slide-up-fade">
               <div className="flex items-center text-destructive mb-2 font-bold text-sm">
                 <span className="icon-badge !bg-gradient-to-br !from-destructive/12 !to-destructive/4 !border-destructive/8 mr-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
@@ -158,7 +165,7 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
 
           {/* 1.5 高壓提醒區 (Tier 1) */}
           {isElevated && !isSevere && (
-            <div className="bg-primary/10 border border-border rounded-xl p-4 animate-slide-up-fade shadow-soft">
+            <div className="rounded-[1.35rem] border border-primary/14 bg-primary/8 p-4 shadow-soft animate-slide-up-fade">
               <div className="flex items-center text-primary mb-1 font-bold text-sm gap-2.5">
                 <span className="icon-badge !w-7 !h-7" aria-hidden>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -175,7 +182,7 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
 
           {/* 2. 深層需求 (EFT) */}
           {journal.emotional_needs && (
-            <div className={`rounded-xl p-4 border animate-slide-up-fade-1 ${isCrisis ? 'bg-destructive/10 border-destructive/20' : 'bg-muted border-border'}`}>
+            <div className={`rounded-[1.35rem] border p-4 animate-slide-up-fade-1 ${isCrisis ? 'bg-destructive/8 border-destructive/20' : variant === 'timeline' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(251,247,242,0.94))] border-[rgba(219,204,187,0.38)]' : 'bg-white/68 border-white/55'}`}>
               <h4 className={`text-xs font-bold font-art uppercase tracking-wider mb-2 flex items-center gap-2 ${isCrisis ? 'text-destructive' : 'text-muted-foreground'}`}>
                  <span className="icon-badge">{isCrisis ? '🛡️' : '🦁'}</span>
                  <span>{isCrisis ? '安全導航' : '內心深處的渴望'}</span>
@@ -190,12 +197,12 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
 
           {/* 3. 建議與行動 (Grid 排版) */}
           {!isSevere && (journal.advice_for_user || journal.action_for_user) && (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {journal.advice_for_user && (
-                <div className="bg-primary/10 p-4 rounded-xl border border-border shadow-soft hover:bg-primary/15 hover:shadow-lift transition-all duration-haven ease-haven animate-slide-up-fade-2">
-                  <h4 className="text-xs font-bold font-art text-primary mb-2 uppercase tracking-wide flex items-center gap-2">
-                    <span className="icon-badge">💡</span>
-                    <span>溫馨建議</span>
+                <div className={`rounded-[1.35rem] border p-4 shadow-soft transition-all duration-haven ease-haven hover:shadow-lift animate-slide-up-fade-2 ${variant === 'timeline' ? 'border-primary/10 bg-primary/[0.065] hover:bg-primary/[0.09]' : 'border-primary/14 bg-primary/8 hover:bg-primary/12'}`}>
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
+                    <span className="icon-badge !w-6 !h-6">✦</span>
+                    <span>給自己的理解</span>
                   </h4>
                   <div className="list-item-premium mt-1">
                     <p className="text-sm text-foreground leading-relaxed">
@@ -206,10 +213,10 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
               )}
               
               {journal.action_for_user && (
-                <div className="bg-accent/10 p-4 rounded-xl border border-border shadow-soft hover:bg-accent/15 hover:shadow-lift transition-all duration-haven ease-haven animate-slide-up-fade-3">
-                  <h4 className="text-xs font-bold font-art text-accent mb-2 uppercase tracking-wide flex items-center gap-2">
-                    <span className="icon-badge">🚀</span>
-                    <span>小小行動</span>
+                <div className={`rounded-[1.35rem] border p-4 shadow-soft transition-all duration-haven ease-haven hover:shadow-lift animate-slide-up-fade-3 ${variant === 'timeline' ? 'border-accent/12 bg-accent/[0.065] hover:bg-accent/[0.09]' : 'border-accent/16 bg-accent/8 hover:bg-accent/12'}`}>
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-accent">
+                    <span className="icon-badge !w-6 !h-6">↗</span>
+                    <span>接下來的一步</span>
                   </h4>
                   <div className="list-item-premium mt-1">
                     <p className="text-sm text-foreground leading-relaxed">
@@ -225,9 +232,9 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
           {(journal.advice_for_partner || journal.action_for_partner) && !isSevere && (
             <div className="mt-4 pt-4 animate-slide-up-fade-3">
                <div className="section-divider mb-4" />
-               <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold font-art text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <span className="icon-badge">🤝</span>
+               <div className="mb-3 flex items-center justify-between">
+                  <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="icon-badge !w-6 !h-6">⋯</span>
                     <span>伴侶同步指南</span>
                   </h4>
                   <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full border border-border">
@@ -235,7 +242,7 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
                   </span>
                </div>
                
-              <div className="bg-primary/10 p-4 rounded-xl border border-border space-y-3 shadow-glass-inset">
+              <div className={`space-y-3 rounded-[1.4rem] border p-4 shadow-glass-inset ${variant === 'timeline' ? 'border-primary/10 bg-primary/[0.055]' : 'border-primary/14 bg-primary/8'}`}>
                  {journal.advice_for_partner && (
                    <div className="list-item-premium flex gap-3 items-start animate-slide-up-fade-4">
                      <span className="shrink-0 text-[10px] font-bold bg-card text-primary px-2 py-0.5 rounded border border-border shadow-soft mt-0.5">
@@ -260,7 +267,7 @@ export default function JournalCard({ journal, onDelete }: JournalCardProps) {
           {!isSevere && journal.card_recommendation && (
             <div className="mt-8 pt-5">
               <div className="section-divider mb-5" />
-              <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-6 md:p-8 text-primary-foreground relative overflow-hidden shadow-lift">
+                <div className="relative overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-primary to-primary/85 p-6 text-primary-foreground shadow-lift md:p-8">
                 <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-[0.04] rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3" aria-hidden />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-[0.03] rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4" aria-hidden />
                 <div className="flex flex-col-reverse md:flex-row items-center gap-6 relative z-10">

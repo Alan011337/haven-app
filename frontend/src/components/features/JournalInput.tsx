@@ -14,10 +14,13 @@ import { useToast } from '@/hooks/useToast';
 import { resolveSafetyBand } from '@/lib/safety';
 import { isNetworkError } from '@/lib/offline-queue/network';
 import { enqueue } from '@/lib/offline-queue/queue';
-import { GlassCard } from '@/components/haven/GlassCard';
+import { HomeComposerStage } from '@/features/home/HomePrimitives';
+import { cn } from '@/lib/utils';
 
 interface JournalInputProps {
   onJournalCreated: () => void;
+  className?: string;
+  variant?: 'default' | 'cover';
 }
 
 interface SafetyGuidanceState {
@@ -26,7 +29,11 @@ interface SafetyGuidanceState {
   actionForUser?: string;
 }
 
-export default function JournalInput({ onJournalCreated }: JournalInputProps) {
+export default function JournalInput({
+  onJournalCreated,
+  className,
+  variant = 'default',
+}: JournalInputProps) {
   const [content, setContent] = useState('');
   const [safetyGuidance, setSafetyGuidance] = useState<SafetyGuidanceState | null>(null);
   const { showToast } = useToast();
@@ -125,46 +132,87 @@ export default function JournalInput({ onJournalCreated }: JournalInputProps) {
 
   return (
     <>
-      <GlassCard className="mb-8 p-6 md:p-8 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
-        <form onSubmit={handleSubmit} className="flex flex-col">
+      <HomeComposerStage
+        eyebrow={variant === 'cover' ? 'Cover Story' : 'Composer Stage'}
+        title={variant === 'cover' ? '首頁現在留給你一整頁，慢慢把今天寫下來。' : '寫下今天真正想被理解的那一段。'}
+        description={
+          variant === 'cover'
+            ? '它不是一個欄位，而是打開的首頁稿紙。你只需要先留下今天最重要的那一句，其餘部分會在後面慢慢排好。'
+            : '這裡不是社群貼文，也不是任務欄位。它更像一頁正準備被排版的私人稿件。'
+        }
+        className={className}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-[11px] font-semibold tracking-[0.2em] text-primary uppercase">
+                Private Page
+              </span>
+              <span className="inline-flex items-center rounded-full border border-border/80 bg-white/70 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                AI 會在背景安靜整理
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground/70 font-mono tabular-nums">
+              {content.length}/{MAX_JOURNAL_CONTENT_LENGTH}
+            </p>
+          </div>
+
           <label htmlFor="journal-content" className="sr-only">
             日記內容
           </label>
-          <div className="rounded-xl transition-all duration-haven ease-haven focus-within:shadow-focus-glow focus-within:ring-2 focus-within:ring-primary/20">
+          <div
+            className={cn(
+              'relative overflow-hidden rounded-[1.85rem] border shadow-soft',
+              variant === 'cover'
+                ? 'border-[rgba(219,204,187,0.5)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(251,247,242,0.95))]'
+                : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(250,246,241,0.78))]',
+            )}
+          >
+            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/22 to-transparent" aria-hidden />
             <textarea
               id="journal-content"
               aria-label="日記內容"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="今天發生了什麼事？心情如何？（試著寫寫看，AI 會幫你分析喔...）"
-              className="w-full p-5 border border-input bg-muted/30 rounded-xl focus-visible:bg-card focus-visible:border-transparent outline-none resize-none min-h-[140px] text-foreground placeholder:text-muted-foreground/50 placeholder:font-light leading-relaxed transition-all duration-haven ease-haven"
+              placeholder="今天發生了什麼事？你最希望被怎麼理解？不用寫得完整，只要先留下一句最真的感受。"
+              className={cn(
+                'w-full resize-none bg-transparent text-[15px] leading-[2] text-foreground outline-none transition-all duration-haven ease-haven placeholder:font-light placeholder:text-muted-foreground/50 md:px-6',
+                variant === 'cover' ? 'min-h-[300px] px-6 py-8 md:min-h-[340px] md:px-7' : 'min-h-[220px] px-5 py-6',
+                'focus-visible:bg-white/35',
+              )}
               disabled={isSubmitting}
               maxLength={MAX_JOURNAL_CONTENT_LENGTH}
               suppressHydrationWarning={true}
             />
           </div>
-          <div className="pt-4 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground/60 font-mono tabular-nums">
-              {content.length}/{MAX_JOURNAL_CONTENT_LENGTH}
-            </p>
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-xl space-y-1.5">
+              <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Editorial Note</p>
+              <p className="text-sm leading-7 text-muted-foreground">
+                {variant === 'cover'
+                  ? '先把今天寫成一頁，再讓 AI 在背景安靜協助整理。首頁這一層不追求完整，只追求真實。'
+                  : '先寫下去就好。提交後，AI 會在背景協助整理情緒層次與後續建議，不需要你一次把所有話都說完。'}
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting || !content.trim()}
-              className={`px-7 py-2.5 rounded-full font-medium border-t border-t-white/30 bg-gradient-to-b from-primary to-primary/90 text-primary-foreground shadow-satin-button active:scale-95 transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${content.trim() ? 'hover:shadow-lift hover:-translate-y-0.5' : ''}`}
+              className={`inline-flex items-center justify-center gap-2 rounded-full border-t border-t-white/30 bg-gradient-to-b from-primary to-primary/90 px-8 py-3 font-medium text-primary-foreground shadow-satin-button transition-all duration-haven ease-haven active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${content.trim() ? 'hover:-translate-y-0.5 hover:shadow-lift' : ''}`}
             >
               {isSubmitting ? (
-                <span className="flex items-center gap-2">
+                <>
                   <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground" aria-hidden />
-                  AI 分析中...
-                </span>
+                  AI 分析中…
+                </>
               ) : (
-                '寫下此刻'
+                '收藏這篇日記'
               )}
             </button>
           </div>
         </form>
-      </GlassCard>
+      </HomeComposerStage>
 
       {safetyGuidance && (
         <div className="fixed inset-0 z-[130] bg-black/45 backdrop-blur-sm p-4 flex items-center justify-center">

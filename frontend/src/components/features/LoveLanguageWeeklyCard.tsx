@@ -11,8 +11,9 @@ import {
 } from "@/services/api-client";
 import { logClientError } from "@/lib/safe-error-log";
 import { useToast } from "@/hooks/useToast";
+import { cn } from "@/lib/utils";
 
-export default function LoveLanguageWeeklyCard() {
+export default function LoveLanguageWeeklyCard({ className }: { className?: string }) {
   const [task, setTask] = useState<WeeklyTaskPublic | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
@@ -49,7 +50,7 @@ export default function LoveLanguageWeeklyCard() {
 
   if (loading) {
     return (
-      <GlassCard className="mb-6 p-6 flex items-center justify-center min-h-[80px]">
+      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[80px]", className)}>
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
       </GlassCard>
     );
@@ -57,7 +58,7 @@ export default function LoveLanguageWeeklyCard() {
   if (!task) return null;
 
   return (
-    <GlassCard className="mb-6 p-6 md:p-8 relative overflow-hidden">
+    <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
       <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
       <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge">

@@ -7,8 +7,9 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from '@/lib/home-performance';
 import { fetchDateSuggestions, type DateSuggestionPublic } from '@/services/api-client';
 import { logClientError } from '@/lib/safe-error-log';
+import { cn } from '@/lib/utils';
 
-export default function DateSuggestionCard() {
+export default function DateSuggestionCard({ className }: { className?: string }) {
   const [data, setData] = useState<DateSuggestionPublic | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +38,7 @@ export default function DateSuggestionCard() {
   const suggestions = data.suggestions ?? [];
 
   return (
-    <GlassCard className="mb-6 p-6 md:p-8 relative overflow-hidden">
+    <GlassCard className={cn('p-6 md:p-8 relative overflow-hidden', className)}>
       <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
       <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge">

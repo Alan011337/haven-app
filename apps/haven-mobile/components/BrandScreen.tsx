@@ -20,6 +20,7 @@ interface BrandScreenProps {
   scroll?: boolean;
   centered?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  variant?: 'default' | 'home';
 }
 
 export function BrandScreen({
@@ -30,6 +31,7 @@ export function BrandScreen({
   scroll = true,
   centered = false,
   contentContainerStyle,
+  variant = 'default',
 }: BrandScreenProps) {
   const glowScale = useRef(new Animated.Value(0.96)).current;
 
@@ -72,9 +74,9 @@ export function BrandScreen({
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.backdrop}>
-        <View style={[styles.orb, styles.orbWarm]} />
-        <View style={[styles.orb, styles.orbSage]} />
-        <Animated.View style={[styles.orb, styles.orbGlow, { transform: [{ scale: glowScale }] }]} />
+        <View style={[styles.orb, styles.orbWarm, variant === 'home' && styles.homeOrbWarm]} />
+        <View style={[styles.orb, styles.orbSage, variant === 'home' && styles.homeOrbSage]} />
+        <Animated.View style={[styles.orb, styles.orbGlow, variant === 'home' && styles.homeOrbGlow, { transform: [{ scale: glowScale }] }]} />
       </View>
 
       {scroll ? (
@@ -82,6 +84,7 @@ export function BrandScreen({
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
+            variant === 'home' && styles.homeScrollContent,
             centered && styles.centeredContent,
             contentContainerStyle,
           ]}
@@ -91,7 +94,7 @@ export function BrandScreen({
           {body}
         </ScrollView>
       ) : (
-        <View style={[styles.staticContent, centered && styles.centeredContent, contentContainerStyle]}>
+        <View style={[styles.staticContent, variant === 'home' && styles.homeScrollContent, centered && styles.centeredContent, contentContainerStyle]}>
           {body}
         </View>
       )}
@@ -133,6 +136,27 @@ const styles = StyleSheet.create({
     right: 24,
     backgroundColor: hexToRgba(mobileTheme.colors.heroGlow, 0.12),
   },
+  homeOrbWarm: {
+    width: 220,
+    height: 220,
+    top: -10,
+    right: -18,
+    backgroundColor: hexToRgba(mobileTheme.colors.primary, 0.08),
+  },
+  homeOrbSage: {
+    width: 180,
+    height: 180,
+    bottom: 140,
+    left: -30,
+    backgroundColor: hexToRgba(mobileTheme.colors.accent, 0.08),
+  },
+  homeOrbGlow: {
+    width: 150,
+    height: 150,
+    top: '32%',
+    right: 18,
+    backgroundColor: hexToRgba(mobileTheme.colors.heroGlow, 0.08),
+  },
   scroll: {
     flex: 1,
   },
@@ -141,6 +165,10 @@ const styles = StyleSheet.create({
     paddingTop: mobileTheme.spacing.lg,
     paddingBottom: mobileTheme.spacing.xxl,
     gap: mobileTheme.spacing.lg,
+  },
+  homeScrollContent: {
+    paddingTop: mobileTheme.spacing.md,
+    gap: mobileTheme.spacing.md + 2,
   },
   staticContent: {
     flex: 1,

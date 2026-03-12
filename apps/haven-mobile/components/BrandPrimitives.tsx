@@ -17,6 +17,7 @@ import {
 import { mobileTheme, editorialShadow, hexToRgba } from '../theme/editorial';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+type CardTone = 'default' | 'hero' | 'paper' | 'mist';
 
 interface EditorialButtonProps extends Omit<PressableProps, 'style'> {
   label: string;
@@ -67,11 +68,13 @@ export function FadeUpView({
 export function EditorialCard({
   children,
   style,
+  tone = 'default',
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  tone?: CardTone;
 }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, cardToneVariants[tone], style]}>{children}</View>;
 }
 
 export function EditorialButton({
@@ -145,7 +148,7 @@ export function StatusPill({
   tone = 'warm',
 }: {
   label: string;
-  tone?: 'warm' | 'sage' | 'muted';
+  tone?: 'warm' | 'sage' | 'muted' | 'mutedWarm';
 }) {
   return (
     <View style={[styles.pill, pillVariants[tone]]}>
@@ -158,21 +161,39 @@ export function SectionHeading({
   eyebrow,
   title,
   meta,
+  metaPlacement = 'inline',
 }: {
   eyebrow?: string;
   title: string;
   meta?: string;
+  metaPlacement?: 'inline' | 'stacked';
 }) {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, metaPlacement === 'stacked' && styles.sectionHeaderStacked]}>
       <View style={styles.sectionHeaderText}>
         {eyebrow ? <Text style={styles.sectionEyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
-      {meta ? <StatusPill label={meta} tone="muted" /> : null}
+      {meta ? <StatusPill label={meta} tone={metaPlacement === 'stacked' ? 'mutedWarm' : 'muted'} /> : null}
     </View>
   );
 }
+
+const cardToneVariants = StyleSheet.create({
+  default: {},
+  hero: {
+    backgroundColor: hexToRgba(mobileTheme.colors.surface, 0.96),
+    borderColor: hexToRgba(mobileTheme.colors.primaryStrong, 0.14),
+  },
+  paper: {
+    backgroundColor: hexToRgba('#fffdfa', 0.98),
+    borderColor: hexToRgba(mobileTheme.colors.primaryStrong, 0.12),
+  },
+  mist: {
+    backgroundColor: hexToRgba(mobileTheme.colors.surfaceElevated, 0.96),
+    borderColor: hexToRgba(mobileTheme.colors.accent, 0.16),
+  },
+});
 
 const buttonVariants = StyleSheet.create({
   primary: {
@@ -215,6 +236,10 @@ const pillVariants = StyleSheet.create({
     backgroundColor: hexToRgba(mobileTheme.colors.foreground, 0.04),
     borderColor: hexToRgba(mobileTheme.colors.foregroundMuted, 0.12),
   },
+  mutedWarm: {
+    backgroundColor: hexToRgba(mobileTheme.colors.primaryStrong, 0.08),
+    borderColor: hexToRgba(mobileTheme.colors.primaryStrong, 0.14),
+  },
 });
 
 const pillTextVariants = StyleSheet.create({
@@ -226,6 +251,9 @@ const pillTextVariants = StyleSheet.create({
   },
   muted: {
     color: mobileTheme.colors.foregroundMuted,
+  },
+  mutedWarm: {
+    color: mobileTheme.colors.primaryStrong,
   },
 });
 
@@ -318,6 +346,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: mobileTheme.spacing.md,
+  },
+  sectionHeaderStacked: {
+    alignItems: 'flex-start',
+    flexDirection: 'column',
   },
   sectionHeaderText: {
     flexShrink: 1,

@@ -89,6 +89,7 @@ export default function HomeScreen() {
         eyebrow="Couple Journal"
         title="請先登入"
         subtitle="登入後才能查看你們的日記與每日共感。"
+        variant="home"
       >
         <FadeUpView>
           <EditorialCard style={styles.promptCard}>
@@ -108,9 +109,10 @@ export default function HomeScreen() {
 
   return (
     <BrandScreen
-      eyebrow="Couple Journal"
-      title="今天，想留下什麼？"
-      subtitle="把一句心緒、一段想念，安放進你們的靜奢日記裡。"
+      eyebrow="Home Edition"
+      title="先把今天寫下來，其他一切都可以晚一點。"
+      subtitle="首頁先替你的心緒留出版面，然後再把 daily、deck 與回憶安靜地排進第二層。"
+      variant="home"
     >
       {error ? (
         <FadeUpView>
@@ -118,11 +120,44 @@ export default function HomeScreen() {
         </FadeUpView>
       ) : null}
 
-      <FadeUpView delay={40}>
-        <EditorialCard style={styles.composerCard}>
+      <FadeUpView delay={20}>
+        <EditorialCard style={styles.heroCard} tone="hero">
+          <View style={styles.heroHeader}>
+            <View style={styles.heroHeaderText}>
+              <Text style={styles.heroEyebrow}>Cover Story</Text>
+              <Text style={styles.heroTitle}>把今天真正想留下的那一句，放到前景。</Text>
+            </View>
+            <StatusPill label={`${journals.length} 篇`} tone="mutedWarm" />
+          </View>
+          <Text style={styles.heroBody}>
+            當首頁夠安靜，重要的互動就不需要被提醒很多次。先寫一點點，再讓 Haven 幫你把今天排成一頁。
+          </Text>
+          <View style={styles.heroPulseRow}>
+            <View style={styles.heroPulseCard}>
+              <Text style={styles.heroPulseLabel}>今日頁面</Text>
+              <Text style={styles.heroPulseValue}>My Journal</Text>
+              <Text style={styles.heroPulseBody}>先把自己的感受寫成一頁，再決定要不要進入其他 flow。</Text>
+            </View>
+            <View style={styles.heroPulseCard}>
+              <Text style={styles.heroPulseLabel}>Quick Ritual</Text>
+              <Text style={styles.heroPulseValue}>Daily / Deck</Text>
+              <Text style={styles.heroPulseBody}>需要一點互動時，再往下進入每日共感與牌組圖書館。</Text>
+            </View>
+          </View>
+          <View style={styles.heroNote}>
+            <Text style={styles.heroNoteEyebrow}>Editorial Note</Text>
+            <Text style={styles.heroNoteBody}>
+              先寫、再看、最後再進入 ritual。這一版首頁故意把節奏放慢，讓你不用同時處理所有提醒。
+            </Text>
+          </View>
+        </EditorialCard>
+      </FadeUpView>
+
+      <FadeUpView delay={60}>
+        <EditorialCard style={styles.composerCard} tone="paper">
           <View style={styles.composerHeader}>
             <StatusPill label="今日頁面" />
-            <Text style={styles.composerHint}>2000 字以內，慢慢寫就好</Text>
+            <Text style={styles.composerHint}>先寫，不用急著完整</Text>
           </View>
           <EditorialInput
             label="今日心緒"
@@ -143,7 +178,14 @@ export default function HomeScreen() {
         </EditorialCard>
       </FadeUpView>
 
-      <FadeUpView delay={100}>
+      <FadeUpView delay={110}>
+        <SectionHeading
+          eyebrow="Second Layer"
+          title="把其餘 flow 放到後面"
+        />
+      </FadeUpView>
+
+      <FadeUpView delay={130}>
         <View style={styles.navRow}>
           <EditorialButton
             label="每日共感"
@@ -169,31 +211,35 @@ export default function HomeScreen() {
         </View>
       </FadeUpView>
 
-      <FadeUpView delay={150}>
+      <FadeUpView delay={170}>
         <SectionHeading
           eyebrow="Memory Lane"
           title="我的日記"
           meta={`${journals.length} 篇`}
+          metaPlacement="stacked"
         />
       </FadeUpView>
 
       {journals.length === 0 ? (
-        <FadeUpView delay={200}>
-          <EditorialCard style={styles.emptyCard}>
+        <FadeUpView delay={210}>
+          <EditorialCard style={styles.emptyCard} tone="mist">
             <View style={styles.emptyIcon}>
               <Feather name="feather" size={18} color={mobileTheme.colors.accent} />
             </View>
-            <Text style={styles.emptyTitle}>第一篇日記，會在這裡發光</Text>
-            <Text style={styles.emptyBody}>寫下今天的片刻，讓 Haven 為你收好。</Text>
+            <Text style={styles.emptyTitle}>第一篇日記，會從這裡開始發光</Text>
+            <Text style={styles.emptyBody}>當你開始留下內容，首頁就會從空白頁，變成你們關係的編輯檯。</Text>
           </EditorialCard>
         </FadeUpView>
       ) : (
         journals.map((journal, index) => (
-          <FadeUpView key={journal.id} delay={200 + index * 40}>
-            <EditorialCard style={styles.journalCard}>
+          <FadeUpView key={journal.id} delay={210 + index * 40}>
+            <EditorialCard style={styles.journalCard} tone="paper">
               <View style={styles.journalTopRow}>
-                <StatusPill label={new Date(journal.created_at).toLocaleDateString('zh-TW')} tone="sage" />
-                <Text style={styles.journalMeta}>私人札記</Text>
+                <View style={styles.journalChapter}>
+                  <Text style={styles.journalChapterEyebrow}>Chapter {String(index + 1).padStart(2, '0')}</Text>
+                  <Text style={styles.journalMeta}>{new Date(journal.created_at).toLocaleDateString('zh-TW')}</Text>
+                </View>
+                <StatusPill label="安靜收藏" tone="sage" />
               </View>
               <Text style={styles.journalContent} numberOfLines={5}>
                 {journal.content}
@@ -235,6 +281,67 @@ const styles = StyleSheet.create({
   promptBody: {
     ...mobileTheme.typography.bodyMuted,
   },
+  heroCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: mobileTheme.spacing.md,
+  },
+  heroHeaderText: {
+    flex: 1,
+    gap: 6,
+  },
+  heroEyebrow: {
+    ...mobileTheme.typography.eyebrow,
+  },
+  heroTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  heroBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  heroPulseRow: {
+    gap: mobileTheme.spacing.sm,
+  },
+  heroPulseCard: {
+    borderRadius: mobileTheme.radius.md,
+    borderWidth: 1,
+    borderColor: mobileTheme.colors.borderStrong,
+    backgroundColor: mobileTheme.colors.surfaceElevated,
+    padding: mobileTheme.spacing.md,
+    gap: 6,
+  },
+  heroPulseLabel: {
+    ...mobileTheme.typography.eyebrow,
+  },
+  heroPulseValue: {
+    ...mobileTheme.typography.title,
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  heroPulseBody: {
+    ...mobileTheme.typography.caption,
+    lineHeight: 20,
+  },
+  heroNote: {
+    borderRadius: mobileTheme.radius.md,
+    borderWidth: 1,
+    borderColor: mobileTheme.colors.borderStrong,
+    backgroundColor: mobileTheme.colors.surfaceElevated,
+    padding: mobileTheme.spacing.md,
+    gap: 6,
+  },
+  heroNoteEyebrow: {
+    ...mobileTheme.typography.eyebrow,
+  },
+  heroNoteBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
   composerCard: {
     gap: mobileTheme.spacing.md,
   },
@@ -255,9 +362,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: mobileTheme.spacing.sm,
+    flexWrap: 'wrap',
   },
   navButton: {
     flex: 1,
+    minWidth: 120,
   },
   logoutButton: {
     paddingHorizontal: mobileTheme.spacing.sm,
@@ -286,9 +395,15 @@ const styles = StyleSheet.create({
   },
   journalTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: mobileTheme.spacing.sm,
+  },
+  journalChapter: {
+    gap: 4,
+  },
+  journalChapterEyebrow: {
+    ...mobileTheme.typography.eyebrow,
   },
   journalMeta: {
     ...mobileTheme.typography.caption,

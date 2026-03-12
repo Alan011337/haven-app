@@ -1,8 +1,19 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { Heart, Sparkles, User } from 'lucide-react';
-import type { GamificationSummaryResponse, OnboardingQuestResponse, SyncNudgeItem, FirstDelightResponse } from '@/services/api-client';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { BookHeart, Flame, Heart, Sparkles, Star, User } from 'lucide-react';
+import type {
+  FirstDelightResponse,
+  GamificationSummaryResponse,
+  OnboardingQuestResponse,
+  SyncNudgeItem,
+} from '@/services/api-client';
+import {
+  EditorialMetricPill,
+  EditorialPaperCard,
+  HomeRailNav,
+} from '@/features/home/HomePrimitives';
+import { cn } from '@/lib/utils';
 
 const HOME_TAB_ORDER = ['mine', 'partner', 'card'] as const;
 type HomeTabId = (typeof HOME_TAB_ORDER)[number];
@@ -24,8 +35,54 @@ interface HomeHeaderProps {
   onAckFirstDelight: () => void;
 }
 
-const badgeClass =
-  'inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/12 backdrop-blur-xl shadow-glass-inset px-3.5 py-1.5 text-[11px] font-medium tracking-wider text-white/95 tabular-nums transition-all duration-haven ease-haven hover:bg-white/20 hover:scale-[1.02]';
+type MastheadCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+};
+
+function NoticeCard({
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <EditorialPaperCard
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      tone="paper"
+      className="rounded-[2rem]"
+    >
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          onClick={onAction}
+          className="inline-flex items-center gap-2 rounded-full border border-primary/14 bg-primary/8 px-4 py-2 text-sm font-medium text-card-foreground transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-soft"
+        >
+          {actionLabel}
+        </button>
+      ) : null}
+    </EditorialPaperCard>
+  );
+}
+
+function getMastheadButtonClass(isActive: boolean) {
+  return cn(
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    isActive
+      ? 'bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,243,236,0.92))] text-card-foreground shadow-soft'
+      : 'text-muted-foreground hover:bg-white/72 hover:text-card-foreground',
+  );
+}
 
 export default function HomeHeader({
   savingsScore,
@@ -43,13 +100,39 @@ export default function HomeHeader({
   onAckSyncNudge,
   onAckFirstDelight,
 }: HomeHeaderProps) {
+  void getTabStyle;
   const tabRefs = useRef<Record<HomeTabId, HTMLButtonElement | null>>({
     mine: null,
     partner: null,
     card: null,
   });
-
   const [focusedTab, setFocusedTab] = useState<HomeTabId>(() => activeTab as HomeTabId);
+
+  const mastheadCopy = useMemo<Record<HomeTabId, MastheadCopy>>(
+    () => ({
+      mine: {
+        eyebrow: 'Cover Story',
+        title: '首頁現在先服務一件事：把今天寫好。',
+        description:
+          '這裡不是資訊總覽，而是一張被好好留白的封面。你先寫，其他 flow 會安靜退到第二層。',
+      },
+      partner: {
+        eyebrow: 'Reading Room',
+        title: '先慢慢讀，再決定今天要怎麼靠近對方。',
+        description:
+          '伴侶內容在這一頁不再像通知。它被整理成更像來信的閱讀場景，讓你先理解，再回應。',
+      },
+      card: {
+        eyebrow: 'Night Ritual',
+        title: '今晚最值得一起回答的問題，只留在一個舞台上。',
+        description:
+          'Daily ritual 的周圍噪音被刻意降到最低。抽卡、等待與揭曉，都應該像一場被照亮的儀式。',
+      },
+    }),
+    [],
+  );
+
+  const activeMasthead = mastheadCopy[activeTab as HomeTabId];
 
   const handleTabListFocusCapture = useCallback(
     (e: React.FocusEvent<HTMLDivElement>) => {
@@ -86,7 +169,9 @@ export default function HomeHeader({
       } else if (e.key === 'End') {
         e.preventDefault();
         nextIndex = HOME_TAB_ORDER.length - 1;
-      } else return;
+      } else {
+        return;
+      }
       const nextTab = HOME_TAB_ORDER[nextIndex];
       setFocusedTab(nextTab);
       tabRefs.current[nextTab]?.focus();
@@ -94,76 +179,129 @@ export default function HomeHeader({
     [focusedTab, onTabChange],
   );
 
-  const showNotificationCards =
-    onboardingQuest.enabled || showFirstDelightCard || (syncNudges.enabled && primarySyncNudge);
+  const headerNotice = showFirstDelightCard && firstDelight.title
+    ? {
+        eyebrow: 'First Delight',
+        title: firstDelight.title,
+        description:
+          firstDelight.description ??
+          '首頁只保留真正值得被看見的亮點，新的互動提醒會被收成一張安靜的小卡。',
+        actionLabel: '收起提醒',
+        onAction: onAckFirstDelight,
+      }
+    : primarySyncNudge
+      ? {
+          eyebrow: 'Gentle Nudge',
+          title: '今天適合主動靠近一下。',
+          description:
+            '同步提醒現在不再佔滿首頁。它只留下最輕的一句提示，等你寫完自己的頁面之後再回頭看。',
+          actionLabel: '稍後再提醒',
+          onAction: onAckSyncNudge,
+        }
+      : {
+          eyebrow: nextOnboardingStep ? `Quest Day ${nextOnboardingStep.quest_day}` : 'Editorial Note',
+          title: nextOnboardingStep?.title ?? '把首頁留給今天真正重要的那一段。',
+          description: nextOnboardingStep?.completed
+            ? '今天的 quest 已完成，首頁會把更多空間還給你的文字。'
+            : syncNudges.enabled
+              ? `目前還有 ${syncNudges.nudges.length} 則 gentle nudges，但它們會安靜地待在第二層。`
+              : '當首頁變得夠安靜，真正有價值的互動自然會留下來。',
+      };
 
   return (
-    <>
-      {/* ── SECTION 1: Compact Hero Banner ── */}
-      <header className="relative overflow-hidden rounded-card shadow-lift group hero-gold-accent noise-overlay">
-        <div className="absolute inset-0 rounded-card hero-mesh-gradient" aria-hidden />
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-[0.10] rounded-full blur-hero-orb -translate-y-1/2 translate-x-1/3 pointer-events-none animate-float" aria-hidden />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-primary opacity-[0.15] rounded-full blur-hero-orb-sm translate-y-1/3 -translate-x-1/4 pointer-events-none animate-float-delayed" aria-hidden />
+    <section className="space-y-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_360px] xl:items-start">
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <p className="text-[0.72rem] uppercase tracking-[0.34em] text-primary/80">
+              {activeMasthead.eyebrow}
+            </p>
+            <h1 className="max-w-5xl font-art text-[2rem] leading-[0.98] text-card-foreground md:text-[3rem] xl:text-[3.45rem]">
+              {activeMasthead.title}
+            </h1>
+            <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-[0.98rem]">
+              {activeMasthead.description}
+            </p>
+          </div>
 
-        <div className="relative z-10 rounded-card border border-white/[0.07] px-[var(--space-section)] py-4 md:px-[var(--space-page)] md:py-5 text-white">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* LEFT: Greeting + subtitle */}
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-3">
-                <h2 className="font-art text-3xl md:text-4xl font-bold tracking-tight text-gradient-gold drop-shadow-hero">
-                  早安，朋友
-                </h2>
-                <div className="flex items-center gap-1.5 bg-white/18 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:bg-white/25 cursor-default select-none">
-                  <Heart className="w-3.5 h-3.5 text-white/70 fill-white/70" aria-hidden />
-                  <span className="text-sm font-bold tracking-wide text-white tabular-nums">{savingsScore}</span>
-                </div>
-              </div>
-              <p className="text-white/80 font-light text-sm md:text-base max-w-md leading-relaxed tracking-wide">
-                今天的你過得好嗎？無論發生什麼，這裡都是你的避風港。
-              </p>
-            </div>
-
-            {/* RIGHT (desktop): Gamification cluster + love bar */}
-            <div className="flex flex-col items-end gap-2.5 shrink-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`${badgeClass} animate-slide-up-fade`}>
-                  🔥 連續 {gamificationSummary.streak_days} 天
-                </span>
-                <span className={`${badgeClass} animate-slide-up-fade-1`}>
-                  🏅 Lv.{gamificationSummary.level} · {gamificationSummary.level_title}
-                </span>
-                <span className={`${badgeClass} animate-slide-up-fade-2`}>
-                  ⭐ 最佳 {gamificationSummary.best_streak_days} 天
-                </span>
-              </div>
-              <div className="w-full max-w-[220px]">
-                <div className="mb-1 flex items-center justify-between text-xs text-white/75 font-medium">
-                  <span className="tracking-wider text-[10px]">愛情值</span>
-                  <span className="tabular-nums">{Math.round(gamificationSummary.love_bar_percent)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-white/15 shadow-glass-inset overflow-hidden">
-                  <div
-                    className="h-2 rounded-full bg-gradient-to-r from-primary/90 via-primary/60 to-white/50 transition-all duration-haven ease-haven"
-                    style={{ width: `${gamificationSummary.love_bar_percent}%` }}
-                    aria-hidden
-                  />
-                </div>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <EditorialMetricPill
+              icon={Flame}
+              label="連續互動"
+              value={`${gamificationSummary.streak_days} 天`}
+              className="min-w-[142px]"
+            />
+            <EditorialMetricPill
+              icon={Heart}
+              label="關係脈搏"
+              value={`${savingsScore} 分`}
+              tone="sage"
+              className="min-w-[138px]"
+            />
+            <EditorialMetricPill
+              icon={Star}
+              label="進度"
+              value={`${onboardingQuest.completed_steps}/${onboardingQuest.total_steps}`}
+              tone="neutral"
+              className="min-w-[118px]"
+            />
           </div>
         </div>
-      </header>
 
-      {/* ── SECTION 2: Tab Bar (outside gradient) ── */}
-      <nav className="mt-3" aria-label="主頁分頁">
+        <div className="space-y-4">
+          <NoticeCard {...headerNotice} />
+
+          <EditorialPaperCard
+            eyebrow={activeTab === 'partner' ? 'Reading Signal' : activeTab === 'card' ? 'Stage Rule' : 'Relationship Pulse'}
+            title={
+              activeTab === 'partner'
+                ? '用閱讀感取代通知感。'
+                : activeTab === 'card'
+                  ? '把 ritual 留在唯一的聚光區。'
+                  : hasNewPartnerContent
+                    ? '伴侶那邊有新的內容，但先別急。'
+                    : '今天維持低噪音首頁。'
+            }
+            description={
+              activeTab === 'partner'
+                ? '在這個分頁裡，新的內容不被設計成要立刻清掉的 badge，而是一封可以慢慢展開的信。'
+                : activeTab === 'card'
+                  ? '這一頁不追求資訊量。它只留下最值得被一起完成的那張卡與那個節奏。'
+                  : hasNewPartnerContent
+                    ? '首頁會先把你的文字放到前景；伴侶內容會安靜待在第二層，等你寫完之後再讀。'
+                    : '讓首頁先照顧你自己的文字與情緒，其他互動就會自然地排進正確位置。'
+            }
+            tone="mist"
+            className="rounded-[2rem]"
+          >
+            <div className="flex items-center gap-2 text-sm text-card-foreground">
+              {activeTab === 'partner' ? <BookHeart className="h-4 w-4 text-primary" aria-hidden /> : null}
+              {activeTab === 'card' ? <Sparkles className="h-4 w-4 text-primary" aria-hidden /> : null}
+              {activeTab === 'mine' ? <User className="h-4 w-4 text-primary" aria-hidden /> : null}
+              <span>
+                {activeTab === 'mine'
+                  ? '先寫，再看，最後再進入 ritual。'
+                  : activeTab === 'partner'
+                    ? '先理解，再回應；先慢下來，再靠近。'
+                    : '抽卡、回答、等待與揭曉，都值得被慢慢完成。'}
+              </span>
+            </div>
+          </EditorialPaperCard>
+        </div>
+      </div>
+
+      <HomeRailNav className="max-w-[760px]">
         <div
           role="tablist"
-          className="flex gap-1 p-1.5 bg-card/80 backdrop-blur-md border border-border rounded-full shadow-soft"
+          aria-label="主頁分頁"
+          className="flex flex-col gap-1.5 md:flex-row"
           onFocusCapture={handleTabListFocusCapture}
           onKeyDown={handleTabListKeyDown}
         >
           <button
-            ref={(el) => { tabRefs.current.mine = el; }}
+            ref={(el) => {
+              tabRefs.current.mine = el;
+            }}
             type="button"
             role="tab"
             id="home-tab-mine"
@@ -172,13 +310,15 @@ export default function HomeHeader({
             tabIndex={focusedTab === 'mine' ? 0 : -1}
             onFocus={() => setFocusedTab('mine')}
             onClick={() => onTabChange('mine')}
-            className={`${getTabStyle('mine')} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-haven-fast ease-haven active:scale-95`}
+            className={getMastheadButtonClass(activeTab === 'mine')}
           >
-            <User size={16} strokeWidth={2.5} />
+            <User size={16} strokeWidth={2.25} />
             <span>我的空間</span>
           </button>
           <button
-            ref={(el) => { tabRefs.current.partner = el; }}
+            ref={(el) => {
+              tabRefs.current.partner = el;
+            }}
             type="button"
             role="tab"
             id="home-tab-partner"
@@ -187,23 +327,15 @@ export default function HomeHeader({
             tabIndex={focusedTab === 'partner' ? 0 : -1}
             onFocus={() => setFocusedTab('partner')}
             onClick={() => onTabChange('partner')}
-            className={`${getTabStyle('partner')} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-haven-fast ease-haven active:scale-95 relative`}
+            className={getMastheadButtonClass(activeTab === 'partner')}
           >
-            <Heart
-              size={16}
-              strokeWidth={2.5}
-              className={hasNewPartnerContent ? 'animate-bounce' : ''}
-            />
-            <span>伴侶心聲</span>
-            {hasNewPartnerContent && (
-              <span className="absolute top-2 right-2 flex h-2.5 w-2.5" aria-hidden>
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary ring-2 ring-white" />
-              </span>
-            )}
+            <BookHeart size={16} strokeWidth={2.25} />
+            <span>伴侶來信</span>
           </button>
           <button
-            ref={(el) => { tabRefs.current.card = el; }}
+            ref={(el) => {
+              tabRefs.current.card = el;
+            }}
             type="button"
             role="tab"
             id="home-tab-card"
@@ -212,79 +344,13 @@ export default function HomeHeader({
             tabIndex={focusedTab === 'card' ? 0 : -1}
             onFocus={() => setFocusedTab('card')}
             onClick={() => onTabChange('card')}
-            className={`${getTabStyle('card')} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-haven-fast ease-haven active:scale-95`}
+            className={getMastheadButtonClass(activeTab === 'card')}
           >
-            <Sparkles size={16} strokeWidth={2.5} />
-            <span>每日共感</span>
+            <Sparkles size={16} strokeWidth={2.25} />
+            <span>每日儀式</span>
           </button>
         </div>
-      </nav>
-
-      {/* ── SECTION 3: Notification Cards (outside gradient) ── */}
-      {showNotificationCards && (
-        <div className="mt-3 space-y-2">
-          {onboardingQuest.enabled && (
-            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-3">
-              <div className="mb-2 flex items-center justify-between text-xs font-semibold text-card-foreground">
-                <span>7 日任務</span>
-                <span className="tabular-nums text-muted-foreground">
-                  {onboardingQuest.completed_steps}/{onboardingQuest.total_steps}
-                </span>
-              </div>
-              <div className="mb-2 h-2 rounded-full bg-muted shadow-glass-inset">
-                <div
-                  className="h-2 rounded-full bg-gradient-to-r from-accent to-accent/70 transition-all duration-haven ease-haven"
-                  style={{ width: `${onboardingQuest.progress_percent}%` }}
-                  aria-hidden
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {nextOnboardingStep
-                  ? `Day ${nextOnboardingStep.quest_day}: ${nextOnboardingStep.title}`
-                  : '7 日任務已完成，持續保持互動節奏'}
-              </p>
-            </div>
-          )}
-
-          {showFirstDelightCard && (
-            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-4">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-card-foreground">
-                <span>首次驚喜</span>
-                <span className="text-muted-foreground">里程碑</span>
-              </div>
-              <p className="text-xs text-card-foreground">{firstDelight.title ?? '你們達成第一個里程碑'}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {firstDelight.description ?? '已完成首次雙人互動閉環，建議記錄這次成就。'}
-              </p>
-              <button
-                type="button"
-                onClick={onAckFirstDelight}
-                className="mt-2 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-foreground transition-all duration-haven ease-haven hover:bg-primary/10 hover:scale-[1.02] active:scale-95"
-              >
-                已看見這個里程碑
-              </button>
-            </div>
-          )}
-
-          {syncNudges.enabled && primarySyncNudge && (
-            <div className="rounded-card border border-border bg-card p-4 shadow-soft animate-slide-up-fade-5">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-card-foreground">
-                <span>同步提醒</span>
-                <span className="text-muted-foreground">{primarySyncNudge.nudge_type.replace(/_/g, ' ')}</span>
-              </div>
-              <p className="text-xs text-card-foreground">{primarySyncNudge.title}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{primarySyncNudge.description}</p>
-              <button
-                type="button"
-                onClick={onAckSyncNudge}
-                className="mt-2 inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-foreground transition-all duration-haven ease-haven hover:bg-primary/10 hover:scale-[1.02] active:scale-95"
-              >
-                我知道了
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </>
+      </HomeRailNav>
+    </section>
   );
 }

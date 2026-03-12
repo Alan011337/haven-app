@@ -11,8 +11,9 @@ import { logClientError } from "@/lib/safe-error-log";
 import { trackDailySyncSubmitted } from "@/lib/relationship-events";
 import { capturePosthogEvent } from "@/lib/posthog";
 import { useToast } from "@/hooks/useToast";
+import { cn } from "@/lib/utils";
 
-export default function DailySyncCard() {
+export default function DailySyncCard({ className }: { className?: string }) {
   const queryClient = useQueryClient();
   const { data: status, isLoading: loading } = useDailySyncStatus();
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +51,7 @@ export default function DailySyncCard() {
 
   if (loading) {
     return (
-      <GlassCard className="mb-6 p-6 flex items-center justify-center min-h-[140px]">
+      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[140px]", className)}>
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
       </GlassCard>
     );
@@ -61,7 +62,7 @@ export default function DailySyncCard() {
   }
 
   return (
-    <GlassCard className="mb-6 p-6 md:p-8">
+    <GlassCard className={cn("p-6 md:p-8", className)}>
       <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge">
           <Sun className="w-5 h-5 text-primary" aria-hidden />

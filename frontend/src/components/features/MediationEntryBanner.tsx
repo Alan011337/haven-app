@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { HandHeart } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
 import { useMediationStatus } from '@/hooks/queries';
+import { cn } from '@/lib/utils';
 
-export default function MediationEntryBanner() {
+export default function MediationEntryBanner({ className }: { className?: string }) {
   const { data: status, isLoading: loading } = useMediationStatus();
   const inMediation = status?.in_mediation === true;
 
   if (loading || !inMediation) return null;
 
   return (
-    <GlassCard className="mb-6 p-4 flex items-center justify-between gap-4 border-primary/20">
+    <GlassCard className={cn('p-4 flex items-center justify-between gap-4 border-primary/20', className)}>
       <div className="flex items-center gap-3">
         <span className="icon-badge !w-10 !h-10" aria-hidden>
           <HandHeart className="w-5 h-5" />

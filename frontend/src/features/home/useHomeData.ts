@@ -387,13 +387,13 @@ export function useHomeData() {
     (tabName: string) => {
       const isActive = activeTab === tabName;
       const baseStyle =
-        'relative px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-haven-fast ease-haven';
+        'relative flex items-center gap-2 rounded-[1.15rem] px-5 py-3 text-sm font-medium transition-all duration-haven-fast ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
       if (isActive) {
-        return `${baseStyle} bg-primary/10 text-foreground shadow-soft border border-primary/15 -translate-y-px hover:shadow-lift`;
+        return `${baseStyle} border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(250,246,240,0.82))] text-card-foreground shadow-soft`;
       }
 
-      return `${baseStyle} text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors`;
+      return `${baseStyle} border border-transparent text-muted-foreground hover:border-white/55 hover:bg-white/60 hover:text-card-foreground`;
     },
     [activeTab],
   );

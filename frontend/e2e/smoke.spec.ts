@@ -154,7 +154,7 @@ test.describe('Smoke / CUJ', () => {
 
   test('register page loads and shows age + terms consent', async ({ page }) => {
     await page.goto('/register');
-    await expect(page.getByRole('heading', { name: /加入 Haven|Join Haven/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /加入 Haven|Join Haven|為你們建立一個更有呼吸感的親密空間/i })).toBeVisible();
     await expect(page.getByText(/18 歲/)).toBeVisible();
     await expect(page.getByRole('link', { name: /服務條款/ })).toBeVisible();
     const checkbox = page.getByRole('checkbox');
@@ -778,7 +778,7 @@ test.describe('Smoke / CUJ', () => {
     await page.getByRole('button', { name: /^送出$/ }).first().click();
     await expect.poll(() => coreLoopEvents.includes('daily_sync_submitted')).toBe(true);
 
-    await page.getByRole('tab', { name: '每日共感' }).click();
+    await page.getByRole('tab', { name: /每日共感|每日儀式/ }).click();
     await page.getByRole('button', { name: /抽取今日話題/i }).click();
     await expect.poll(() => coreLoopEvents.includes('daily_card_revealed')).toBe(true);
 

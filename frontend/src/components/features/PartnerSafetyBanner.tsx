@@ -1,17 +1,28 @@
 'use client';
 
 import { AlertTriangle, PhoneCall, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PartnerSafetyBannerProps {
   severeCount: number;
   onDismiss: () => void;
+  className?: string;
 }
 
-export default function PartnerSafetyBanner({ severeCount, onDismiss }: PartnerSafetyBannerProps) {
+export default function PartnerSafetyBanner({
+  severeCount,
+  onDismiss,
+  className,
+}: PartnerSafetyBannerProps) {
   const countLabel = severeCount > 1 ? `${severeCount} 則` : '一則';
 
   return (
-    <div className="relative mb-6 overflow-hidden rounded-card border border-border bg-destructive/5 p-4 shadow-soft">
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-card border border-border bg-destructive/5 p-4 shadow-soft',
+        className,
+      )}
+    >
       <div className="absolute right-0 top-0 h-20 w-20 translate-x-1/3 -translate-y-1/3 rounded-full bg-destructive/10 blur-2xl" aria-hidden />
 
       <button
