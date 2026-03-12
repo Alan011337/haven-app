@@ -179,7 +179,7 @@ export default function DecksPageContent() {
     deckRoomQueryString ? `/decks/${deckId}?${deckRoomQueryString}` : `/decks/${deckId}`;
 
   return (
-    <div className="min-h-screen bg-muted/40 pb-20">
+    <div className="min-h-screen bg-ethereal-mesh pb-20">
       <header className="sticky top-0 z-10 bg-card/90 backdrop-blur-md border-b border-border space-page flex items-center shadow-card py-4">
         <Link
           href="/"
@@ -193,15 +193,15 @@ export default function DecksPageContent() {
 
       <main className="space-page space-y-6 max-w-6xl mx-auto">
         <div className="text-center space-y-2 mb-6 mt-2">
-          <h2 className="text-title font-art font-bold text-card-foreground tracking-tight">今天想聊點什麼？</h2>
-          <p className="text-caption text-foreground/80">選擇一套牌組，開啟無限話題。</p>
+          <h2 className="text-title font-art font-bold text-gradient-gold tracking-tight">今天想聊點什麼？</h2>
+          <p className="text-caption text-foreground/80 tracking-wide">選擇一套牌組，開啟無限話題。</p>
         </div>
 
         <GlassCard className="p-5 md:p-6 relative overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
-              <p className="text-[11px] font-art font-semibold tracking-[0.18em] text-muted-foreground uppercase">Progress Snapshot</p>
+              <p className="text-[11px] font-art font-semibold tracking-[0.18em] text-muted-foreground uppercase">學習進度</p>
               {countsLoading ? (
                 <div className="space-y-2">
                   <div className="h-6 w-40 rounded-md bg-muted animate-pulse" aria-hidden />
@@ -229,16 +229,16 @@ export default function DecksPageContent() {
               </Link>
             )}
           </div>
-          <div className="mt-4 h-2.5 w-full rounded-full bg-muted shadow-glass-inset overflow-hidden">
+          <div className="mt-4 h-2 w-full rounded-full bg-muted shadow-glass-inset overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-haven ease-haven"
+              className="h-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary/60 transition-all duration-haven ease-haven"
               style={{ width: `${countsLoading ? 0 : Math.max(0, Math.min(100, overallCompletionRate))}%` }}
             />
           </div>
         </GlassCard>
 
-        <GlassCard className="flex flex-col gap-3 p-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             {(['all', 'in_progress', 'not_started', 'completed'] as const).map((mode) => (
               <Badge
                 key={mode}
@@ -257,12 +257,10 @@ export default function DecksPageContent() {
               </Badge>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="deck-sort" className="text-caption text-muted-foreground whitespace-nowrap">
-              排序：
-            </label>
+          <div className="ml-auto flex items-center gap-2">
             <select
               id="deck-sort"
+              aria-label="排序方式"
               value={sortMode}
               onChange={(event) => {
                 const nextSort = event.target.value;
@@ -278,11 +276,11 @@ export default function DecksPageContent() {
               <option value="progress_asc">進度低到高</option>
               <option value="title">名稱排序</option>
             </select>
+            <span className="text-caption text-muted-foreground tabular-nums whitespace-nowrap">
+              {deckCards.length}/{DECK_META_LIST.length}
+            </span>
           </div>
-          <p className="text-caption text-foreground/80 tabular-nums">
-            目前顯示 {deckCards.length}/{DECK_META_LIST.length} 套牌組
-          </p>
-        </GlassCard>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {deckCards.length === 0 && !countsLoading && (
@@ -308,7 +306,7 @@ export default function DecksPageContent() {
                 <div
                   className={`
                     relative overflow-hidden rounded-2xl p-4 sm:p-6 min-h-[11rem] sm:h-44 flex flex-col justify-between
-                    transition-all duration-haven ease-haven hover:scale-[1.02] hover:shadow-lift cursor-pointer
+                    shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:shadow-lift cursor-pointer
                     bg-gradient-to-br ${deck.color} group
                   `}
                 >
@@ -318,7 +316,7 @@ export default function DecksPageContent() {
                     </CardBackVariant>
                   </div>
 
-                  <div className="absolute top-0 right-0 -mt-2 -mr-2 opacity-15 select-none pointer-events-none group-hover:opacity-25 transition-opacity duration-haven-fast ease-haven">
+                  <div className="absolute top-0 right-0 -mt-2 -mr-2 opacity-[0.08] select-none pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-haven-fast ease-haven">
                     <deck.Icon className={`w-24 h-24 ${deck.iconColor}`} strokeWidth={1.7} />
                   </div>
 
@@ -352,20 +350,15 @@ export default function DecksPageContent() {
                           />
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className={`text-xs font-semibold tabular-nums px-2.5 py-1 rounded-full bg-white/40 backdrop-blur-sm ${deck.textColor}`}>
-                            {progressLabel}
+                          <span className={`text-xs font-medium tabular-nums ${deck.textColor} opacity-80`}>
+                            {progressLabel} · {countLabel}
                           </span>
-                          <span className={`text-xs font-semibold tabular-nums px-2.5 py-1 rounded-full bg-white/40 backdrop-blur-sm ${deck.textColor}`}>
-                            {countLabel}
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-white/40 backdrop-blur-sm ${deck.textColor}`}>
+                            {statusLabel} →
                           </span>
                         </div>
                       </>
                     )}
-                  </div>
-                  <div className="mt-2 flex items-center justify-end gap-3">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-white/40 backdrop-blur-sm ${deck.textColor}`}>
-                      {statusLabel} · 進入 →
-                    </span>
                   </div>
                 </div>
               </Link>
