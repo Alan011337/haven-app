@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { HavenApiNative } from '../api/HavenApiNative';
 import { getStoredToken } from '../api/auth';
 import { CardCategory } from 'haven-shared';
 import type { CardSession, DeckHistoryEntry } from 'haven-shared';
 import { DECK_CATEGORY_LABELS, DECK_CATEGORIES } from '../constants/deckLabels';
+import { BrandScreen } from '../components/BrandScreen';
+import {
+  EditorialButton,
+  EditorialCard,
+  EditorialInput,
+  FadeUpView,
+  InlineError,
+  SectionHeading,
+  StatusPill,
+} from '../components/BrandPrimitives';
+import { mobileTheme } from '../theme/editorial';
 
 function generateOperationId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -37,7 +41,7 @@ export default function DeckScreen() {
       const list = await HavenApiNative.getDeckHistory({ limit: 10 });
       setHistory(list);
     } catch {
-      // ignore
+      // keep history best-effort
     }
   };
 
@@ -55,7 +59,7 @@ export default function DeckScreen() {
   }, []);
 
   useEffect(() => {
-    init();
+    void init();
   }, [init]);
 
   const handleDraw = async (category: string) => {
@@ -63,8 +67,8 @@ export default function DeckScreen() {
     setError(null);
     setSession(null);
     try {
-      const s = await HavenApiNative.drawDeckCard(category);
-      setSession(s);
+      const result = await HavenApiNative.drawDeckCard(category);
+      setSession(result);
       await loadHistory();
     } catch (e) {
       setError(e instanceof Error ? e.message : '抽卡失敗');
@@ -90,7 +94,7 @@ export default function DeckScreen() {
               ...prev,
               status: res.session_status as 'COMPLETED' | 'WAITING_PARTNER',
             }
-          : null
+          : null,
       );
       await loadHistory();
     } catch (e) {
@@ -108,163 +112,255 @@ export default function DeckScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.hint}>載入中…</Text>
-      </View>
+      <BrandScreen title="牌組圖書館" subtitle="正在整理你們的題庫與最近紀錄。">
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={mobileTheme.colors.primaryStrong} />
+          <Text style={styles.loadingText}>載入牌組中…</Text>
+        </View>
+      </BrandScreen>
     );
   }
 
   if (needsLogin) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.hint}>請先登入</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-          <Text style={styles.buttonText}>前往登入</Text>
-        </TouchableOpacity>
-      </View>
+      <BrandScreen title="請先登入" subtitle="登入後才能使用牌組圖書館。">
+        <EditorialCard style={styles.promptCard}>
+          <Text style={styles.promptTitle}>登入後即可開始抽卡</Text>
+          <Text style={styles.promptBody}>登入完成後，你可以立即抽取任何一組對話牌卡。</Text>
+          <EditorialButton label="前往登入" onPress={() => router.push('/login')} />
+        </EditorialCard>
+      </BrandScreen>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <BrandScreen
+      eyebrow="Deck Library"
+      title="牌組圖書館"
+      subtitle="選一個今天想探索的方向，讓一張卡片替你打開對話。"
+    >
+      {error ? (
+        <FadeUpView>
+          <InlineError message={error} />
+        </FadeUpView>
+      ) : null}
 
       {!session ? (
-        <>
-          <Text style={styles.sectionTitle}>選擇牌組</Text>
-          <View style={styles.categoryGrid}>
-            {DECK_CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.categoryBtn, submitting && styles.buttonDisabled]}
-                onPress={() => handleDraw(cat)}
-                disabled={submitting}
-              >
-                <Text style={styles.categoryBtnText}>
-                  {submitting ? '抽卡中…' : DECK_CATEGORY_LABELS[cat as CardCategory]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
+        <FadeUpView delay={60}>
+          <EditorialCard style={styles.libraryHero}>
+            <View style={styles.libraryIcon}>
+              <Feather name="book-open" size={20} color={mobileTheme.colors.primaryStrong} />
+            </View>
+            <Text style={styles.heroTitle}>選擇一組牌卡主題</Text>
+            <Text style={styles.heroBody}>
+              每個分類都對應一種關係深度，從輕鬆互動到更深的理解。
+            </Text>
+            <View style={styles.categoryGrid}>
+              {DECK_CATEGORIES.map((cat, index) => (
+                <FadeUpView key={cat} delay={90 + index * 30} style={styles.categoryCell}>
+                  <EditorialButton
+                    label={submitting ? '抽卡中…' : DECK_CATEGORY_LABELS[cat as CardCategory]}
+                    variant="secondary"
+                    onPress={() => handleDraw(cat)}
+                    disabled={submitting}
+                    style={styles.categoryButton}
+                    textStyle={styles.categoryButtonText}
+                  />
+                </FadeUpView>
+              ))}
+            </View>
+          </EditorialCard>
+        </FadeUpView>
       ) : (
         <>
-          <View style={styles.card}>
-            <Text style={styles.cardCategory}>{session.category}</Text>
-            <Text style={styles.cardQuestion}>{session.card?.question ?? session.card?.title ?? '—'}</Text>
-          </View>
+          <FadeUpView delay={60}>
+            <EditorialCard style={styles.activeCard}>
+              <View style={styles.cardTopRow}>
+                <StatusPill label={session.category} tone="sage" />
+                <StatusPill
+                  label={session.status === 'WAITING_PARTNER' ? '等待伴侶' : session.status === 'COMPLETED' ? '已完成' : '正在作答'}
+                />
+              </View>
+              <Text style={styles.questionText}>
+                {session.card?.question ?? session.card?.title ?? '—'}
+              </Text>
+            </EditorialCard>
+          </FadeUpView>
 
           {session.status === 'COMPLETED' ? (
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.button} onPress={resetCard}>
-                <Text style={styles.buttonText}>再抽一張</Text>
-              </TouchableOpacity>
-            </View>
+            <FadeUpView delay={110}>
+              <EditorialCard style={styles.completedCard}>
+                <Text style={styles.completedTitle}>這張卡片已完成</Text>
+                <Text style={styles.heroBody}>你可以回到牌組，或繼續抽下一張。</Text>
+                <EditorialButton label="再抽一張" onPress={resetCard} />
+              </EditorialCard>
+            </FadeUpView>
           ) : session.status === 'WAITING_PARTNER' ? (
-            <View style={styles.waiting}>
-              <Text style={styles.hint}>已送出，等待伴侶回答</Text>
-              <TouchableOpacity style={styles.button} onPress={resetCard}>
-                <Text style={styles.buttonText}>先回牌組</Text>
-              </TouchableOpacity>
-            </View>
+            <FadeUpView delay={110}>
+              <EditorialCard style={styles.completedCard}>
+                <Text style={styles.completedTitle}>你的回應已封存</Text>
+                <Text style={styles.heroBody}>伴侶完成後，這輪對話就會正式收束。</Text>
+                <EditorialButton label="回到牌組" variant="secondary" onPress={resetCard} />
+              </EditorialCard>
+            </FadeUpView>
           ) : (
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                placeholder="寫下你的回答…"
-                placeholderTextColor="#999"
-                value={answer}
-                onChangeText={setAnswer}
-                multiline
-                maxLength={2000}
-                editable={!submitting}
-              />
-              <TouchableOpacity
-                style={[styles.button, (submitting || !answer.trim()) && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={submitting || !answer.trim()}
-              >
-                <Text style={styles.buttonText}>{submitting ? '送出中…' : '送出'}</Text>
-              </TouchableOpacity>
-            </View>
+            <FadeUpView delay={110}>
+              <EditorialCard style={styles.answerCard}>
+                <EditorialInput
+                  label="你的回答"
+                  placeholder="慢慢寫下你真正想說的話…"
+                  multiline
+                  maxLength={2000}
+                  editable={!submitting}
+                  value={answer}
+                  onChangeText={setAnswer}
+                  style={styles.textarea}
+                />
+                <EditorialButton
+                  label={submitting ? '送出中…' : '送出這張卡片'}
+                  loading={submitting}
+                  disabled={!answer.trim()}
+                  onPress={handleSubmit}
+                />
+              </EditorialCard>
+            </FadeUpView>
           )}
         </>
       )}
 
-      <Text style={styles.sectionTitle}>最近紀錄</Text>
+      <FadeUpView delay={180}>
+        <SectionHeading eyebrow="Archive" title="最近紀錄" meta={`${history.length} 則`} />
+      </FadeUpView>
+
       {history.length === 0 ? (
-        <Text style={styles.hint}>尚無紀錄</Text>
+        <FadeUpView delay={220}>
+          <EditorialCard>
+            <Text style={styles.emptyTitle}>你的牌卡紀錄會收藏在這裡</Text>
+            <Text style={styles.heroBody}>開始第一輪對話後，這裡就會留下你們的痕跡。</Text>
+          </EditorialCard>
+        </FadeUpView>
       ) : (
-        history.slice(0, 10).map((entry, i) => (
-          <View key={`${entry.session_id}-${i}`} style={styles.historyCard}>
-            <Text style={styles.historyCategory}>{entry.category}</Text>
-            <Text style={styles.historyQuestion} numberOfLines={1}>{entry.card_question}</Text>
-            <Text style={styles.hint}>{new Date(entry.revealed_at).toLocaleDateString('zh-TW')}</Text>
-          </View>
+        history.slice(0, 10).map((entry, index) => (
+          <FadeUpView key={`${entry.session_id}-${index}`} delay={220 + index * 35}>
+            <EditorialCard style={styles.historyCard}>
+              <View style={styles.historyTopRow}>
+                <StatusPill label={entry.category} tone="sage" />
+                <Text style={styles.historyDate}>
+                  {new Date(entry.revealed_at).toLocaleDateString('zh-TW')}
+                </Text>
+              </View>
+              <Text style={styles.historyQuestion} numberOfLines={2}>
+                {entry.card_question}
+              </Text>
+            </EditorialCard>
+          </FadeUpView>
         ))
       )}
-    </ScrollView>
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
   centered: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    gap: mobileTheme.spacing.sm,
+    paddingTop: mobileTheme.spacing.xxl,
   },
-  hint: { color: '#666', fontSize: 14, marginTop: 4 },
-  error: { color: '#b91c1c', marginBottom: 8, fontSize: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryBtn: {
-    backgroundColor: '#f3e8ff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  loadingText: {
+    ...mobileTheme.typography.bodyMuted,
   },
-  categoryBtnText: { color: '#7c3aed', fontWeight: '600' },
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
+  promptCard: {
+    gap: mobileTheme.spacing.sm,
   },
-  cardCategory: { fontSize: 12, color: '#7c3aed', marginBottom: 4 },
-  cardQuestion: { fontSize: 16, color: '#333' },
-  inputRow: { gap: 8, marginTop: 12 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    fontSize: 16,
+  promptTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  promptBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  libraryHero: {
+    gap: mobileTheme.spacing.md,
+  },
+  libraryIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: mobileTheme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mobileTheme.colors.primarySoft,
+  },
+  heroTitle: {
+    ...mobileTheme.typography.title,
+  },
+  heroBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  categoryCell: {
+    width: '50%',
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  categoryButton: {
+    minHeight: 48,
+    borderRadius: mobileTheme.radius.md,
+  },
+  categoryButtonText: {
+    fontSize: 14,
+  },
+  activeCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    gap: mobileTheme.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  questionText: {
+    ...mobileTheme.typography.title,
+    fontSize: 22,
+    lineHeight: 30,
+  },
+  answerCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  textarea: {
+    minHeight: 132,
     textAlignVertical: 'top',
   },
-  button: {
-    backgroundColor: '#7c3aed',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
+  completedCard: {
+    gap: mobileTheme.spacing.sm,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  actions: { marginTop: 16 },
-  waiting: { marginTop: 16, gap: 8 },
+  completedTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
   historyCard: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    gap: mobileTheme.spacing.sm,
   },
-  historyCategory: { fontSize: 12, color: '#666' },
-  historyQuestion: { fontSize: 14, color: '#333', marginVertical: 4 },
+  historyTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileTheme.spacing.sm,
+  },
+  historyDate: {
+    ...mobileTheme.typography.caption,
+  },
+  historyQuestion: {
+    ...mobileTheme.typography.body,
+  },
+  emptyTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
 });

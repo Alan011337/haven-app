@@ -5,13 +5,18 @@
     "version": "1.0.0",
     "scheme": "haven",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F8F3ED",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.haven.mobile"
+      "bundleIdentifier": "com.haven.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.haven.mobile"
-    }
+    },
+    "plugins": []
   }
 }

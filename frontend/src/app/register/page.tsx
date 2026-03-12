@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isAxiosError } from 'axios';
-import { AlertCircle, Gift, Heart } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, Gift, HeartHandshake, LockKeyhole } from 'lucide-react';
 import { trackBindStart, trackBindSuccess } from '@/lib/cuj-events';
 import { register } from '@/services/auth';
 import { trackReferralLandingView } from '@/services/api-client';
@@ -16,7 +16,7 @@ import {
   rememberReferralInviteCode,
 } from '@/lib/referral';
 import { logClientError } from '@/lib/safe-error-log';
-import { GlassCard } from '@/components/haven/GlassCard';
+import { EditorialAuthShell } from '@/components/haven/EditorialAuthShell';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -113,32 +113,48 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center space-page bg-auth-gradient overflow-hidden">
-      {/* Decorative floating orbs */}
-      <div className="absolute top-16 right-[20%] w-64 h-64 rounded-full bg-primary/8 blur-hero-orb animate-float pointer-events-none" aria-hidden />
-      <div className="absolute bottom-24 left-[12%] w-48 h-48 rounded-full bg-accent/10 blur-hero-orb-sm animate-float-delayed pointer-events-none" aria-hidden />
-
-      <div className="relative z-10 w-full max-w-md animate-scale-in">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-primary to-primary/80 shadow-lift shadow-glass-inset mb-5 relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-3xl blur-xl animate-breathe" aria-hidden />
-            <Heart className="w-7 h-7 text-primary-foreground fill-primary-foreground relative" />
-          </div>
-          <h1 id="register-heading" className="text-3xl font-art font-bold text-gradient-gold mb-2 animate-slide-up-fade">Join Haven</h1>
-          <p className="text-caption text-muted-foreground font-light">建立帳號，開始你的心靈旅程</p>
-        </div>
-
-        <GlassCard className="w-full p-8 md:p-10 relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
+    <EditorialAuthShell
+      panelHeadingId="register-heading"
+      panelEyebrow="Create your editorial sanctuary"
+      panelTitle="為你們建立一個更有呼吸感的親密空間。"
+      panelSubtitle="註冊完成後，你可以開始記錄雙方的日常、每日共感與牌卡儀式。Haven 會把重要的互動留下，把噪音移開。"
+      storyEyebrow="Curated onboarding"
+      storyTitle="精品感，不只是外觀，而是關係被對待的方式。"
+      storyBody="從第一封邀請開始，Haven 就把伴侶互動當成值得被設計、被整理、被尊重的素材。這不是加速器，而是一個讓關係慢慢發亮的版面系統。"
+      storyQuote="好的關係介面，應該讓人更想靠近，而不是更快耗盡。"
+      storyCredit="Haven Couple OS"
+      highlights={[
+        {
+          value: '01',
+          label: 'Invite Layer',
+          description: '維持邀請制 beta，讓每段關係都在安靜的節奏裡進場。',
+        },
+        {
+          value: '02',
+          label: 'Shared Memory',
+          description: '日記、牌卡與地圖不是碎片，而是同一條記憶敘事線。',
+        },
+        {
+          value: '03',
+          label: 'Soft Guardrails',
+          description: '條款、年齡與推薦流程都被清楚收束，不打擾但不省略。',
+        },
+      ]}
+      callout={
+        <>
           {error && (
-            <div id="register-error" role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-body text-destructive">
+            <div
+              id="register-error"
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-body text-destructive"
+            >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span className="text-sm leading-relaxed">{error}</span>
             </div>
           )}
 
           {referralInviteCode && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-4 text-body text-foreground">
+            <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-4 text-body text-foreground">
               <Gift className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
               <span className="text-sm leading-relaxed">
                 已偵測邀請碼：<span className="font-semibold text-primary">{referralInviteCode}</span>
@@ -146,91 +162,121 @@ export default function RegisterPage() {
               </span>
             </div>
           )}
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-            aria-labelledby="register-heading"
-            aria-describedby={error ? 'register-error' : undefined}
+        </>
+      }
+      footer={
+        <p className="text-center">
+          已經有帳號了嗎？{' '}
+          <Link
+            href="/login"
+            className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <div className="animate-slide-up-fade">
-              <Input
-                label="暱稱 / 姓名"
-                type="text"
-                required
-                placeholder="你想怎麼被稱呼？"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              />
-            </div>
-            <div className="animate-slide-up-fade-1">
-              <Input
-                label="Email"
-                type="email"
-                required
-                placeholder="name@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-            <div className="animate-slide-up-fade-2">
-              <Input
-                label="密碼"
-                type="password"
-                required
-                minLength={8}
-                maxLength={128}
-                placeholder="至少 8 個字元"
-                helperText="密碼至少需要 8 個字元"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
-            </div>
+            登入
+          </Link>
+        </p>
+      }
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+        aria-labelledby="register-heading"
+        aria-describedby={error ? 'register-error' : undefined}
+      >
+        <div className="animate-slide-up-fade">
+          <Input
+            label="暱稱 / 姓名"
+            type="text"
+            required
+            placeholder="你想怎麼被稱呼？"
+            value={formData.fullName}
+            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+          />
+        </div>
+        <div className="animate-slide-up-fade-1">
+          <Input
+            label="Email"
+            type="email"
+            required
+            placeholder="name@example.com"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
+        </div>
+        <div className="animate-slide-up-fade-2">
+          <Input
+            label="密碼"
+            type="password"
+            required
+            minLength={8}
+            maxLength={128}
+            placeholder="至少 8 個字元"
+            helperText="密碼至少需要 8 個字元"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          />
+        </div>
 
-            <div className="flex items-start gap-3 animate-slide-up-fade-3">
-              <input
-                id="agree-terms"
-                type="checkbox"
-                checked={formData.agreedToTerms}
-                onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
-                className="mt-1 h-4 w-4 rounded border-input text-primary accent-primary focus-visible:ring-ring transition-colors duration-haven-fast ease-haven"
-              />
-              <label htmlFor="agree-terms" className="text-sm text-muted-foreground leading-relaxed">
-                我已滿 18 歲，並同意{' '}
-                <Link href="/legal/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                  服務條款
-                </Link>
-                {' '}與{' '}
-                <Link href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                  隱私權政策
-                </Link>
-                。
-              </label>
-            </div>
-
-            <div className="pt-1">
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
-                loading={loading}
-                disabled={loading || !formData.agreedToTerms}
-              >
-                註冊帳號
-              </Button>
-            </div>
-          </form>
-
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            <div className="section-divider mb-6" />
-            已經有帳號了嗎？{' '}
-            <Link href="/login" className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-              登入
-            </Link>
+        <div className="rounded-[1.4rem] border border-white/45 bg-white/65 p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm text-foreground">
+            <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
+            註冊前確認
           </div>
-        </GlassCard>
-      </div>
-    </div>
+          <div className="flex items-start gap-3">
+            <input
+              id="agree-terms"
+              type="checkbox"
+              checked={formData.agreedToTerms}
+              onChange={(e) => setFormData({ ...formData, agreedToTerms: e.target.checked })}
+              className="mt-1 h-4 w-4 rounded border-input text-primary accent-primary focus-visible:ring-ring transition-colors duration-haven-fast ease-haven"
+            />
+            <label htmlFor="agree-terms" className="text-sm leading-relaxed text-muted-foreground">
+              我已滿 18 歲，並同意{' '}
+              <Link
+                href="/legal/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                服務條款
+              </Link>
+              {' '}與{' '}
+              <Link
+                href="/legal/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:text-primary/80 transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                隱私權政策
+              </Link>
+              。
+            </label>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+              Invite-only beta
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-3 py-1 text-xs text-accent-foreground">
+              <LockKeyhole className="h-3.5 w-3.5" aria-hidden />
+              資料與會話保護
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-1">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            loading={loading}
+            disabled={loading || !formData.agreedToTerms}
+            rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
+          >
+            註冊帳號
+          </Button>
+        </div>
+      </form>
+    </EditorialAuthShell>
   );
 }

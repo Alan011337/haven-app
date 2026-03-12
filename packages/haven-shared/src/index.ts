@@ -6,4 +6,5 @@
 export * from './types';
 export * from './api-types';
 export * from './query-keys';
+export * from './design-tokens';
 export type { HavenApiClient } from './api-client.interface';

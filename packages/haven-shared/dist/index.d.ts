@@ -165,6 +165,66 @@ declare const queryKeys: {
     readonly deckCardCounts: () => readonly ["deckCardCounts"];
 };
 
+/**
+ * Cross-platform Haven editorial design tokens.
+ * Web remains the visual source of truth; native consumes these distilled values.
+ */
+declare const havenEditorialTokens: {
+    readonly color: {
+        readonly background: "#F8F3ED";
+        readonly backgroundMuted: "#F2EAE1";
+        readonly surface: "#FFFBF6";
+        readonly surfaceSecondary: "#F7EFE6";
+        readonly surfaceElevated: "#FFF8F1";
+        readonly foreground: "#352C26";
+        readonly foregroundMuted: "#7B6D62";
+        readonly foregroundSoft: "#9E9185";
+        readonly primary: "#C7A173";
+        readonly primaryStrong: "#B78B59";
+        readonly primarySoft: "#EFE2D0";
+        readonly accent: "#8E9C8D";
+        readonly accentSoft: "#E5ECE3";
+        readonly border: "#E7DBCF";
+        readonly borderStrong: "#D8C7B7";
+        readonly danger: "#B86460";
+        readonly dangerSoft: "#F7E5E2";
+        readonly heroBase: "#4E4036";
+        readonly heroGlow: "#E2C198";
+        readonly inkInverse: "#FFF8F1";
+        readonly overlay: "rgba(53, 44, 38, 0.04)";
+    };
+    readonly spacing: {
+        readonly xxs: 4;
+        readonly xs: 8;
+        readonly sm: 12;
+        readonly md: 16;
+        readonly lg: 24;
+        readonly xl: 32;
+        readonly xxl: 48;
+    };
+    readonly radius: {
+        readonly sm: 12;
+        readonly md: 18;
+        readonly lg: 24;
+        readonly xl: 32;
+        readonly pill: 999;
+    };
+    readonly motion: {
+        readonly fast: 180;
+        readonly normal: 240;
+        readonly slow: 340;
+        readonly ritual: 520;
+    };
+    readonly typography: {
+        readonly display: 34;
+        readonly title: 24;
+        readonly body: 16;
+        readonly caption: 13;
+        readonly eyebrow: 11;
+    };
+};
+type HavenEditorialTokens = typeof havenEditorialTokens;
+
 interface HavenApiClient {
     getToken(): string | null;
     getDeviceId(): string | null;
@@ -202,4 +262,4 @@ interface HavenApiClient {
     }): Promise<DeckHistorySummary>;
 }
 
-export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type Journal, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, queryKeys };
+export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type HavenEditorialTokens, type Journal, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, havenEditorialTokens, queryKeys };

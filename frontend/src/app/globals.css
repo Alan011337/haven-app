@@ -321,35 +321,35 @@ h1, h2, h3, h4, h5, h6 {
   .shadow-hero-glass {
     box-shadow: var(--shadow-hero-glass);
   }
-  /* Phase 4: Hero mesh — Rose-gold luxury gradient (warm, luminous, not muddy). */
+  /* Quiet Luxury editorial mesh — lighter parchment, restrained gold, muted sage depth. */
   .hero-mesh-gradient {
     background:
-      radial-gradient(ellipse 90% 65% at 80% 10%, oklch(0.70 0.12 72 / 0.55) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 55% at 10% 95%, oklch(0.50 0.10 25 / 0.35) 0%, transparent 45%),
-      radial-gradient(ellipse 65% 50% at 45% 50%, oklch(0.55 0.09 50 / 0.28) 0%, transparent 45%),
-      linear-gradient(150deg, oklch(0.42 0.07 38) 0%, oklch(0.48 0.09 62) 50%, oklch(0.40 0.06 32) 100%);
+      radial-gradient(ellipse 92% 68% at 82% 8%, oklch(0.84 0.08 76 / 0.34) 0%, transparent 52%),
+      radial-gradient(ellipse 74% 58% at 8% 98%, oklch(0.74 0.025 145 / 0.22) 0%, transparent 48%),
+      radial-gradient(ellipse 68% 52% at 46% 48%, oklch(0.94 0.014 86 / 0.16) 0%, transparent 48%),
+      linear-gradient(155deg, oklch(0.31 0.03 40) 0%, oklch(0.42 0.05 60) 52%, oklch(0.28 0.03 34) 100%);
   }
   .dark .hero-mesh-gradient {
     background:
-      radial-gradient(ellipse 90% 65% at 80% 10%, oklch(0.45 0.10 72 / 0.5) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 55% at 10% 95%, oklch(0.30 0.07 25 / 0.3) 0%, transparent 45%),
-      radial-gradient(ellipse 65% 50% at 45% 50%, oklch(0.32 0.07 50 / 0.25) 0%, transparent 45%),
-      linear-gradient(150deg, oklch(0.22 0.05 38) 0%, oklch(0.28 0.06 62) 50%, oklch(0.20 0.04 32) 100%);
+      radial-gradient(ellipse 92% 68% at 82% 8%, oklch(0.50 0.08 76 / 0.34) 0%, transparent 52%),
+      radial-gradient(ellipse 74% 58% at 8% 98%, oklch(0.36 0.025 145 / 0.22) 0%, transparent 48%),
+      radial-gradient(ellipse 68% 52% at 46% 48%, oklch(0.32 0.012 86 / 0.12) 0%, transparent 48%),
+      linear-gradient(155deg, oklch(0.21 0.022 40) 0%, oklch(0.29 0.04 60) 52%, oklch(0.19 0.02 34) 100%);
   }
-  /* Phase 5: Ethereal background clouds (token definitions in globals only). */
+  /* Editorial page backdrop — parchment base, low-contrast gold/sage mist. */
   .bg-ethereal-mesh {
-    background-color: oklch(var(--muted) / 0.4);
+    background-color: oklch(var(--background));
     background-image:
-      radial-gradient(ellipse 80% 60% at 0% 0%, oklch(0.95 0.02 60 / 0.1) 0%, transparent 70%),
-      radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.92 0.04 300 / 0.05) 0%, transparent 65%),
-      radial-gradient(ellipse 50% 40% at 20% 100%, oklch(0.93 0.02 85 / 0.06) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 100% 20%, oklch(0.92 0.03 280 / 0.05) 0%, transparent 55%);
+      radial-gradient(ellipse 84% 62% at 0% 0%, oklch(0.95 0.02 72 / 0.14) 0%, transparent 72%),
+      radial-gradient(ellipse 72% 56% at 100% 100%, oklch(0.92 0.016 145 / 0.09) 0%, transparent 66%),
+      radial-gradient(ellipse 56% 44% at 18% 100%, oklch(0.90 0.018 88 / 0.1) 0%, transparent 62%),
+      radial-gradient(ellipse 60% 52% at 100% 18%, oklch(0.94 0.012 56 / 0.14) 0%, transparent 58%);
   }
   .dark .bg-ethereal-mesh {
-    background-color: oklch(var(--muted) / 0.4);
+    background-color: oklch(var(--background));
     background-image:
-      radial-gradient(ellipse 80% 60% at 0% 0%, oklch(0.35 0.04 60 / 0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.35 0.05 300 / 0.06) 0%, transparent 65%);
+      radial-gradient(ellipse 84% 62% at 0% 0%, oklch(0.38 0.032 72 / 0.12) 0%, transparent 72%),
+      radial-gradient(ellipse 72% 56% at 100% 100%, oklch(0.32 0.02 145 / 0.1) 0%, transparent 66%);
   }
   /* Phase 5: Satin CTA shadow (semantic). */
   .shadow-satin-button {
@@ -483,7 +483,7 @@ h1, h2, h3, h4, h5, h6 {
     animation: scale-in 0.4s var(--ease-haven-spring) both;
   }
 
-  /* Gradient text shimmer for hero headings */
+  /* Editorial metallic heading — restrained shimmer, less “neon gold”. */
   @keyframes gradient-shift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -491,14 +491,14 @@ h1, h2, h3, h4, h5, h6 {
   }
   .text-gradient-gold {
     background: linear-gradient(135deg,
-      oklch(0.80 0.09 72) 0%,
-      oklch(0.88 0.11 78) 25%,
-      oklch(0.80 0.09 65) 50%,
-      oklch(0.72 0.07 55) 75%,
-      oklch(0.80 0.09 72) 100%
+      oklch(0.77 0.07 72) 0%,
+      oklch(0.87 0.06 82) 24%,
+      oklch(0.79 0.05 68) 50%,
+      oklch(0.70 0.045 58) 76%,
+      oklch(0.77 0.07 72) 100%
     );
     background-size: 200% 200%;
-    animation: gradient-shift 6s ease-in-out infinite;
+    animation: gradient-shift 8s ease-in-out infinite;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -526,19 +526,19 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 0 0 3px oklch(var(--primary) / 0.15), 0 0 20px -4px oklch(var(--primary) / 0.2);
   }
 
-  /* Login/Register cinematic background */
+  /* Login/Register editorial backdrop — lighter, more print-like, less synthetic glow. */
   .bg-auth-gradient {
     background:
-      radial-gradient(ellipse 60% 50% at 20% 20%, oklch(var(--primary) / 0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 60% at 80% 80%, oklch(var(--accent) / 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 30% at 60% 10%, oklch(0.85 0.06 300 / 0.04) 0%, transparent 60%),
-      oklch(var(--muted) / 0.4);
+      radial-gradient(ellipse 62% 50% at 18% 18%, oklch(var(--primary) / 0.11) 0%, transparent 72%),
+      radial-gradient(ellipse 52% 62% at 82% 82%, oklch(var(--accent) / 0.09) 0%, transparent 72%),
+      radial-gradient(ellipse 42% 32% at 58% 10%, oklch(0.93 0.02 86 / 0.16) 0%, transparent 62%),
+      linear-gradient(180deg, oklch(var(--background)) 0%, oklch(var(--muted) / 0.62) 100%);
   }
   .dark .bg-auth-gradient {
     background:
-      radial-gradient(ellipse 60% 50% at 20% 20%, oklch(var(--primary) / 0.06) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 60% at 80% 80%, oklch(var(--accent) / 0.05) 0%, transparent 70%),
-      oklch(var(--muted) / 0.3);
+      radial-gradient(ellipse 62% 50% at 18% 18%, oklch(var(--primary) / 0.08) 0%, transparent 72%),
+      radial-gradient(ellipse 52% 62% at 82% 82%, oklch(var(--accent) / 0.08) 0%, transparent 72%),
+      linear-gradient(180deg, oklch(var(--background)) 0%, oklch(var(--muted) / 0.4) 100%);
   }
 
   /* ══════════════════════════════════════════════
@@ -637,9 +637,10 @@ h1, h2, h3, h4, h5, h6 {
     height: 1px;
     background: linear-gradient(to right,
       transparent,
-      oklch(var(--border) / 0.6),
-      oklch(var(--primary) / 0.15),
-      oklch(var(--border) / 0.6),
+      oklch(var(--border) / 0.48),
+      oklch(var(--primary) / 0.18),
+      oklch(var(--accent) / 0.12),
+      oklch(var(--border) / 0.48),
       transparent
     );
     margin: 1rem 0;

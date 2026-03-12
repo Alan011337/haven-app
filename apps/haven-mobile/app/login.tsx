@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { login } from '../api/auth';
+import { BrandScreen } from '../components/BrandScreen';
+import {
+  EditorialButton,
+  EditorialCard,
+  EditorialInput,
+  FadeUpView,
+  InlineError,
+  StatusPill,
+} from '../components/BrandPrimitives';
+import { mobileTheme } from '../theme/editorial';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,6 +34,7 @@ export default function LoginScreen() {
       setError('請輸入 Email 與密碼');
       return;
     }
+
     setLoading(true);
     setError(null);
     try {
@@ -39,88 +48,84 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.form}>
-        <Text style={styles.title}>登入 Haven</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="密碼"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>登入</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+    <BrandScreen scroll={false} centered>
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <FadeUpView>
+          <View style={styles.brandIntro}>
+            <StatusPill label="Private Couple Journal" />
+            <Text style={styles.title}>回到 Haven</Text>
+            <Text style={styles.subtitle}>
+              讓今天的情緒、想念與對話，都有一個安靜而精緻的容器。
+            </Text>
+          </View>
+        </FadeUpView>
+
+        <FadeUpView delay={80}>
+          <EditorialCard style={styles.card}>
+            <View style={styles.iconBadge}>
+              <Feather name="heart" size={20} color={mobileTheme.colors.primaryStrong} />
+            </View>
+
+            {error ? <InlineError message={error} /> : null}
+
+            <EditorialInput
+              label="Email"
+              placeholder="user@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+              value={email}
+              onChangeText={setEmail}
+            />
+            <EditorialInput
+              label="密碼"
+              placeholder="請輸入密碼"
+              secureTextEntry
+              editable={!loading}
+              value={password}
+              onChangeText={setPassword}
+            />
+
+            <EditorialButton
+              label={loading ? '登入中…' : '登入 Haven'}
+              loading={loading}
+              onPress={handleLogin}
+            />
+          </EditorialCard>
+        </FadeUpView>
+      </KeyboardAvoidingView>
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    padding: 24,
+  keyboardWrap: {
+    gap: mobileTheme.spacing.lg,
   },
-  form: {
-    gap: 12,
+  brandIntro: {
+    gap: mobileTheme.spacing.sm,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
+    ...mobileTheme.typography.display,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
+  subtitle: {
+    ...mobileTheme.typography.bodyMuted,
+    maxWidth: 320,
   },
-  error: {
-    color: '#b91c1c',
-    fontSize: 14,
+  card: {
+    gap: mobileTheme.spacing.md,
   },
-  button: {
-    backgroundColor: '#7c3aed',
-    paddingVertical: 14,
-    borderRadius: 8,
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: mobileTheme.radius.lg,
     alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    justifyContent: 'center',
+    backgroundColor: mobileTheme.colors.primarySoft,
+    marginBottom: mobileTheme.spacing.xs,
   },
 });

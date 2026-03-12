@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { HavenApiNative, clearToken } from '../api/HavenApiNative';
 import { getStoredToken } from '../api/auth';
 import type { Journal } from 'haven-shared';
+import { BrandScreen } from '../components/BrandScreen';
+import {
+  EditorialButton,
+  EditorialCard,
+  EditorialInput,
+  FadeUpView,
+  InlineError,
+  SectionHeading,
+  StatusPill,
+} from '../components/BrandPrimitives';
+import { mobileTheme } from '../theme/editorial';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -22,6 +34,7 @@ export default function HomeScreen() {
       setLoading(false);
       return;
     }
+
     try {
       const list = await HavenApiNative.getJournals();
       setJournals(list);
@@ -40,7 +53,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    loadJournals();
+    void loadJournals();
   }, []);
 
   const handleCreate = async () => {
@@ -61,162 +74,226 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.hint}>載入日記…</Text>
-      </View>
+      <BrandScreen title="正在整理你的避風港" subtitle="我們正在安靜地鋪陳今日頁面。">
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={mobileTheme.colors.primaryStrong} />
+          <Text style={styles.loadingText}>載入日記中…</Text>
+        </View>
+      </BrandScreen>
     );
   }
 
   if (needsLogin) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.hint}>請先登入以查看與撰寫日記</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-          <Text style={styles.buttonText}>前往登入</Text>
-        </TouchableOpacity>
-      </View>
+      <BrandScreen
+        eyebrow="Couple Journal"
+        title="請先登入"
+        subtitle="登入後才能查看你們的日記與每日共感。"
+      >
+        <FadeUpView>
+          <EditorialCard style={styles.promptCard}>
+            <View style={styles.promptIcon}>
+              <Feather name="lock" size={18} color={mobileTheme.colors.primaryStrong} />
+            </View>
+            <Text style={styles.promptTitle}>這裡需要你的身份確認</Text>
+            <Text style={styles.promptBody}>
+              完成登入後，Haven 會帶你回到今天的頁面與儀式。
+            </Text>
+            <EditorialButton label="前往登入" onPress={() => router.push('/login')} />
+          </EditorialCard>
+        </FadeUpView>
+      </BrandScreen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="今天發生了什麼事？"
-          placeholderTextColor="#999"
-          value={content}
-          onChangeText={setContent}
-          multiline
-          maxLength={4000}
-          editable={!submitting}
-        />
-        <TouchableOpacity
-          style={[styles.button, submitting && styles.buttonDisabled]}
-          onPress={handleCreate}
-          disabled={submitting || !content.trim()}
-        >
-          <Text style={styles.buttonText}>{submitting ? '送出中…' : '發布'}</Text>
-        </TouchableOpacity>
-      </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <View style={styles.topRow}>
-        <View style={styles.navLinks}>
-          <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/daily')}>
-            <Text style={styles.linkBtnText}>今日抽卡</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/deck')}>
-            <Text style={styles.linkBtnText}>牌組</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={async () => {
-            await clearToken();
-            setNeedsLogin(true);
-          }}
-        >
-          <Text style={styles.logoutBtnText}>登出</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.sectionTitle}>我的日記</Text>
-      {journals.length === 0 ? (
-        <Text style={styles.hint}>尚無日記，寫下第一則吧</Text>
-      ) : (
-        journals.map((j) => (
-          <View key={j.id} style={styles.card}>
-            <Text style={styles.cardDate}>{new Date(j.created_at).toLocaleDateString('zh-TW')}</Text>
-            <Text style={styles.cardContent} numberOfLines={3}>{j.content}</Text>
+    <BrandScreen
+      eyebrow="Couple Journal"
+      title="今天，想留下什麼？"
+      subtitle="把一句心緒、一段想念，安放進你們的靜奢日記裡。"
+    >
+      {error ? (
+        <FadeUpView>
+          <InlineError message={error} />
+        </FadeUpView>
+      ) : null}
+
+      <FadeUpView delay={40}>
+        <EditorialCard style={styles.composerCard}>
+          <View style={styles.composerHeader}>
+            <StatusPill label="今日頁面" />
+            <Text style={styles.composerHint}>2000 字以內，慢慢寫就好</Text>
           </View>
+          <EditorialInput
+            label="今日心緒"
+            placeholder="今天發生了什麼事？你想被怎麼理解？"
+            multiline
+            maxLength={4000}
+            editable={!submitting}
+            value={content}
+            onChangeText={setContent}
+            style={styles.textarea}
+          />
+          <EditorialButton
+            label={submitting ? '發布中…' : '收藏這篇日記'}
+            loading={submitting}
+            onPress={handleCreate}
+            disabled={!content.trim()}
+          />
+        </EditorialCard>
+      </FadeUpView>
+
+      <FadeUpView delay={100}>
+        <View style={styles.navRow}>
+          <EditorialButton
+            label="每日共感"
+            variant="secondary"
+            style={styles.navButton}
+            onPress={() => router.push('/daily')}
+          />
+          <EditorialButton
+            label="牌組圖書館"
+            variant="secondary"
+            style={styles.navButton}
+            onPress={() => router.push('/deck')}
+          />
+          <EditorialButton
+            label="登出"
+            variant="ghost"
+            style={styles.logoutButton}
+            onPress={async () => {
+              await clearToken();
+              setNeedsLogin(true);
+            }}
+          />
+        </View>
+      </FadeUpView>
+
+      <FadeUpView delay={150}>
+        <SectionHeading
+          eyebrow="Memory Lane"
+          title="我的日記"
+          meta={`${journals.length} 篇`}
+        />
+      </FadeUpView>
+
+      {journals.length === 0 ? (
+        <FadeUpView delay={200}>
+          <EditorialCard style={styles.emptyCard}>
+            <View style={styles.emptyIcon}>
+              <Feather name="feather" size={18} color={mobileTheme.colors.accent} />
+            </View>
+            <Text style={styles.emptyTitle}>第一篇日記，會在這裡發光</Text>
+            <Text style={styles.emptyBody}>寫下今天的片刻，讓 Haven 為你收好。</Text>
+          </EditorialCard>
+        </FadeUpView>
+      ) : (
+        journals.map((journal, index) => (
+          <FadeUpView key={journal.id} delay={200 + index * 40}>
+            <EditorialCard style={styles.journalCard}>
+              <View style={styles.journalTopRow}>
+                <StatusPill label={new Date(journal.created_at).toLocaleDateString('zh-TW')} tone="sage" />
+                <Text style={styles.journalMeta}>私人札記</Text>
+              </View>
+              <Text style={styles.journalContent} numberOfLines={5}>
+                {journal.content}
+              </Text>
+            </EditorialCard>
+          </FadeUpView>
         ))
       )}
-    </View>
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-  },
   centered: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    gap: mobileTheme.spacing.sm,
+    paddingTop: mobileTheme.spacing.xxl,
   },
-  hint: {
-    color: '#666',
-    fontSize: 14,
+  loadingText: {
+    ...mobileTheme.typography.bodyMuted,
   },
-  inputRow: {
+  promptCard: {
+    gap: mobileTheme.spacing.sm,
+  },
+  promptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: mobileTheme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mobileTheme.colors.primarySoft,
+  },
+  promptTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  promptBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  composerCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  composerHeader: {
     flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-end',
-    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileTheme.spacing.md,
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    fontSize: 16,
+  composerHint: {
+    ...mobileTheme.typography.caption,
+  },
+  textarea: {
+    minHeight: 132,
     textAlignVertical: 'top',
   },
-  button: {
-    backgroundColor: '#7c3aed',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  error: {
-    color: '#b91c1c',
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  topRow: {
+  navRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: mobileTheme.spacing.sm,
   },
-  navLinks: { flexDirection: 'row', gap: 16 },
-  linkBtn: { paddingVertical: 6, paddingHorizontal: 0 },
-  linkBtnText: { color: '#7c3aed', fontSize: 14, fontWeight: '600' },
-  logoutBtn: { paddingVertical: 6, paddingHorizontal: 12 },
-  logoutBtnText: { color: '#666', fontSize: 14 },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
+  navButton: {
+    flex: 1,
   },
-  card: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+  logoutButton: {
+    paddingHorizontal: mobileTheme.spacing.sm,
   },
-  cardDate: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+  emptyCard: {
+    alignItems: 'flex-start',
   },
-  cardContent: {
-    fontSize: 15,
-    color: '#333',
+  emptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: mobileTheme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mobileTheme.colors.accentSoft,
+  },
+  emptyTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  emptyBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  journalCard: {
+    gap: mobileTheme.spacing.sm,
+  },
+  journalTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileTheme.spacing.sm,
+  },
+  journalMeta: {
+    ...mobileTheme.typography.caption,
+  },
+  journalContent: {
+    ...mobileTheme.typography.body,
   },
 });

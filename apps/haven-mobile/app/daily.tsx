@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { HavenApiNative, clearToken } from '../api/HavenApiNative';
 import { getStoredToken } from '../api/auth';
 import type { Card } from 'haven-shared';
+import { BrandScreen } from '../components/BrandScreen';
+import {
+  EditorialButton,
+  EditorialCard,
+  EditorialInput,
+  FadeUpView,
+  InlineError,
+  SectionHeading,
+  StatusPill,
+} from '../components/BrandPrimitives';
+import { mobileTheme } from '../theme/editorial';
 
 type DailyState = 'IDLE' | 'PARTNER_STARTED' | 'WAITING_PARTNER' | 'COMPLETED';
 
@@ -65,7 +69,7 @@ export default function DailyCardScreen() {
   };
 
   useEffect(() => {
-    loadStatus();
+    void loadStatus();
   }, []);
 
   const handleDraw = async () => {
@@ -105,7 +109,7 @@ export default function DailyCardScreen() {
               my_content: trimmed,
               partner_content: prev.partner_content,
             }
-          : null
+          : null,
       );
       setAnswer('');
       await loadStatus();
@@ -118,128 +122,212 @@ export default function DailyCardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.hint}>載入中…</Text>
-      </View>
+      <BrandScreen title="每日共感" subtitle="正在鋪好今天的儀式頁。">
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={mobileTheme.colors.primaryStrong} />
+          <Text style={styles.loadingText}>載入每日卡片…</Text>
+        </View>
+      </BrandScreen>
     );
   }
 
   if (needsLogin) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.hint}>請先登入</Text>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
-          <Text style={styles.buttonText}>前往登入</Text>
-        </TouchableOpacity>
-      </View>
+      <BrandScreen title="請先登入" subtitle="登入後才能開始今天的雙人儀式。">
+        <EditorialCard style={styles.promptCard}>
+          <Text style={styles.promptTitle}>你還沒登入 Haven</Text>
+          <Text style={styles.promptBody}>登入後即可抽取今日共感卡片並寫下你的回應。</Text>
+          <EditorialButton label="前往登入" onPress={() => router.push('/login')} />
+        </EditorialCard>
+      </BrandScreen>
     );
   }
 
+  const stateLabel =
+    status?.state === 'COMPLETED'
+      ? '雙方已揭曉'
+      : status?.state === 'WAITING_PARTNER'
+        ? '等待伴侶'
+        : status?.card
+          ? '輪到你回答'
+          : '尚未抽卡';
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <BrandScreen
+      eyebrow="Daily Ritual"
+      title="每日共感"
+      subtitle="一張卡片，一段回答，讓你們在同一天裡靠近一點。"
+    >
+      {error ? (
+        <FadeUpView>
+          <InlineError message={error} />
+        </FadeUpView>
+      ) : null}
+
+      <FadeUpView delay={40}>
+        <SectionHeading
+          eyebrow="Today"
+          title="今天的儀式"
+          meta={stateLabel}
+        />
+      </FadeUpView>
 
       {!status?.card ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>今日共感卡片</Text>
-          <Text style={styles.hint}>抽一張卡片，與伴侶一起回答</Text>
-          <TouchableOpacity
-            style={[styles.button, submitting && styles.buttonDisabled]}
-            onPress={handleDraw}
-            disabled={submitting}
-          >
-            <Text style={styles.buttonText}>{submitting ? '抽卡中…' : '抽今日卡片'}</Text>
-          </TouchableOpacity>
-        </View>
+        <FadeUpView delay={100}>
+          <EditorialCard style={styles.heroCard}>
+            <View style={styles.heroIcon}>
+              <Feather name="star" size={20} color={mobileTheme.colors.primaryStrong} />
+            </View>
+            <Text style={styles.heroTitle}>抽一張今日共感卡片</Text>
+            <Text style={styles.heroBody}>
+              今天的問題會讓你更靠近彼此的內在世界。準備好了就開始吧。
+            </Text>
+            <EditorialButton
+              label={submitting ? '抽卡中…' : '開始今天的儀式'}
+              loading={submitting}
+              onPress={handleDraw}
+            />
+          </EditorialCard>
+        </FadeUpView>
       ) : (
         <>
-          <View style={styles.card}>
-            <Text style={styles.cardCategory}>{status.card.category}</Text>
-            <Text style={styles.cardQuestion}>{status.card.question}</Text>
-          </View>
+          <FadeUpView delay={100}>
+            <EditorialCard style={styles.ritualCard}>
+              <View style={styles.cardHeader}>
+                <StatusPill label={status.card.category} tone="sage" />
+                <StatusPill label={status.state === 'COMPLETED' ? 'Revealed' : 'Private'} />
+              </View>
+              <Text style={styles.question}>{status.card.question}</Text>
+            </EditorialCard>
+          </FadeUpView>
 
           {status.state === 'COMPLETED' ? (
-            <View style={styles.reveal}>
-              <Text style={styles.revealLabel}>我的回答</Text>
-              <Text style={styles.revealContent}>{status.my_content || '—'}</Text>
-              <Text style={styles.revealLabel}>伴侶的回答</Text>
-              <Text style={styles.revealContent}>{status.partner_content || '—'}</Text>
-            </View>
+            <FadeUpView delay={140}>
+              <View style={styles.revealStack}>
+                <EditorialCard>
+                  <Text style={styles.responseLabel}>我的回答</Text>
+                  <Text style={styles.responseText}>{status.my_content || '—'}</Text>
+                </EditorialCard>
+                <EditorialCard>
+                  <Text style={styles.responseLabel}>伴侶的回答</Text>
+                  <Text style={styles.responseText}>{status.partner_content || '—'}</Text>
+                </EditorialCard>
+              </View>
+            </FadeUpView>
           ) : status.state === 'WAITING_PARTNER' ? (
-            <View style={styles.waiting}>
-              <Text style={styles.hint}>已送出，等待伴侶回答</Text>
-              <Text style={styles.revealContent}>{status.my_content}</Text>
-            </View>
+            <FadeUpView delay={140}>
+              <EditorialCard style={styles.waitingCard}>
+                <StatusPill label="已送出" tone="warm" />
+                <Text style={styles.waitingTitle}>你的回答已悄悄放好</Text>
+                <Text style={styles.waitingBody}>現在等待伴侶寫下她/他的版本，完成後會一起揭曉。</Text>
+                <Text style={styles.responseText}>{status.my_content || '—'}</Text>
+                <EditorialButton label="重新整理狀態" variant="secondary" onPress={loadStatus} />
+              </EditorialCard>
+            </FadeUpView>
           ) : (
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                placeholder="寫下你的回答…"
-                placeholderTextColor="#999"
-                value={answer}
-                onChangeText={setAnswer}
-                multiline
-                maxLength={2000}
-                editable={!submitting}
-              />
-              <TouchableOpacity
-                style={[styles.button, (submitting || !answer.trim()) && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={submitting || !answer.trim()}
-              >
-                <Text style={styles.buttonText}>{submitting ? '送出中…' : '送出'}</Text>
-              </TouchableOpacity>
-            </View>
+            <FadeUpView delay={140}>
+              <EditorialCard style={styles.answerCard}>
+                <EditorialInput
+                  label="你的回答"
+                  placeholder="把此刻最真實的念頭寫下來…"
+                  multiline
+                  maxLength={2000}
+                  editable={!submitting}
+                  value={answer}
+                  onChangeText={setAnswer}
+                  style={styles.textarea}
+                />
+                <EditorialButton
+                  label={submitting ? '送出中…' : '封存這段回應'}
+                  loading={submitting}
+                  disabled={!answer.trim()}
+                  onPress={handleSubmit}
+                />
+              </EditorialCard>
+            </FadeUpView>
           )}
         </>
       )}
-    </ScrollView>
+    </BrandScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
   centered: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    gap: mobileTheme.spacing.sm,
+    paddingTop: mobileTheme.spacing.xxl,
   },
-  hint: { color: '#666', fontSize: 14, marginTop: 8 },
-  error: { color: '#b91c1c', marginBottom: 8, fontSize: 14 },
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  loadingText: {
+    ...mobileTheme.typography.bodyMuted,
   },
-  cardCategory: { fontSize: 12, color: '#7c3aed', marginBottom: 4 },
-  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  cardQuestion: { fontSize: 16, color: '#333' },
-  inputRow: { gap: 8, marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    fontSize: 16,
+  promptCard: {
+    gap: mobileTheme.spacing.sm,
+  },
+  promptTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  promptBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  heroCard: {
+    gap: mobileTheme.spacing.sm,
+  },
+  heroIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: mobileTheme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: mobileTheme.colors.primarySoft,
+  },
+  heroTitle: {
+    ...mobileTheme.typography.title,
+  },
+  heroBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  ritualCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    gap: mobileTheme.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  question: {
+    ...mobileTheme.typography.title,
+    fontSize: 22,
+    lineHeight: 30,
+  },
+  answerCard: {
+    gap: mobileTheme.spacing.md,
+  },
+  textarea: {
+    minHeight: 148,
     textAlignVertical: 'top',
   },
-  button: {
-    backgroundColor: '#7c3aed',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
+  waitingCard: {
+    gap: mobileTheme.spacing.sm,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  reveal: { marginTop: 16, gap: 8 },
-  revealLabel: { fontSize: 12, color: '#666' },
-  revealContent: { fontSize: 15, color: '#333', marginBottom: 12 },
-  waiting: { marginTop: 16 },
+  waitingTitle: {
+    ...mobileTheme.typography.title,
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  waitingBody: {
+    ...mobileTheme.typography.bodyMuted,
+  },
+  revealStack: {
+    gap: mobileTheme.spacing.md,
+  },
+  responseLabel: {
+    ...mobileTheme.typography.eyebrow,
+  },
+  responseText: {
+    ...mobileTheme.typography.body,
+  },
 });
