@@ -79,7 +79,7 @@ function getMastheadButtonClass(isActive: boolean) {
   return cn(
     'relative inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     isActive
-      ? 'bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,243,236,0.92))] text-card-foreground shadow-soft after:absolute after:bottom-1 after:inset-x-4 after:h-[2px] after:rounded-full after:bg-gradient-to-r after:from-primary/20 after:via-primary/50 after:to-primary/20'
+      ? 'bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,243,236,0.92))] text-card-foreground shadow-lift scale-[1.02] after:absolute after:bottom-1 after:inset-x-4 after:h-[2.5px] after:rounded-full after:bg-gradient-to-r after:from-primary/20 after:via-primary/50 after:to-primary/20'
       : 'text-muted-foreground hover:bg-white/72 hover:text-card-foreground',
   );
 }

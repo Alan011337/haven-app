@@ -171,7 +171,7 @@ export function HomeSectionFrame({
                 {title}
               </h3>
               {description ? (
-                <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-[0.96rem]">
+                <p className="max-w-2xl text-sm leading-7 text-muted-foreground/80 md:text-[0.96rem]">
                   {description}
                 </p>
               ) : null}
@@ -268,7 +268,7 @@ export function HomeCoverStage({
             </div>
             {pulse ? (
               <div className="inline-flex max-w-2xl items-start gap-3 rounded-[1.6rem] border border-white/52 bg-white/68 px-4 py-3.5 shadow-soft backdrop-blur-md">
-                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/75 shadow-[0_0_0_8px_rgba(201,163,100,0.11)]" aria-hidden />
+                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/75 shadow-[0_0_0_8px_rgba(201,163,100,0.11)] animate-breathe" aria-hidden />
                 <div className="text-sm leading-7 text-card-foreground">{pulse}</div>
               </div>
             ) : null}
@@ -452,12 +452,12 @@ export function EditorialTimelineColumn({
           ) : null}
           <h3 className="font-art text-[1.8rem] leading-tight text-card-foreground">{title}</h3>
           {description ? (
-            <p className="text-sm leading-7 text-muted-foreground md:text-[0.96rem]">{description}</p>
+            <p className="text-sm leading-7 text-muted-foreground/80 md:text-[0.96rem]">{description}</p>
           ) : null}
           {aside ? <div className="pt-2">{aside}</div> : null}
         </div>
 
-        <div className="relative space-y-10 before:absolute before:bottom-6 before:left-6 before:top-6 before:w-px before:bg-gradient-to-b before:from-primary/26 before:via-primary/14 before:to-transparent">
+        <div className="relative space-y-10 before:absolute before:bottom-6 before:left-6 before:top-6 before:w-px before:bg-gradient-to-b before:from-primary/35 before:via-primary/20 before:to-primary/5">
           {children}
         </div>
       </div>

@@ -73,7 +73,7 @@ export default function DailySyncCard({ className }: { className?: string }) {
     return (
       <GlassCard className={cn("p-6 md:p-8", className)}>
         <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
-          <span className="icon-badge">
+          <span className="icon-badge animate-breathe">
             <Sun className="w-5 h-5 text-primary" aria-hidden />
           </span>
           每日 3 分鐘同步

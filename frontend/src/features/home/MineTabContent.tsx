@@ -140,19 +140,19 @@ export default function MineTabContent({
         eyebrow="Second Layer"
         title="其餘 flow 還在，只是退到了更安靜的位置。"
         description="每日同步、約會提案、感恩便利貼與修復入口仍然存在，但不再搶走你首頁第一屏的注意力。"
-        aside={<Badge variant="outline">Editorial Mosaic</Badge>}
+        aside={<Badge variant="outline" className="border-primary/25 text-primary/70">Editorial Mosaic</Badge>}
         className="bg-[linear-gradient(180deg,rgba(255,252,248,0.74),rgba(248,244,238,0.64))]"
       >
         <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
             <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
           </div>
-          <div className="md:row-span-2">
+          <div className="md:row-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
             <DailySyncCard className="h-full border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
           </div>
-          <DateSuggestionCard className="border-white/45 bg-[linear-gradient(180deg,rgba(248,252,248,0.92),rgba(242,247,242,0.88))]" />
-          <AppreciationCard className="border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
-          <div className="md:col-span-2">
+          <DateSuggestionCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-white/45 bg-[linear-gradient(180deg,rgba(248,252,248,0.92),rgba(242,247,242,0.88))]" />
+          <AppreciationCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
+          <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
             <LoveLanguageWeeklyCard className="h-full border-white/45 bg-[linear-gradient(180deg,rgba(247,250,248,0.93),rgba(240,246,242,0.88))]" />
           </div>
         </HomeMosaicRail>
@@ -162,7 +162,7 @@ export default function MineTabContent({
         eyebrow="Memory Lane"
         title="時光迴廊"
         description="現在它更像被編排的欄目，而不是一串功能卡。每篇日記都被留出自己的段落、日期與閱讀空氣。"
-        aside={<Badge variant="outline">{myJournals.length} 篇日記</Badge>}
+        aside={<Badge variant="outline" className="border-primary/25 text-primary/70">{myJournals.length} 篇日記</Badge>}
         className="bg-[linear-gradient(180deg,rgba(255,254,251,0.96),rgba(249,245,239,0.9))]"
       >
         {timelineStage === 'loading' ? (

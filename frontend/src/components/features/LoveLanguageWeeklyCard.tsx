@@ -61,7 +61,7 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
       <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
         <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
-          <span className="icon-badge">
+          <span className="icon-badge animate-breathe">
             <Sparkles className="w-5 h-5 text-primary" aria-hidden />
           </span>
           本週愛之語小任務

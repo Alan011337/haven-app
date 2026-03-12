@@ -34,7 +34,7 @@ export default function MediationEntryBanner({ className }: { className?: string
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="icon-badge !w-9 !h-9" aria-hidden>
+            <span className="icon-badge !w-9 !h-9 animate-breathe" aria-hidden>
               <HandHeart className="w-[18px] h-[18px]" />
             </span>
             <div>
