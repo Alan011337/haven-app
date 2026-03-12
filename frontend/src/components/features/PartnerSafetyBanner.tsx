@@ -19,7 +19,7 @@ export default function PartnerSafetyBanner({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-card border border-border bg-destructive/5 p-4 shadow-soft',
+        'relative overflow-hidden rounded-card border border-destructive/15 bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))] p-4 shadow-soft',
         className,
       )}
     >
@@ -40,7 +40,8 @@ export default function PartnerSafetyBanner({
         </span>
 
         <div className="space-y-2">
-          <p className="text-sm font-art font-bold text-destructive">安全提示：先確認彼此狀態</p>
+          <p className="text-[0.68rem] font-art font-bold uppercase tracking-[0.24em] text-destructive">Safety Preface</p>
+          <p className="font-art text-base font-bold text-destructive">先確認彼此狀態，再決定是否往下讀。</p>
           <p className="text-sm leading-relaxed text-foreground">
             目前有 {countLabel} 伴侶日記屬於高風險情緒。建議先降低刺激、確認安全，再進行深度溝通。
           </p>

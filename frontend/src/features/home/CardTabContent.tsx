@@ -22,7 +22,7 @@ export default function CardTabContent() {
           eyebrow="Stage Rule"
           title="把 ritual 放在聚光燈下。"
           description="首頁這一頁會刻意減少周圍噪音，只留下今晚真正需要一起完成的那張卡。"
-          tone="paper"
+          tone="mist"
           className="rounded-[2rem]"
         >
           <div className="flex flex-wrap gap-2">
@@ -34,24 +34,24 @@ export default function CardTabContent() {
     >
       <div className="relative pt-2">
         <div
-          className="pointer-events-none absolute inset-x-6 top-4 h-64 rounded-full bg-primary/10 blur-hero-orb"
+          className="pointer-events-none absolute inset-x-6 top-4 h-64 rounded-full bg-primary/12 blur-hero-orb"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-x-20 top-16 h-48 rounded-full bg-accent/10 blur-hero-orb-sm"
+          className="pointer-events-none absolute inset-x-20 top-16 h-48 rounded-full bg-accent/12 blur-hero-orb-sm"
           aria-hidden
         />
         <div className="pointer-events-none absolute left-8 top-12 text-primary/20" aria-hidden>
-          <Stars className="h-9 w-9" />
+          <Stars className="h-8 w-8" />
         </div>
         <div className="pointer-events-none absolute right-10 top-24 text-accent/25" aria-hidden>
           <Sparkles className="h-8 w-8" />
         </div>
-        <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-primary/16" aria-hidden>
-          <MoonStar className="h-10 w-10" />
+        <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-primary/20" aria-hidden>
+          <MoonStar className="h-8 w-8" />
         </div>
 
-        <div className="relative mx-auto w-full max-w-[980px] rounded-[2.5rem] border border-white/48 bg-[linear-gradient(180deg,rgba(255,253,249,0.74),rgba(249,245,239,0.54))] p-4 shadow-lift backdrop-blur-xl md:p-7">
+        <div className="home-surface-ritual relative mx-auto w-full max-w-[980px] rounded-[2.8rem] p-4 md:p-7">
           <DailyCard />
         </div>
       </div>

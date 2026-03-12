@@ -110,7 +110,7 @@ export default function HomeScreen() {
   return (
     <BrandScreen
       eyebrow="Home Edition"
-      title="先把今天寫下來，其他一切都可以晚一點。"
+      title="先把今天寫成一頁，其他一切都可以晚一點。"
       subtitle="首頁先替你的心緒留出版面，然後再把 daily、deck 與回憶安靜地排進第二層。"
       variant="home"
     >
@@ -127,20 +127,20 @@ export default function HomeScreen() {
               <Text style={styles.heroEyebrow}>Cover Story</Text>
               <Text style={styles.heroTitle}>把今天真正想留下的那一句，放到前景。</Text>
             </View>
-            <StatusPill label={`${journals.length} 篇`} tone="mutedWarm" />
+            <StatusPill label="低噪音首頁" tone="mutedWarm" />
           </View>
           <Text style={styles.heroBody}>
             當首頁夠安靜，重要的互動就不需要被提醒很多次。先寫一點點，再讓 Haven 幫你把今天排成一頁。
           </Text>
           <View style={styles.heroPulseRow}>
             <View style={styles.heroPulseCard}>
-              <Text style={styles.heroPulseLabel}>今日頁面</Text>
-              <Text style={styles.heroPulseValue}>My Journal</Text>
+              <Text style={styles.heroPulseLabel}>Relationship Pulse</Text>
+              <Text style={styles.heroPulseValue}>先寫，再看</Text>
               <Text style={styles.heroPulseBody}>先把自己的感受寫成一頁，再決定要不要進入其他 flow。</Text>
             </View>
             <View style={styles.heroPulseCard}>
-              <Text style={styles.heroPulseLabel}>Quick Ritual</Text>
-              <Text style={styles.heroPulseValue}>Daily / Deck</Text>
+              <Text style={styles.heroPulseLabel}>Memory Lane</Text>
+              <Text style={styles.heroPulseValue}>{journals.length} 篇收藏</Text>
               <Text style={styles.heroPulseBody}>需要一點互動時，再往下進入每日共感與牌組圖書館。</Text>
             </View>
           </View>
@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     gap: mobileTheme.spacing.md,
+    paddingTop: mobileTheme.spacing.lg + 2,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -307,6 +308,7 @@ const styles = StyleSheet.create({
   },
   heroPulseRow: {
     gap: mobileTheme.spacing.sm,
+    flexDirection: 'row',
   },
   heroPulseCard: {
     borderRadius: mobileTheme.radius.md,
@@ -315,6 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: mobileTheme.colors.surfaceElevated,
     padding: mobileTheme.spacing.md,
     gap: 6,
+    flex: 1,
   },
   heroPulseLabel: {
     ...mobileTheme.typography.eyebrow,
@@ -344,6 +347,7 @@ const styles = StyleSheet.create({
   },
   composerCard: {
     gap: mobileTheme.spacing.md,
+    paddingTop: mobileTheme.spacing.lg + 2,
   },
   composerHeader: {
     flexDirection: 'row',

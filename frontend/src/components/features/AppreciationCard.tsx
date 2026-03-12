@@ -15,6 +15,8 @@ import { capturePosthogEvent } from "@/lib/posthog";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
+const APPRECIATION_EMOJIS = ['💛', '🌸', '✨', '🤝', '☕', '🌿', '💕', '🫶'];
+
 function getWeekRange(): { from: string; to: string } {
   const now = new Date();
   const day = now.getDay();
@@ -133,13 +135,16 @@ export default function AppreciationCard({ className }: { className?: string }) 
               {weekList.length > 0 ? "本週感恩回顧" : "近期回顧"}
             </p>
             <ul className="space-y-1.5">
-              {(weekList.length > 0 ? weekList : list.slice(0, 5)).map((a) => (
+              {(weekList.length > 0 ? weekList : list.slice(0, 5)).map((a, idx) => (
                 <li
                   key={a.id}
-                  className="list-item-premium"
+                  className="list-item-premium group"
                 >
+                  <span className="mr-1.5 text-sm opacity-60 group-hover:opacity-100 transition-opacity duration-haven" aria-hidden>
+                    {APPRECIATION_EMOJIS[idx % APPRECIATION_EMOJIS.length]}
+                  </span>
                   <span className="text-body text-foreground/90">{a.body_text}</span>
-                  <span className="text-caption text-muted-foreground ml-2 tabular-nums">
+                  <span className="text-caption text-muted-foreground ml-auto pl-2 tabular-nums shrink-0">
                     {new Date(a.created_at).toLocaleDateString("zh-TW")}
                   </span>
                 </li>

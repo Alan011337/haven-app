@@ -541,6 +541,111 @@ h1, h2, h3, h4, h5, h6 {
       linear-gradient(180deg, oklch(var(--background)) 0%, oklch(var(--muted) / 0.4) 100%);
   }
 
+  /* Home-only editorial surfaces: keep homepage materials centralized instead of scattering gradients. */
+  .home-backdrop-cover {
+    background:
+      radial-gradient(ellipse 52% 42% at 8% 10%, oklch(var(--primary) / 0.08) 0%, transparent 72%),
+      radial-gradient(ellipse 44% 40% at 94% 4%, oklch(var(--accent) / 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 52% 42% at 76% 82%, oklch(0.96 0.014 86 / 0.24) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(248, 244, 238, 0.92));
+  }
+
+  .home-surface-cover,
+  .home-surface-paper,
+  .home-surface-mist,
+  .home-surface-ritual,
+  .home-surface-ink {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .home-surface-cover::before,
+  .home-surface-paper::before,
+  .home-surface-mist::before,
+  .home-surface-ritual::before,
+  .home-surface-ink::before {
+    content: '';
+    position: absolute;
+    inset-inline: 2.5rem;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(var(--primary) / 0.22), transparent);
+    pointer-events: none;
+  }
+
+  .home-surface-cover {
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.72) 0%, transparent 40%),
+      linear-gradient(135deg, rgba(255, 254, 251, 0.98) 0%, rgba(252, 248, 242, 0.95) 36%, rgba(243, 248, 245, 0.84) 100%);
+    box-shadow: var(--shadow-lift);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
+  }
+
+  .home-surface-paper {
+    border: 1px solid rgba(219, 204, 187, 0.4);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 4rem),
+      linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(251, 247, 242, 0.95));
+    box-shadow: var(--shadow-soft), var(--shadow-glass-inset);
+  }
+
+  .home-surface-mist {
+    border: 1px solid rgba(255, 255, 255, 0.48);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 3rem),
+      linear-gradient(180deg, rgba(248, 251, 248, 0.92), rgba(244, 248, 244, 0.88));
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
+  }
+
+  .home-surface-ritual {
+    border: 1px solid rgba(255, 255, 255, 0.48);
+    background:
+      radial-gradient(circle at top center, oklch(var(--primary) / 0.1) 0%, transparent 48%),
+      radial-gradient(circle at bottom left, oklch(var(--accent) / 0.08) 0%, transparent 42%),
+      linear-gradient(180deg, rgba(255, 253, 249, 0.82), rgba(249, 245, 239, 0.62));
+    box-shadow: var(--shadow-lift);
+    backdrop-filter: blur(1.3rem);
+    -webkit-backdrop-filter: blur(1.3rem);
+  }
+
+  .home-surface-ink {
+    border: 1px solid rgba(219, 204, 187, 0.36);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0) 4rem),
+      linear-gradient(180deg, rgba(255, 254, 251, 0.96), rgba(248, 244, 238, 0.92));
+    box-shadow: var(--shadow-soft);
+  }
+
+  .home-paper-lines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to bottom, rgba(214, 168, 124, 0.06) 1px, transparent 1px);
+    background-size: 100% 2.75rem;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .home-rail-shell {
+    border: 1px solid rgba(255, 255, 255, 0.48);
+    background: linear-gradient(180deg, rgba(255, 251, 246, 0.58), rgba(249, 244, 237, 0.42));
+    box-shadow: var(--shadow-lift);
+    backdrop-filter: blur(1.2rem);
+    -webkit-backdrop-filter: blur(1.2rem);
+  }
+
+  .home-rail-label {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(0.85rem);
+    -webkit-backdrop-filter: blur(0.85rem);
+  }
+
   /* ══════════════════════════════════════════════
      PREMIUM ELEVATION — Phase 6 utility classes
      ══════════════════════════════════════════════ */
@@ -576,6 +681,15 @@ h1, h2, h3, h4, h5, h6 {
   }
   .animate-glow-pulse {
     animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  /* Timeline dot pulse: active dot for latest journal entry */
+  @keyframes dot-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(var(--primary) / 0.3); }
+    50% { box-shadow: 0 0 0 7px oklch(var(--primary) / 0); }
+  }
+  .timeline-dot-active {
+    animation: dot-pulse 2.2s ease-in-out infinite;
   }
 
   /* Card accent bar: premium top gradient line (requires relative + overflow-hidden on parent) */

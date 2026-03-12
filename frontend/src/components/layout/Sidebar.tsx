@@ -106,7 +106,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
         href={item.href}
         className={`
           group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border transition-all duration-haven ease-haven
-          ${isActive ? 'border-primary/15 bg-white/82 text-card-foreground shadow-soft' : 'border-transparent bg-white/38 text-muted-foreground hover:border-primary/10 hover:bg-white/72 hover:text-card-foreground'}
+          ${isActive ? 'border-primary/15 bg-white/82 text-card-foreground shadow-soft' : 'border-transparent bg-white/30 text-muted-foreground hover:border-primary/10 hover:bg-white/68 hover:text-card-foreground'}
         `}
         aria-label={item.name}
       >
@@ -118,7 +118,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
         ) : null}
         <span
           className={`
-            pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/50 bg-white/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven
+            home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven
             ${isActive ? 'opacity-100 translate-x-0' : 'translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100'}
           `}
         >
@@ -242,13 +242,13 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       <div className="px-4 pb-4 pt-5">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="absolute inset-0 rounded-[1.4rem] bg-primary/18 blur-md" aria-hidden />
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-primary to-primary/80 shadow-soft">
-              <Heart className="h-5 w-5 fill-primary-foreground text-primary-foreground" />
+            <div className="absolute inset-0 rounded-[1.2rem] bg-primary/16 blur-md" aria-hidden />
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-[1.2rem] bg-gradient-to-br from-primary to-primary/80 shadow-soft">
+              <Heart className="h-4.5 w-4.5 fill-primary-foreground text-primary-foreground" />
             </div>
           </div>
-          <div className="rounded-full border border-white/50 bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-primary/80 shadow-soft">
-            Home
+          <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-primary/78">
+            Haven
           </div>
         </div>
       </div>
@@ -266,11 +266,11 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
             void handleUpgrade();
           }}
           disabled={upgradeLoading}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/40 text-muted-foreground transition-all duration-haven ease-haven hover:border-primary/10 hover:bg-white/74 hover:text-card-foreground"
+          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/30 text-muted-foreground transition-all duration-haven ease-haven hover:border-primary/10 hover:bg-white/68 hover:text-card-foreground"
           aria-label={upgradeNavItem.name}
         >
           <upgradeNavItem.icon className="h-[18px] w-[18px]" />
-          <span className="pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/50 bg-white/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+          <span className="home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
             {upgradeLoading ? '載入中…' : upgradeNavItem.name}
           </span>
         </button>
@@ -281,11 +281,11 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       <div className="px-4 pb-5">
         <button
           onClick={handleLogout}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/34 text-muted-foreground transition-all duration-haven ease-haven hover:border-destructive/10 hover:bg-destructive/8 hover:text-destructive"
+          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/28 text-muted-foreground transition-all duration-haven ease-haven hover:border-destructive/10 hover:bg-destructive/8 hover:text-destructive"
           aria-label="登出"
         >
           <LogOut className="h-[18px] w-[18px]" />
-          <span className="pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/50 bg-white/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+          <span className="home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
             登出
           </span>
         </button>
@@ -300,7 +300,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
         variant="sidebar"
         className={`hidden md:flex fixed flex-col z-50 transition-transform duration-haven ease-haven ${
           isHomeVariant
-            ? 'left-5 top-5 h-[calc(100vh-2.5rem)] w-[88px] rounded-[2.4rem] border border-white/45 bg-[linear-gradient(180deg,rgba(255,251,246,0.62),rgba(249,244,237,0.44))] shadow-lift'
+            ? 'home-rail-shell left-5 top-5 h-[calc(100vh-2.5rem)] w-[80px] rounded-[2.4rem]'
             : 'left-0 top-0 h-screen w-64 bg-[linear-gradient(180deg,rgba(255,251,246,0.82),rgba(249,244,237,0.72))]'
         }`}
       >
@@ -310,7 +310,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       <header
         className={`md:hidden fixed left-0 right-0 z-50 flex items-center justify-between px-4 backdrop-blur-xl ${
           isHomeVariant
-            ? 'top-3 mx-3 h-12 rounded-full border border-white/45 bg-[linear-gradient(180deg,rgba(255,252,248,0.82),rgba(248,243,237,0.68))] shadow-soft'
+            ? 'top-3 mx-3 h-11 rounded-full border border-white/45 bg-[linear-gradient(180deg,rgba(255,252,248,0.82),rgba(248,243,237,0.64))] shadow-soft'
             : 'top-0 h-14 border-b border-border/50 bg-[linear-gradient(180deg,rgba(255,252,248,0.92),rgba(248,243,237,0.86))]'
         }`}
         aria-label="頂部導航"
@@ -322,7 +322,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
               <Heart className="w-4 h-4 text-primary-foreground fill-primary-foreground" />
             </div>
           </div>
-          <span className={`${isHomeVariant ? 'text-base' : 'text-lg'} font-art font-bold text-gradient-gold`}>
+          <span className={`${isHomeVariant ? 'text-[0.96rem]' : 'text-lg'} font-art font-bold text-gradient-gold`}>
             Haven
           </span>
         </div>

@@ -91,7 +91,6 @@ export function useHomeData() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const activeTab: HomeTab = tabFromSearchParams(searchParams);
-  const [nonCriticalDelayElapsed, setNonCriticalDelayElapsed] = useState(false);
   const initialHomeBootstrapPlan = buildHomeBootstrapPlan(activeTab, false);
 
   const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus();
@@ -105,7 +104,7 @@ export function useHomeData() {
         : true;
   const homeBootstrapPlan = buildHomeBootstrapPlan(
     activeTab,
-    nonCriticalDelayElapsed && criticalTabDataReady,
+    criticalTabDataReady,
   );
   const gamificationQuery = useGamificationSummary(homeBootstrapPlan.loadHeaderEnhancements);
   const onboardingQuery = useOnboardingQuest(homeBootstrapPlan.loadHeaderEnhancements);
@@ -116,12 +115,6 @@ export function useHomeData() {
   const statusRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setNonCriticalDelayElapsed(true);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const tab = searchParams.get('tab');

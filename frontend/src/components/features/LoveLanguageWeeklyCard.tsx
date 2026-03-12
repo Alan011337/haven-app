@@ -50,29 +50,45 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
 
   if (loading) {
     return (
-      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[80px]", className)}>
-        <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
+      <GlassCard className={cn("p-6 flex items-center justify-center gap-3 min-h-[80px]", className)}>
+        <Loader2 className="w-5 h-5 animate-spin text-primary" aria-hidden />
+        <span className="text-caption text-muted-foreground">正在載入本週任務…</span>
       </GlassCard>
     );
   }
-  if (!task) return null;
+  if (!task) {
+    return (
+      <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
+        <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
+          <span className="icon-badge">
+            <Sparkles className="w-5 h-5 text-primary" aria-hidden />
+          </span>
+          本週愛之語小任務
+        </h3>
+        <p className="text-sm text-muted-foreground/70 leading-relaxed">
+          本週暫無新任務，好好享受彼此的陪伴。
+        </p>
+      </GlassCard>
+    );
+  }
 
   return (
     <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
-      <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
       <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge">
           <Sparkles className="w-5 h-5 text-primary" aria-hidden />
         </span>
         本週愛之語小任務
       </h3>
-      <p className="text-body text-foreground mb-3 animate-slide-up-fade">{task.task_label}</p>
+      <p className="text-body text-foreground mb-3 leading-relaxed animate-slide-up-fade">{task.task_label}</p>
       {task.completed ? (
-        <div className="flex items-center gap-2 animate-scale-in">
-          <span className="icon-badge">
-            <Check className="w-4 h-4 text-primary" aria-hidden />
+        <div className="inline-flex items-center gap-2.5 animate-scale-in rounded-xl bg-primary/6 border border-primary/10 px-3.5 py-2.5">
+          <span className="icon-badge !w-6 !h-6">
+            <Check className="w-3.5 h-3.5 text-primary" aria-hidden />
           </span>
-          <p className="text-caption text-muted-foreground font-medium">已完成</p>
+          <p className="text-caption text-primary font-medium">本週任務已完成 ✓</p>
         </div>
       ) : (
         <button

@@ -622,6 +622,20 @@
       "method": "GET",
       "name": "read_my_journals",
       "owner_team": "backend-core",
+      "path": "/api/journals",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.read_my_journals",
+      "method": "GET",
+      "name": "read_my_journals",
+      "owner_team": "backend-core",
       "path": "/api/journals/",
       "protocol": "http",
       "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",

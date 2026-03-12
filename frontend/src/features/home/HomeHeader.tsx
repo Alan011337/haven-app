@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { BookHeart, Flame, Heart, Sparkles, Star, User } from 'lucide-react';
+import { BookHeart, Flame, Heart, Sparkles, User } from 'lucide-react';
 import type {
   FirstDelightResponse,
   GamificationSummaryResponse,
@@ -77,9 +77,9 @@ function NoticeCard({
 
 function getMastheadButtonClass(isActive: boolean) {
   return cn(
-    'inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    'relative inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
     isActive
-      ? 'bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,243,236,0.92))] text-card-foreground shadow-soft'
+      ? 'bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,243,236,0.92))] text-card-foreground shadow-soft after:absolute after:bottom-1 after:inset-x-4 after:h-[2px] after:rounded-full after:bg-gradient-to-r after:from-primary/20 after:via-primary/50 after:to-primary/20'
       : 'text-muted-foreground hover:bg-white/72 hover:text-card-foreground',
   );
 }
@@ -112,7 +112,7 @@ export default function HomeHeader({
     () => ({
       mine: {
         eyebrow: 'Cover Story',
-        title: '首頁現在先服務一件事：把今天寫好。',
+        title: '把首頁收安靜，讓今天先被寫成一頁。',
         description:
           '這裡不是資訊總覽，而是一張被好好留白的封面。你先寫，其他 flow 會安靜退到第二層。',
       },
@@ -194,7 +194,7 @@ export default function HomeHeader({
           eyebrow: 'Gentle Nudge',
           title: '今天適合主動靠近一下。',
           description:
-            '同步提醒現在不再佔滿首頁。它只留下最輕的一句提示，等你寫完自己的頁面之後再回頭看。',
+            '同步提醒不再佔滿首頁。它只留下最輕的一句提示，等你寫完自己的頁面之後再回頭看。',
           actionLabel: '稍後再提醒',
           onAction: onAckSyncNudge,
         }
@@ -204,24 +204,33 @@ export default function HomeHeader({
           description: nextOnboardingStep?.completed
             ? '今天的 quest 已完成，首頁會把更多空間還給你的文字。'
             : syncNudges.enabled
-              ? `目前還有 ${syncNudges.nudges.length} 則 gentle nudges，但它們會安靜地待在第二層。`
+              ? `目前還有 ${syncNudges.nudges.length} 則 gentle nudges，但它們會安靜待在第二層。`
               : '當首頁變得夠安靜，真正有價值的互動自然會留下來。',
       };
 
+  const questMeta =
+    nextOnboardingStep && !nextOnboardingStep.completed
+      ? `Quest Day ${nextOnboardingStep.quest_day} · ${nextOnboardingStep.title}`
+      : `本週進度 ${onboardingQuest.completed_steps}/${onboardingQuest.total_steps}`;
+
   return (
-    <section className="space-y-5">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_360px] xl:items-start">
+    <section className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-4">
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-[2rem] border border-white/44 bg-white/48 p-5 shadow-soft backdrop-blur-xl md:p-6">
             <p className="text-[0.72rem] uppercase tracking-[0.34em] text-primary/80">
               {activeMasthead.eyebrow}
             </p>
-            <h1 className="max-w-5xl font-art text-[2rem] leading-[0.98] text-card-foreground md:text-[3rem] xl:text-[3.45rem]">
+            <h1 className="max-w-4xl font-art text-[1.9rem] leading-[1.02] text-gradient-gold md:text-[2.7rem] xl:text-[3.05rem]">
               {activeMasthead.title}
             </h1>
-            <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-[0.98rem]">
+            <p className="max-w-3xl text-sm leading-7 tracking-wide text-muted-foreground md:text-[0.98rem]">
               {activeMasthead.description}
             </p>
+            <div className="inline-flex max-w-max items-center gap-2 rounded-full border border-white/50 bg-white/74 px-3 py-2 text-[0.68rem] uppercase tracking-[0.24em] text-primary/75 shadow-soft">
+              <span className="h-2 w-2 rounded-full bg-primary/70" aria-hidden />
+              <span>{questMeta}</span>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -238,13 +247,16 @@ export default function HomeHeader({
               tone="sage"
               className="min-w-[138px]"
             />
-            <EditorialMetricPill
-              icon={Star}
-              label="進度"
-              value={`${onboardingQuest.completed_steps}/${onboardingQuest.total_steps}`}
-              tone="neutral"
-              className="min-w-[118px]"
-            />
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/48 bg-white/62 px-4 py-3 text-sm text-muted-foreground shadow-soft backdrop-blur-md">
+              <span className="text-[0.66rem] font-semibold uppercase tracking-[0.26em] text-primary/80">Flow</span>
+              <span className="leading-none text-card-foreground">
+                {activeTab === 'mine'
+                  ? '先寫，再看。'
+                  : activeTab === 'partner'
+                    ? '先讀，再回應。'
+                    : '先專注，再揭曉。'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -269,7 +281,7 @@ export default function HomeHeader({
                   ? '這一頁不追求資訊量。它只留下最值得被一起完成的那張卡與那個節奏。'
                   : hasNewPartnerContent
                     ? '首頁會先把你的文字放到前景；伴侶內容會安靜待在第二層，等你寫完之後再讀。'
-                    : '讓首頁先照顧你自己的文字與情緒，其他互動就會自然地排進正確位置。'
+                    : '讓首頁先照顧你自己的文字與情緒，其他互動就會自然排進正確位置。'
             }
             tone="mist"
             className="rounded-[2rem]"

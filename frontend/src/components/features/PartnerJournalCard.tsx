@@ -34,7 +34,7 @@ export default function PartnerJournalCard({
             : isElevated
               ? 'border-primary/15 bg-[linear-gradient(180deg,rgba(255,250,245,0.96),rgba(255,252,248,0.92))]'
               : variant === 'reading-room'
-                ? 'border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.95))]'
+                ? 'home-surface-paper'
                 : 'border-white/50 bg-[linear-gradient(180deg,rgba(255,252,248,0.94),rgba(250,246,240,0.9))]'}`
         }
       >
@@ -71,8 +71,10 @@ export default function PartnerJournalCard({
             </div>
           </div>
 
-          <div className={`rounded-[1.7rem] border p-6 shadow-glass-inset ${variant === 'reading-room' ? 'border-[rgba(219,204,187,0.4)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(251,247,242,0.94))]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,248,243,0.72))]'}`}>
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Inner Need</p>
+          <div className={`rounded-[1.7rem] border p-6 shadow-glass-inset ${variant === 'reading-room' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.4)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,248,243,0.72))]'}`}>
+            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">
+              {variant === 'reading-room' ? 'Letter Excerpt' : 'Inner Need'}
+            </p>
             <p className="mt-3 font-art text-[1.55rem] leading-[1.65] text-card-foreground italic">
               &quot;{journal.emotional_needs || '希望能被理解與支持'}&quot;
             </p>
@@ -120,7 +122,7 @@ export default function PartnerJournalCard({
 
               <div className="space-y-4">
                 {journal.action_for_partner ? (
-                  <div className={`rounded-[1.4rem] border p-4 shadow-soft ${variant === 'reading-room' ? 'border-accent/12 bg-accent/[0.065]' : 'border-accent/16 bg-accent/8'}`}>
+                  <div className={`rounded-[1.4rem] border p-4 shadow-soft ${variant === 'reading-room' ? 'border-accent/12 bg-accent/[0.055]' : 'border-accent/16 bg-accent/8'}`}>
                     <h4 className="flex items-center gap-2.5 text-sm font-bold text-accent">
                       <HeartHandshake className="h-4 w-4" aria-hidden />
                       具體做法
@@ -130,7 +132,7 @@ export default function PartnerJournalCard({
                 ) : null}
 
                 {journal.advice_for_partner ? (
-                  <div className={`rounded-[1.4rem] border p-4 shadow-soft ${variant === 'reading-room' ? 'border-primary/10 bg-primary/[0.06]' : 'border-primary/14 bg-primary/8'}`}>
+                  <div className={`rounded-[1.4rem] border p-4 shadow-soft ${variant === 'reading-room' ? 'border-primary/10 bg-primary/[0.05]' : 'border-primary/14 bg-primary/8'}`}>
                     <h4 className="flex items-center gap-2.5 text-sm font-bold text-primary">
                       <Lightbulb className="h-4 w-4" aria-hidden />
                       理解視角

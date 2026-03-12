@@ -3,7 +3,9 @@ import { NextResponse } from 'next/server';
 import { logServerError, redactSensitiveSegments } from '@/lib/safe-error-log';
 import {
   buildUpstreamUrl,
+  MAX_INTERNAL_UPSTREAM_REDIRECTS,
   redactProxyPath,
+  resolveInternalUpstreamRedirectUrl,
   shouldLogSlowProxy,
   trimApiSuffix,
   trimTrailingSlash,
@@ -164,14 +166,39 @@ async function proxyRequest({
   const upstreamUrl = buildUpstreamUrl(targetBase, pathSegments, request.nextUrl.search);
   const startedAtMs = Date.now();
   try {
-    const body = requestSupportsBody(request.method) ? await request.arrayBuffer() : undefined;
-    const upstreamResponse = await fetch(upstreamUrl, {
-      method: request.method,
-      headers: buildForwardHeaders(request),
-      body,
-      cache: 'no-store',
-      redirect: 'manual',
-    });
+    const requestBody = requestSupportsBody(request.method) ? await request.arrayBuffer() : undefined;
+    const forwardHeaders = buildForwardHeaders(request);
+    let currentUpstreamUrl = upstreamUrl;
+    let upstreamResponse: Response;
+    const visitedUrls = new Set<string>();
+
+    for (let redirectCount = 0; ; redirectCount += 1) {
+      visitedUrls.add(currentUpstreamUrl);
+      upstreamResponse = await fetch(currentUpstreamUrl, {
+        method: request.method,
+        headers: forwardHeaders,
+        body: requestBody ? requestBody.slice(0) : undefined,
+        cache: 'no-store',
+        redirect: 'manual',
+      });
+
+      const nextUpstreamUrl = resolveInternalUpstreamRedirectUrl({
+        currentUpstreamUrl,
+        location: upstreamResponse.headers.get('location'),
+        status: upstreamResponse.status,
+        targetBase,
+      });
+
+      if (
+        !nextUpstreamUrl ||
+        redirectCount >= MAX_INTERNAL_UPSTREAM_REDIRECTS ||
+        visitedUrls.has(nextUpstreamUrl)
+      ) {
+        break;
+      }
+
+      currentUpstreamUrl = nextUpstreamUrl;
+    }
 
     const durationMs = Date.now() - startedAtMs;
     const upstreamRequestId = upstreamResponse.headers.get('x-request-id') || 'unknown';
@@ -182,7 +209,8 @@ async function proxyRequest({
         path: safePath,
         status: upstreamResponse.status,
         duration_ms: durationMs,
-        upstream: redactSensitiveSegments(upstreamUrl.split('?')[0] || upstreamUrl),
+        upstream:
+          redactSensitiveSegments(currentUpstreamUrl.split('?')[0] || currentUpstreamUrl),
         request_id: requestId,
         upstream_request_id: upstreamRequestId,
       });
@@ -194,7 +222,8 @@ async function proxyRequest({
         path: safePath,
         status: upstreamResponse.status,
         duration_ms: durationMs,
-        upstream: redactSensitiveSegments(upstreamUrl.split('?')[0] || upstreamUrl),
+        upstream:
+          redactSensitiveSegments(currentUpstreamUrl.split('?')[0] || currentUpstreamUrl),
         request_id: requestId,
         upstream_request_id: upstreamRequestId,
       });

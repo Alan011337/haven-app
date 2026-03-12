@@ -22,13 +22,13 @@ import {
   TimelineDateRail,
 } from '@/features/home/HomePrimitives';
 import { resolveHomeTimelineStage } from '@/lib/home-timeline-state';
+import { cn } from '@/lib/utils';
 import { Journal } from '@/types';
 
 interface MineTabContentProps {
   myJournals: Journal[];
   loading: boolean;
   timelineUnavailable: boolean;
-  secondaryContentReady: boolean;
   relationshipPulse: {
     score: number;
     streakDays: number;
@@ -57,7 +57,6 @@ export default function MineTabContent({
   myJournals,
   loading,
   timelineUnavailable,
-  secondaryContentReady,
   relationshipPulse,
   onJournalCreated,
   onJournalDeleted,
@@ -106,39 +105,28 @@ export default function MineTabContent({
     <div className="flex flex-col gap-[var(--space-section)]">
       <HomeCoverStage
         eyebrow="My Journal"
-        title="把今天真正重要的那一句，放到首頁封面。"
-        description="這一屏不再要你同時處理所有 flow。它只替你的文字留出最好的前景，其他提醒則安靜退到更後面。"
+        title="把今天真正重要的那一句，放到封面最前景。"
+        description="這一屏不再要你同時處理所有 flow。它先替你的文字留出最好的一塊稿紙，再把其餘提醒安靜排到後面。"
         pulse={pulseLine}
         note={
-          <div className="space-y-4">
-            <EditorialPaperCard
-              eyebrow="Relationship Pulse"
-              title={`${relationshipPulse.score} 分的關係脈搏`}
-              description={`已連續互動 ${relationshipPulse.streakDays} 天。首頁先替你守住低噪音節奏，再讓彼此靠近。`}
-              tone="mist"
-              className="rounded-[2rem]"
-            >
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">先寫自己</Badge>
-                <Badge variant="success">
-                  {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
-                </Badge>
-              </div>
-            </EditorialPaperCard>
-
-            <EditorialPaperCard
-              eyebrow="Editorial Rule"
-              title="先寫，再看；先留白，再靠近。"
-              description="首頁不再要求你同時回應每一張卡。當文字先被寫下來，其他互動自然會回到正確位置。"
-              tone="paper"
-              className="rounded-[2rem]"
-            >
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Heart className="h-4 w-4 text-primary" aria-hidden />
-                <span>把今天寫成一頁，比把所有提醒都處理完更重要。</span>
-              </div>
-            </EditorialPaperCard>
-          </div>
+          <EditorialPaperCard
+            eyebrow="Editorial Note"
+            title={`${relationshipPulse.score} 分的關係脈搏，適合先留白一下。`}
+            description={`已連續互動 ${relationshipPulse.streakDays} 天。這一版首頁故意先把你自己的頁面撐成前景，再讓彼此靠近。`}
+            tone="mist"
+            className="rounded-[2rem]"
+          >
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">先寫自己</Badge>
+              <Badge variant="success">
+                {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
+              </Badge>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Heart className="h-4 w-4 text-primary" aria-hidden />
+              <span>把今天寫成一頁，比把所有提醒都處理完更重要。</span>
+            </div>
+          </EditorialPaperCard>
         }
       >
         <JournalInput
@@ -153,39 +141,21 @@ export default function MineTabContent({
         title="其餘 flow 還在，只是退到了更安靜的位置。"
         description="每日同步、約會提案、感恩便利貼與修復入口仍然存在，但不再搶走你首頁第一屏的注意力。"
         aside={<Badge variant="outline">Editorial Mosaic</Badge>}
-        className="bg-[linear-gradient(180deg,rgba(255,252,248,0.76),rgba(248,244,238,0.66))]"
+        className="bg-[linear-gradient(180deg,rgba(255,252,248,0.74),rgba(248,244,238,0.64))]"
       >
-        {secondaryContentReady ? (
-          <HomeMosaicRail className="md:grid-cols-[1.2fr_0.8fr]">
-            <div className="md:col-span-2">
-              <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
-            </div>
-            <div className="md:row-span-2">
-              <DailySyncCard className="h-full border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
-            </div>
-            <DateSuggestionCard className="border-white/45 bg-[linear-gradient(180deg,rgba(248,252,248,0.92),rgba(242,247,242,0.88))]" />
-            <AppreciationCard className="border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
-            <div className="md:col-span-2">
-              <LoveLanguageWeeklyCard className="h-full border-white/45 bg-[linear-gradient(180deg,rgba(247,250,248,0.93),rgba(240,246,242,0.88))]" />
-            </div>
-          </HomeMosaicRail>
-        ) : (
-          <HomeMosaicRail className="md:grid-cols-[1.2fr_0.8fr]">
-            {[1, 2, 3, 4].map((item) => (
-              <EditorialPaperCard
-                key={item}
-                tone={item % 2 === 0 ? 'mist' : 'paper'}
-                className={item === 1 ? 'md:col-span-2 rounded-[2rem]' : 'rounded-[2rem]'}
-              >
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-6 w-2/3" />
-                  <Skeleton className={`w-full rounded-[1.6rem] ${item === 1 ? 'h-28' : 'h-20'}`} />
-                </div>
-              </EditorialPaperCard>
-            ))}
-          </HomeMosaicRail>
-        )}
+        <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
+          <div className="md:col-span-2">
+            <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
+          </div>
+          <div className="md:row-span-2">
+            <DailySyncCard className="h-full border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
+          </div>
+          <DateSuggestionCard className="border-white/45 bg-[linear-gradient(180deg,rgba(248,252,248,0.92),rgba(242,247,242,0.88))]" />
+          <AppreciationCard className="border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.94))]" />
+          <div className="md:col-span-2">
+            <LoveLanguageWeeklyCard className="h-full border-white/45 bg-[linear-gradient(180deg,rgba(247,250,248,0.93),rgba(240,246,242,0.88))]" />
+          </div>
+        </HomeMosaicRail>
       </HomeSectionFrame>
 
       <EditorialTimelineColumn
@@ -230,17 +200,32 @@ export default function MineTabContent({
             const timelineDate = formatTimelineDate(journal.created_at);
 
             return (
-              <div key={journal.id} className="relative grid gap-4 pl-12 xl:grid-cols-[148px_minmax(0,1fr)] xl:gap-9 xl:pl-0">
+              <div
+                key={journal.id}
+                className={cn(
+                  'relative grid gap-4 pl-12 xl:grid-cols-[148px_minmax(0,1fr)] xl:gap-9 xl:pl-0',
+                  idx === 0 && 'xl:gap-10'
+                )}
+              >
                 <span
-                  className="absolute left-[18px] top-8 h-3 w-3 rounded-full border border-primary/25 bg-white shadow-soft xl:left-[214px]"
+                  className={cn(
+                    'absolute left-[18px] top-8 h-3 w-3 rounded-full border border-primary/25 shadow-soft xl:left-[214px]',
+                    idx === 0 ? 'bg-primary/25 timeline-dot-active' : 'bg-white'
+                  )}
                   aria-hidden
                 />
                 <TimelineDateRail
                   eyebrow={`Chapter ${String(idx + 1).padStart(2, '0')}`}
                   title={timelineDate.label}
                   meta={timelineDate.meta}
+                  lead={idx === 0}
                 />
-                <div className={idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : ''}>
+                <div className={cn(idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : '', idx === 0 && 'xl:-mt-1')}>
+                  {idx === 0 ? (
+                    <p className="mb-3 text-[0.68rem] uppercase tracking-[0.28em] text-primary/75">
+                      Lead Story
+                    </p>
+                  ) : null}
                   <JournalCard journal={journal} onDelete={onJournalDeleted} variant="timeline" />
                 </div>
               </div>

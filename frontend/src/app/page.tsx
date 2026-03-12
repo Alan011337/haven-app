@@ -44,7 +44,6 @@ function HomeContent() {
     nextOnboardingStep,
     primarySyncNudge,
     showFirstDelightCard,
-    secondaryContentReady,
     loadData,
     handleTabChange,
     getTabStyle,
@@ -61,15 +60,15 @@ function HomeContent() {
   }, [myJournals, setLatestMoodLabel]);
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(248,244,238,0.94))]">
-      <div className="pointer-events-none absolute inset-0 bg-ethereal-mesh opacity-55" aria-hidden />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.62),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(228,238,231,0.38),transparent_30%)]" aria-hidden />
-      <div className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-primary/8 blur-hero-orb" aria-hidden />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-accent/10 blur-hero-orb" aria-hidden />
+    <div className="home-backdrop-cover relative flex min-h-screen overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-ethereal-mesh opacity-40" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.62),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(228,238,231,0.34),transparent_30%)]" aria-hidden />
+      <div className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-primary/7 blur-hero-orb" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-accent/8 blur-hero-orb" aria-hidden />
       <Sidebar variant="home" />
 
-      <main className="relative z-10 flex-1 px-4 pb-10 pt-16 transition-all duration-haven ease-haven md:pl-[7.8rem] md:pr-8 md:pt-8 xl:pr-10">
-        <div className="mx-auto max-w-[1420px] space-y-[var(--space-page)]">
+      <main className="relative z-10 flex-1 px-4 pb-10 pt-16 transition-all duration-haven ease-haven md:pl-[7rem] md:pr-10 md:pt-8 xl:pr-14">
+        <div className="mx-auto max-w-[1480px] space-y-[var(--space-page)]">
           <div className="animate-page-enter">
             <HomeHeader
               savingsScore={savingsScore}
@@ -101,7 +100,6 @@ function HomeContent() {
                 myJournals={myJournals}
                 loading={loading}
                 timelineUnavailable={mineTimelineUnavailable}
-                secondaryContentReady={secondaryContentReady}
                 relationshipPulse={{
                   score: savingsScore,
                   streakDays: gamificationSummary.streak_days,

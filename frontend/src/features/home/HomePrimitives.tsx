@@ -119,6 +119,7 @@ interface TimelineDateRailProps {
   eyebrow: string;
   title: string;
   meta: string;
+  lead?: boolean;
   className?: string;
 }
 
@@ -141,9 +142,9 @@ const stateIconToneClassName: Record<StateTone, string> = {
 };
 
 const paperToneClassName: Record<PaperTone, string> = {
-  hero: 'border-white/52 bg-[linear-gradient(180deg,rgba(255,253,250,0.96),rgba(250,246,240,0.92))] shadow-lift',
-  paper: 'border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.95))] shadow-soft',
-  mist: 'border-white/46 bg-[linear-gradient(180deg,rgba(248,251,248,0.92),rgba(244,248,244,0.88))] shadow-soft',
+  hero: 'home-surface-cover',
+  paper: 'home-surface-paper',
+  mist: 'home-surface-mist',
 };
 
 export function HomeSectionFrame({
@@ -156,8 +157,7 @@ export function HomeSectionFrame({
   contentClassName,
 }: HomeSectionFrameProps) {
   return (
-    <GlassCard className={cn('overflow-hidden p-6 md:p-8', className)}>
-      <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
+    <GlassCard className={cn('home-surface-mist overflow-hidden rounded-[2.35rem] p-6 md:p-8', className)}>
       <div className="relative flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-2xl space-y-2">
@@ -197,14 +197,10 @@ export function HomeHeroStage({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-[2.4rem] border border-white/45 bg-[linear-gradient(135deg,rgba(255,253,250,0.94)_0%,rgba(250,245,238,0.92)_42%,rgba(238,245,240,0.82)_100%)] p-6 shadow-lift md:p-8 xl:p-10',
+        'home-surface-cover rounded-[2.4rem] p-6 md:p-8 xl:p-10',
         className,
       )}
     >
-      <div
-        className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"
-        aria-hidden
-      />
       <div className="absolute -right-16 top-0 h-72 w-72 rounded-full bg-primary/10 blur-hero-orb" aria-hidden />
       <div className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-accent/10 blur-hero-orb-sm" aria-hidden />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.58),transparent_42%)]" aria-hidden />
@@ -246,17 +242,16 @@ export function HomeCoverStage({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-[2.9rem] border border-white/48 bg-[linear-gradient(135deg,rgba(255,254,251,0.98)_0%,rgba(252,248,242,0.94)_36%,rgba(243,248,245,0.82)_100%)] p-6 shadow-lift md:p-8 xl:p-10',
+        'home-surface-cover rounded-[3rem] p-6 md:p-8 xl:p-10',
         className,
       )}
     >
-      <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/28 to-transparent" aria-hidden />
       <div className="absolute -right-12 top-0 h-80 w-80 rounded-full bg-primary/8 blur-hero-orb" aria-hidden />
       <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-accent/10 blur-hero-orb-sm" aria-hidden />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.68),transparent_38%)]" aria-hidden />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_38%),radial-gradient(circle_at_88%_12%,rgba(255,255,255,0.28),transparent_28%)]" aria-hidden />
 
       <div className="relative z-10 space-y-8">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-9">
           <div className={cn('space-y-4', contentClassName)}>
             {eyebrow ? (
               <p className="text-[0.72rem] uppercase tracking-[0.34em] text-primary/80">{eyebrow}</p>
@@ -272,8 +267,8 @@ export function HomeCoverStage({
               ) : null}
             </div>
             {pulse ? (
-              <div className="inline-flex max-w-2xl items-start gap-3 rounded-full border border-white/50 bg-white/68 px-4 py-3 shadow-soft backdrop-blur-md">
-                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/75 shadow-[0_0_0_6px_rgba(201,163,100,0.12)]" aria-hidden />
+              <div className="inline-flex max-w-2xl items-start gap-3 rounded-[1.6rem] border border-white/52 bg-white/68 px-4 py-3.5 shadow-soft backdrop-blur-md">
+                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/75 shadow-[0_0_0_8px_rgba(201,163,100,0.11)]" aria-hidden />
                 <div className="text-sm leading-7 text-card-foreground">{pulse}</div>
               </div>
             ) : null}
@@ -308,7 +303,7 @@ export function EditorialMetricPill({
       </span>
       <div className="min-w-0">
         <p className="text-[0.64rem] uppercase tracking-[0.28em] opacity-75">{label}</p>
-        <p className="font-art text-lg leading-none text-card-foreground">{value}</p>
+        <p className="font-art text-lg leading-none text-card-foreground tabular-nums">{value}</p>
       </div>
     </div>
   );
@@ -325,11 +320,10 @@ export function HomeComposerStage({
   return (
     <GlassCard
       className={cn(
-        'overflow-hidden border-white/50 bg-[linear-gradient(180deg,rgba(255,252,248,0.9),rgba(250,246,240,0.86))] p-0 shadow-lift',
+        'home-surface-paper overflow-hidden rounded-[2.35rem] p-0',
         className,
       )}
     >
-      <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
       <div className="relative flex flex-col gap-6 p-6 md:p-8">
         <div className="space-y-2">
           {eyebrow ? (
@@ -366,12 +360,11 @@ export function EditorialPaperCard({
   return (
     <GlassCard
       className={cn(
-        'overflow-hidden p-0',
+        'overflow-hidden rounded-[2rem] p-0',
         paperToneClassName[tone],
         className,
       )}
     >
-      <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary/22 to-transparent" aria-hidden />
       <div className={cn('relative space-y-5 p-5 md:p-6', contentClassName)}>
         {eyebrow || title || description ? (
           <div className="space-y-2">
@@ -396,7 +389,7 @@ export function HomeMosaicRail({ children, className }: HomeMosaicRailProps) {
   return (
     <div
       className={cn(
-        'grid auto-rows-[minmax(170px,auto)] gap-4 md:grid-cols-2 xl:auto-rows-[minmax(160px,auto)]',
+        'grid auto-rows-auto gap-4 lg:grid-cols-2',
         className,
       )}
     >
@@ -409,7 +402,7 @@ export function HomeRailNav({ children, className }: HomeRailNavProps) {
   return (
     <div
       className={cn(
-        'rounded-full border border-white/45 bg-white/66 p-1.5 shadow-soft backdrop-blur-xl',
+        'home-rail-shell rounded-full p-1.5',
         className,
       )}
     >
@@ -448,14 +441,10 @@ export function EditorialTimelineColumn({
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-[2.1rem] border border-white/40 bg-[linear-gradient(180deg,rgba(255,253,249,0.94),rgba(248,244,238,0.9))] p-6 shadow-soft md:p-8',
+        'home-surface-ink rounded-[2.2rem] p-6 md:p-8',
         className,
       )}
     >
-      <div
-        className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-primary/22 to-transparent"
-        aria-hidden
-      />
       <div className="relative grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-10">
         <div className="space-y-3 xl:sticky xl:top-24 xl:self-start">
           {eyebrow ? (
@@ -468,7 +457,7 @@ export function EditorialTimelineColumn({
           {aside ? <div className="pt-2">{aside}</div> : null}
         </div>
 
-        <div className="relative space-y-8 before:absolute before:bottom-6 before:left-6 before:top-6 before:w-px before:bg-gradient-to-b before:from-primary/28 before:via-primary/14 before:to-transparent">
+        <div className="relative space-y-10 before:absolute before:bottom-6 before:left-6 before:top-6 before:w-px before:bg-gradient-to-b before:from-primary/26 before:via-primary/14 before:to-transparent">
           {children}
         </div>
       </div>
@@ -480,12 +469,13 @@ export function TimelineDateRail({
   eyebrow,
   title,
   meta,
+  lead = false,
   className,
 }: TimelineDateRailProps) {
   return (
-    <div className={cn('space-y-1 xl:pt-8', className)}>
+    <div className={cn('space-y-1 xl:pt-8', lead && 'xl:pt-5', className)}>
       <p className="text-[0.66rem] uppercase tracking-[0.26em] text-primary/80">{eyebrow}</p>
-      <p className="font-art text-[1.55rem] text-card-foreground">{title}</p>
+      <p className={cn('font-art text-card-foreground', lead ? 'text-[1.85rem]' : 'text-[1.55rem]')}>{title}</p>
       <p className="text-xs leading-6 text-muted-foreground">{meta}</p>
     </div>
   );

@@ -13,6 +13,18 @@ import { capturePosthogEvent } from "@/lib/posthog";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
+const MOOD_OPTIONS = [
+  { value: 1, emoji: '😔', label: '很低落' },
+  { value: 2, emoji: '😕', label: '有點悶' },
+  { value: 3, emoji: '😐', label: '普通' },
+  { value: 4, emoji: '🙂', label: '不錯' },
+  { value: 5, emoji: '😊', label: '很開心' },
+] as const;
+
+function getMoodEmoji(score: number | null | undefined): string {
+  return MOOD_OPTIONS.find((o) => o.value === score)?.emoji ?? '😐';
+}
+
 export default function DailySyncCard({ className }: { className?: string }) {
   const queryClient = useQueryClient();
   const { data: status, isLoading: loading } = useDailySyncStatus();
@@ -58,7 +70,19 @@ export default function DailySyncCard({ className }: { className?: string }) {
   }
 
   if (!status) {
-    return null;
+    return (
+      <GlassCard className={cn("p-6 md:p-8", className)}>
+        <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
+          <span className="icon-badge">
+            <Sun className="w-5 h-5 text-primary" aria-hidden />
+          </span>
+          每日 3 分鐘同步
+        </h3>
+        <p className="text-sm text-muted-foreground/70 leading-relaxed">
+          今日的同步問題正在準備中，稍後即可填寫。
+        </p>
+      </GlassCard>
+    );
   }
 
   return (
@@ -73,21 +97,40 @@ export default function DailySyncCard({ className }: { className?: string }) {
         <form onSubmit={handleSubmit} className="space-y-4 animate-slide-up-fade">
           <p className="text-caption text-muted-foreground">{status.today_question_label ?? "今日一問"}</p>
           <div className="animate-slide-up-fade-1">
-            <label htmlFor="daily-mood" className="block text-body text-foreground font-medium mb-1">
-              今天情緒 1–5 分
-            </label>
-            <select
-              id="daily-mood"
-              value={mood}
-              onChange={(e) => setMood(Number(e.target.value))}
-              className="select-premium w-full max-w-xs"
-            >
-              {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
+            <p className="text-body text-foreground font-medium mb-2.5">
+              今天的情緒
+            </p>
+            <div className="flex items-center gap-1.5 sm:gap-2" role="radiogroup" aria-label="情緒評分">
+              {MOOD_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={mood === opt.value}
+                  aria-label={`${opt.label} — ${opt.value} 分`}
+                  onClick={() => setMood(opt.value)}
+                  className={cn(
+                    'group relative flex flex-col items-center gap-1 rounded-2xl px-2.5 py-2 sm:px-3 sm:py-2.5 transition-all duration-haven ease-haven',
+                    mood === opt.value
+                      ? 'bg-primary/12 ring-2 ring-primary/30 shadow-focus-glow scale-[1.08]'
+                      : 'hover:bg-muted/50 hover:scale-105'
+                  )}
+                >
+                  <span className={cn(
+                    'text-[1.65rem] sm:text-[1.85rem] transition-all duration-haven ease-haven select-none',
+                    mood === opt.value ? '' : 'grayscale-[0.35] opacity-60 group-hover:grayscale-0 group-hover:opacity-100'
+                  )}>
+                    {opt.emoji}
+                  </span>
+                  <span className={cn(
+                    'text-[10px] font-medium tracking-wide transition-colors duration-haven',
+                    mood === opt.value ? 'text-primary' : 'text-muted-foreground/50 group-hover:text-muted-foreground'
+                  )}>
+                    {opt.label}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div className="animate-slide-up-fade-2">
             <label htmlFor="daily-answer" className="block text-body text-foreground font-medium mb-1">
@@ -114,8 +157,9 @@ export default function DailySyncCard({ className }: { className?: string }) {
         </form>
       ) : (
         <div className="space-y-3 animate-slide-up-fade">
-          <p className="text-body text-foreground">
-            你今日已填寫：情緒 <span className="tabular-nums">{status.my_mood_score}</span> 分，{status.today_question_label}
+          <p className="text-body text-foreground flex items-center gap-1.5 flex-wrap">
+            <span className="text-xl">{getMoodEmoji(status.my_mood_score)}</span>
+            你今日已填寫：情緒 <span className="tabular-nums font-medium">{status.my_mood_score}</span> 分，{status.today_question_label}
           </p>
           <div className="list-item-premium">
             <p className="text-caption text-muted-foreground italic">「{status.my_answer_text}」</p>
@@ -128,15 +172,16 @@ export default function DailySyncCard({ className }: { className?: string }) {
           ) : (
             <>
               <div className="section-divider" aria-hidden />
-              <div className="animate-slide-up-fade-1">
+              <div className="animate-scale-in rounded-2xl bg-primary/5 border border-primary/10 p-4">
                 <p className="text-caption font-medium text-foreground flex items-center gap-2 mb-1">
                   <span className="icon-badge">
                     <Unlock className="w-4 h-4 text-primary" aria-hidden />
                   </span>
                   伴侶今日同步
                 </p>
-                <p className="text-body text-foreground">
-                  情緒 <span className="tabular-nums">{status.partner_mood_score}</span> 分
+                <p className="text-body text-foreground flex items-center gap-1.5">
+                  <span className="text-xl">{getMoodEmoji(status.partner_mood_score)}</span>
+                  情緒 <span className="tabular-nums font-medium">{status.partner_mood_score}</span> 分
                 </p>
                 <div className="list-item-premium mt-2">
                   <p className="text-caption text-muted-foreground italic">「{status.partner_answer_text}」</p>

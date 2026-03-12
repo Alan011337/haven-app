@@ -57,10 +57,10 @@ export function BrandScreen({
   }, [glowScale]);
 
   const header = title ? (
-    <View style={styles.header}>
+    <View style={[styles.header, variant === 'home' && styles.homeHeader]}>
       {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.title, variant === 'home' && styles.homeTitle]}>{title}</Text>
+      {subtitle ? <Text style={[styles.subtitle, variant === 'home' && styles.homeSubtitle]}>{subtitle}</Text> : null}
     </View>
   ) : null;
 
@@ -184,14 +184,26 @@ const styles = StyleSheet.create({
     marginBottom: mobileTheme.spacing.md,
     gap: mobileTheme.spacing.xs,
   },
+  homeHeader: {
+    marginBottom: mobileTheme.spacing.sm,
+    gap: 6,
+  },
   eyebrow: {
     ...mobileTheme.typography.eyebrow,
   },
   title: {
     ...mobileTheme.typography.display,
   },
+  homeTitle: {
+    fontSize: 34,
+    lineHeight: 40,
+    maxWidth: 320,
+  },
   subtitle: {
     ...mobileTheme.typography.bodyMuted,
     maxWidth: 320,
+  },
+  homeSubtitle: {
+    maxWidth: 332,
   },
 });

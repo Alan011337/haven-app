@@ -81,7 +81,7 @@ export default function JournalCard({
         : isElevated
           ? 'bg-[linear-gradient(180deg,rgba(255,250,245,0.96),rgba(255,252,248,0.92))] border-primary/15'
           : variant === 'timeline'
-            ? 'border-[rgba(219,204,187,0.38)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(251,247,242,0.95))]'
+            ? 'home-surface-paper'
             : 'glass-card border-border'
       }`}
     >
@@ -129,7 +129,7 @@ export default function JournalCard({
          </div>
 
          {/* Journal content */}
-         <div className={`mb-8 rounded-[1.7rem] border px-5 py-6 ${variant === 'timeline' ? 'border-[rgba(219,204,187,0.4)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(251,247,242,0.94))]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(252,248,243,0.7))]'} shadow-glass-inset`}>
+         <div className={`mb-8 rounded-[1.7rem] border px-5 py-6 ${variant === 'timeline' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.4)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(252,248,243,0.7))]'} shadow-glass-inset`}>
            <p className="whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
              {journal.content}
            </p>

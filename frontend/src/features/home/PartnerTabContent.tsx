@@ -69,42 +69,31 @@ export default function PartnerTabContent({
           </>
         }
         note={
-          <div className="space-y-4">
-            <EditorialPaperCard
-              eyebrow="Reading Rule"
-              title="先理解，再回應；先慢下來，再靠近。"
-              description="伴侶來信被放進閱讀室，而不是通知中心。首頁會把它變成一種閱讀經驗，而不是待處理事項。"
-              tone="paper"
-              className="rounded-[2rem]"
-            >
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Reading Room</Badge>
-                <Badge variant="success">{partnerJournals.length} 則來信</Badge>
-                {partnerSafetyBanner ? <Badge variant="warning">安全提示已啟用</Badge> : null}
-              </div>
-            </EditorialPaperCard>
-
+          <EditorialPaperCard
+            eyebrow="Reading Rule"
+            title="先理解，再回應；先慢下來，再靠近。"
+            description="伴侶來信被放進閱讀室，而不是通知中心。首頁會把它變成一種閱讀經驗，而不是待處理事項。"
+            tone="paper"
+            className="rounded-[2rem]"
+          >
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">Reading Room</Badge>
+              <Badge variant="success">{partnerJournals.length} 則來信</Badge>
+              {partnerSafetyBanner ? <Badge variant="warning">安全提示已啟用</Badge> : null}
+            </div>
             {partnerSafetyBanner ? (
               <PartnerSafetyBanner
                 severeCount={partnerSafetyBanner.severeCount}
                 onDismiss={onDismissSafetyBanner}
-                className="rounded-[2rem] border-destructive/15 bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))]"
+                className="mt-4 rounded-[1.6rem] border-destructive/15 bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))]"
               />
             ) : (
-              <EditorialPaperCard
-                eyebrow="Editorial Note"
-                title="今天沒有安全提醒，閱讀節奏可以更安穩。"
-                description="當 partner tab 沒有高風險信號時，首頁只保留最安靜的閱讀提示，不再額外加壓。"
-                tone="mist"
-                className="rounded-[2rem]"
-              >
-                <div className="flex items-center gap-2 text-sm text-card-foreground">
-                  <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
-                  <span>把它讀成稿頁，而不是待處理的訊息。</span>
-                </div>
-              </EditorialPaperCard>
+              <div className="mt-4 flex items-center gap-2 text-sm text-card-foreground">
+                <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
+                <span>把它讀成稿頁，而不是待處理的訊息。</span>
+              </div>
             )}
-          </div>
+          </EditorialPaperCard>
         }
       />
 
@@ -169,8 +158,14 @@ export default function PartnerTabContent({
                   eyebrow={`Letter ${String(idx + 1).padStart(2, '0')}`}
                   title={letterDate.label}
                   meta={letterDate.meta}
+                  lead={idx === 0}
                 />
                 <div className={idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : ''}>
+                  {idx === 0 ? (
+                    <p className="mb-3 text-[0.68rem] uppercase tracking-[0.28em] text-primary/75">
+                      Reading Desk
+                    </p>
+                  ) : null}
                   <PartnerJournalCard journal={journal} variant="reading-room" />
                 </div>
               </div>
