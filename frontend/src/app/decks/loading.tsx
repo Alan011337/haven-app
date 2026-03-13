@@ -1,32 +1,29 @@
-// frontend/src/app/decks/loading.tsx — Segment loading UI for /decks (Haven tokens only)
-
 import { GlassCard } from '@/components/haven/GlassCard';
 
 export default function DecksLoading() {
   return (
     <div
-      className="flex min-h-[60vh] items-center justify-center bg-background px-4 py-16"
+      className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(214,181,136,0.18),transparent_22%),radial-gradient(circle_at_top_right,rgba(210,223,214,0.25),transparent_26%),linear-gradient(180deg,#faf7f2_0%,#f5f2ec_52%,#f2efe8_100%)] px-4 py-10 sm:px-6"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="w-full max-w-2xl space-y-6 animate-slide-up-fade">
-        <GlassCard className="p-8 relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
-          <div className="mb-6 h-10 w-48 animate-pulse rounded-card bg-muted" aria-hidden />
-          <div className="space-y-3">
-            <div className="h-5 w-3/4 animate-pulse rounded-card bg-muted" aria-hidden />
-            <div className="h-5 w-full animate-pulse rounded-card bg-muted" aria-hidden />
-            <div className="h-5 w-5/6 animate-pulse rounded-card bg-muted" aria-hidden />
+      <div className="mx-auto max-w-7xl space-y-6 animate-slide-up-fade">
+        <GlassCard className="rounded-[2rem] border-white/55 bg-white/80 p-8">
+          <div className="space-y-4">
+            <div className="h-4 w-28 animate-pulse rounded-full bg-muted" aria-hidden />
+            <div className="h-14 w-2/3 animate-pulse rounded-[1.5rem] bg-muted" aria-hidden />
+            <div className="h-5 w-full animate-pulse rounded-full bg-muted" aria-hidden />
           </div>
         </GlassCard>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-24 animate-pulse rounded-card bg-muted"
-              aria-hidden
-            />
-          ))}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_360px]">
+          <div className="h-56 animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
+          <div className="h-56 animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-7 h-[22rem] animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
+          <div className="lg:col-span-5 h-[18rem] animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
+          <div className="lg:col-span-5 h-[18rem] animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
+          <div className="lg:col-span-7 h-[22rem] animate-pulse rounded-[2rem] bg-white/74 shadow-soft" aria-hidden />
         </div>
       </div>
     </div>

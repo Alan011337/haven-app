@@ -1,10 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, History, HeartHandshake, LockKeyhole, RefreshCw, Send, Sparkles, User } from 'lucide-react';
+import {
+  History,
+  HeartHandshake,
+  LockKeyhole,
+  RefreshCw,
+  Send,
+  Sparkles,
+  User,
+} from 'lucide-react';
 
-import { getDeckDisplayName, getDeckMeta } from '@/lib/deck-meta';
+import { getDeckDisplayName } from '@/lib/deck-meta';
 import { getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
+import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
+import {
+  DeckRoomStage,
+  DeckShell,
+  DeckStatePanel,
+} from '@/features/decks/ui/DeckPrimitives';
 import Skeleton from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
@@ -29,245 +43,272 @@ export default function DeckRoomView({
   quotaExceeded,
   handleUpgrade,
 }: DeckRoomViewModel) {
-  const deckMeta = getDeckMeta(category);
   const categoryDisplayName = getDeckDisplayName(category);
+  const editorialCopy = getDeckEditorialCopy(category);
   const depthLevel = resolveDepthLevel(session?.card.depth_level);
   const depthStyles = getDepthPresentation(depthLevel);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-muted/40 space-page relative overflow-hidden" role="status" aria-live="polite">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full bg-primary/5 blur-hero-orb animate-breathe pointer-events-none" aria-hidden />
-        <div className="mx-auto max-w-md space-y-4">
-          <Skeleton className="h-8 w-40" variant="shimmer" />
-          <Skeleton className="h-64 w-full rounded-card" variant="shimmer" />
-          <Skeleton className="h-36 w-full rounded-card" variant="shimmer" />
-          <p className="text-center text-caption text-muted-foreground font-medium animate-breathe">正在為你們準備話題...</p>
-        </div>
-      </div>
+      <DeckShell
+        eyebrow="牌組現場"
+        title={categoryDisplayName}
+        subtitle="正在整理這一輪對話的舞台與紀錄。"
+        backLabel="回牌組圖書館"
+        onBack={handleBackToDecks}
+        actions={
+          <Link
+            href={historyHref}
+            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <History className="h-4 w-4" aria-hidden />
+            歷史檔案館
+          </Link>
+        }
+        containerClassName="max-w-5xl"
+      >
+        <DeckRoomStage
+          eyebrow="準備中"
+          title="正在為你們整理今晚的題目。"
+          description="先把題目、深度與對話舞台整理好，再把這一輪話題交到你們手上。"
+        >
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-48 rounded-full" variant="shimmer" aria-hidden />
+            <Skeleton className="h-24 w-full rounded-[1.5rem]" variant="shimmer" aria-hidden />
+            <Skeleton className="h-40 w-full rounded-[1.5rem]" variant="shimmer" aria-hidden />
+          </div>
+        </DeckRoomStage>
+      </DeckShell>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-muted/40 flex items-center justify-center space-page" role="alert">
-        <GlassCard className="p-10 text-center max-w-sm">
-          <p className="text-body text-muted-foreground">無法載入卡片，請稍後再試</p>
-        </GlassCard>
-      </div>
+      <DeckShell
+        eyebrow="牌組現場"
+        title={categoryDisplayName}
+        subtitle="這一輪題目沒有成功載入，但不代表牌組本身不可用。"
+        backLabel="回牌組圖書館"
+        onBack={handleBackToDecks}
+        actions={
+          <Link
+            href={historyHref}
+            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <History className="h-4 w-4" aria-hidden />
+            歷史檔案館
+          </Link>
+        }
+        containerClassName="max-w-5xl"
+      >
+        <DeckStatePanel
+          eyebrow="暫時無法開啟"
+          title="這張卡片沒有成功開啟。"
+          description="通常只是一時的連線或同步問題。回到圖書館重新選一次，或稍後再打開，都不會影響既有紀錄。"
+          actionLabel="回到牌組圖書館"
+          onAction={handleBackToDecks}
+        />
+      </DeckShell>
     );
   }
 
+  const topActions = (
+    <Link
+      href={historyHref}
+      className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <History className="h-4 w-4" aria-hidden />
+      歷史檔案館
+    </Link>
+  );
+
   return (
-    <div className="min-h-screen bg-muted/40 flex flex-col">
-      {/* Premium frosted header */}
-      <header className="bg-card/80 backdrop-blur-2xl border-b border-border/60 space-page shadow-soft sticky top-0 z-10">
-        <div className="flex items-center justify-between relative max-w-md mx-auto w-full">
-          <button
-            type="button"
-            onClick={handleBackToDecks}
-            className="p-2 -ml-2 text-muted-foreground hover:text-card-foreground hover:bg-muted/50 rounded-full transition-all duration-haven ease-haven z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label="返回牌組"
-          >
-            <ArrowLeft className="w-5 h-5" aria-hidden />
-          </button>
+    <DeckShell
+      eyebrow={editorialCopy?.eyebrow ?? '牌組現場'}
+      title={categoryDisplayName}
+      subtitle={editorialCopy?.roomPrompt ?? '把題目留在舞台中央，讓彼此的回應慢慢把這一輪對話完成。'}
+      backLabel="回牌組圖書館"
+      onBack={handleBackToDecks}
+      actions={topActions}
+      containerClassName="max-w-5xl"
+    >
+      {quotaExceeded ? (
+        <DeckStatePanel
+          eyebrow="方案上限"
+          title="今天的抽卡次數已經到上限。"
+          description="你們今天的配額已經用完，但這輪對話與所有歷史紀錄都還在。若想繼續抽卡，可以直接升級方案。"
+          actionLabel="升級方案，繼續抽卡"
+          onAction={() => void handleUpgrade?.()}
+          tone="paper"
+        />
+      ) : null}
 
-          <h1 className="absolute left-0 right-0 text-center font-art font-bold text-card-foreground text-title tracking-tight pointer-events-none">
-            <span className="inline-flex items-center gap-2">
-              {deckMeta && <deckMeta.Icon className={`w-4 h-4 ${deckMeta.iconColor}`} strokeWidth={2.2} aria-hidden />}
-              {categoryDisplayName}
-            </span>
-          </h1>
-
-          <Link
-            href={historyHref}
-            className="p-2 -mr-2 text-muted-foreground hover:text-card-foreground hover:bg-muted/50 rounded-full transition-all duration-haven ease-haven z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label="歷史紀錄"
-          >
-            <History className="w-5 h-5" aria-hidden />
-          </Link>
-        </div>
-      </header>
-
-      {quotaExceeded && (
-        <div className="mt-3 max-w-md mx-auto w-full space-page animate-page-enter">
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full"
-            leftIcon={<Sparkles className="w-4 h-4" />}
-            onClick={() => void handleUpgrade?.()}
-          >
-            升級方案，繼續抽卡
-          </Button>
-        </div>
-      )}
-
-      <main className="flex-1 space-page flex flex-col items-center max-w-md mx-auto w-full pb-10">
-        {/* Question card */}
-        <GlassCard
-          className={`w-full p-8 flex flex-col items-center text-center relative overflow-hidden mb-8 min-h-[260px] justify-center transition-all duration-haven ease-haven group hover:shadow-lift animate-page-enter ${depthStyles.accentFrameClass}`}
+        <DeckRoomStage
+          eyebrow="本輪題目"
+          title={session.card.question}
+          description={depthStyles.guidance}
+          badge={`深度 ${depthLevel} · ${depthStyles.label}`}
         >
-          {/* Top accent bar */}
-          <div
-            className={`absolute top-0 left-0 w-full h-1 ${depthStyles.topAccentClass} group-hover:h-1.5 transition-all duration-haven ease-haven`}
-          />
-
-          <div className="mb-5 flex flex-wrap items-center justify-center gap-2 gap-block">
-            <span className="text-caption font-bold tracking-[0.2em] text-muted-foreground/70 uppercase">Topic</span>
-            <span className={`text-caption font-bold px-3 py-0.5 rounded-full backdrop-blur-sm ${depthStyles.badgeClass}`}>
-              Depth {depthLevel} · {depthStyles.label}
-            </span>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
+          <div className="space-y-4">
+            {session.card.title ? (
+              <p className="text-sm font-medium italic text-muted-foreground">—— {session.card.title} ——</p>
+            ) : null}
+            {session.card.tags && session.card.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {session.card.tags.slice(0, 4).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/55 bg-white/72 px-3 py-1 text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <p className="mb-4 text-caption text-muted-foreground/80 leading-relaxed max-w-[28rem]">
-            {depthStyles.guidance}
-          </p>
-          <h2 className="text-title font-art font-bold text-card-foreground tracking-tight leading-relaxed mb-4">{session.card.question}</h2>
-          {session.card.title && (
-            <p className="text-body text-muted-foreground font-medium mt-2 font-art italic">—— {session.card.title} ——</p>
-          )}
-          {session.card.tags && session.card.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5 gap-block">
-              {session.card.tags.slice(0, 4).map((tag) => (
-                <span
-                  key={tag}
-                  className="text-caption px-2.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground border border-border/50 backdrop-blur-sm"
-                >
-                  #{tag}
-                </span>
-              ))}
+          <GlassCard className={`rounded-[1.6rem] border-white/55 p-5 ${depthStyles.badgeClass}`}>
+            <div className="space-y-3">
+              <p className="text-[0.7rem] uppercase tracking-[0.28em] text-card-foreground/72">場景提示</p>
+              <p className="text-sm leading-7 text-card-foreground/88">
+                {editorialCopy?.shortHook ?? '讓這張卡片替今晚先打開一個恰到好處的入口。'}
+              </p>
             </div>
-          )}
-        </GlassCard>
-
-        <div className="w-full transition-all duration-haven ease-haven">
-          {/* Panel-enter: duration-500 intentional for content reveal; excluded from Haven micro-motion tokens by design. */}
-          {roomStatus === 'IDLE' && (
-            <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="relative">
-                <Textarea
-                  value={answer}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                  placeholder={`分享給 ${partnerDisplayName} 聽...`}
-                  maxLength={2000}
-                  className="pr-14 resize-none h-36 min-h-[140px]"
-                  aria-label="分享給伴侶的回答"
-                />
-                <Button
-                  type="button"
-                  size="md"
-                  variant={answer.trim() ? 'primary' : 'secondary'}
-                  disabled={submitting || !answer.trim()}
-                  className="absolute bottom-4 right-4 p-3"
-                  leftIcon={submitting ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                  onClick={() => void handleSubmit()}
-                />
-              </div>
-              {partnerTyping && (
-                <div className="mt-3 inline-flex items-center gap-2 text-caption text-muted-foreground" role="status">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
-                  </span>
-                  <span className="font-medium">{partnerDisplayName} 正在輸入...</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {roomStatus === 'WAITING_PARTNER' && (
-            <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <GlassCard className="text-center p-10 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
-
-                <div className="mb-6 inline-flex p-4 bg-gradient-to-br from-primary/15 to-primary/5 rounded-2xl ring-4 ring-primary/10 animate-breathe">
-                  <LockKeyhole className="w-8 h-8 text-primary" />
-                </div>
-
-                <h3 className="font-art font-bold text-card-foreground text-title tracking-tight mb-2">答案已上鎖</h3>
-
-                <p className="text-body text-muted-foreground leading-relaxed mb-8">
-                  你的回答已保存！
-                  <br />
-                  <span className="text-muted-foreground">
-                    當 <strong className="text-primary font-medium">{partnerDisplayName}</strong> 回答後，
-                    <br />
-                    雙方的答案將同時揭曉。
-                  </span>
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full"
-                    leftIcon={<RefreshCw className="w-4 h-4" />}
-                    onClick={handleNextCard}
-                  >
-                    不等了，先抽下一張
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    className="w-full text-muted-foreground"
-                    onClick={handleBackToDecks}
-                  >
-                    暫時離開，晚點再看
-                  </Button>
-                </div>
-              </GlassCard>
-            </div>
-          )}
-
-          {roomStatus === 'COMPLETED' &&
-            resultData &&
-            String(resultData.session_id) === String(session.id) && (
-              <div key={resultData.session_id} className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                <div className="space-y-5 px-1">
-                  {/* My answer (right) */}
-                  <div className="flex gap-3 justify-end items-end">
-                    <div className="max-w-[85%] flex flex-col items-end">
-                      <div className="bg-gradient-to-br from-primary to-primary/85 text-primary-foreground px-5 py-3.5 rounded-2xl rounded-br-md shadow-soft text-body leading-relaxed tracking-wide">
-                        {resultData.my_answer}
-                      </div>
-                      <span className="text-caption text-muted-foreground mt-1.5 pr-1 font-medium">我</span>
-                    </div>
-                    <span className="icon-badge !w-9 !h-9 shrink-0 mb-6" aria-hidden>
-                      <User className="w-4 h-4" />
-                    </span>
-                  </div>
-
-                  {/* Partner answer (left) */}
-                  <div className="flex gap-3 justify-start items-end">
-                    <span className="icon-badge !w-9 !h-9 !bg-gradient-to-br !from-accent/12 !to-accent/4 !border-accent/8 shrink-0 mb-6" aria-hidden>
-                      <HeartHandshake className="w-4 h-4 text-accent" />
-                    </span>
-                    <div className="max-w-[85%] flex flex-col items-start">
-                      <div className="bg-card border border-border/60 text-card-foreground px-5 py-3.5 rounded-2xl rounded-bl-md shadow-soft text-body leading-relaxed tracking-wide">
-                        {resultData.partner_answer}
-                      </div>
-                      <span className="text-caption text-muted-foreground mt-1.5 pl-1 font-medium">{partnerDisplayName}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="section-divider my-6 mx-4" />
-
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="w-full"
-                  leftIcon={<RefreshCw className="w-5 h-5" />}
-                  onClick={handleNextCard}
-                >
-                  聊聊下一個話題
-                </Button>
-              </div>
-            )}
+          </GlassCard>
         </div>
-      </main>
-    </div>
+      </DeckRoomStage>
+
+      {roomStatus === 'IDLE' ? (
+        <DeckRoomStage
+          eyebrow="你的回應"
+          title="把第一個真正想說的版本留在這裡。"
+          description="不需要一次寫得完整。先把最真實的那一段留下來，這張卡的節奏就會開始動。"
+          tone="paper"
+          footer={
+            partnerTyping ? (
+              <div className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
+                </span>
+                <span>{partnerDisplayName} 也正在靠近這輪對話。</span>
+              </div>
+            ) : null
+          }
+        >
+          <div className="space-y-4">
+            <Textarea
+              value={answer}
+              onChange={(e) => handleAnswerChange(e.target.value)}
+              placeholder={`把想對 ${partnerDisplayName} 說的那一段寫下來…`}
+              maxLength={2000}
+              className="min-h-[15rem] resize-none border-white/55 bg-white/82 px-5 py-5 text-base leading-8 shadow-glass-inset"
+              aria-label="分享給伴侶的回答"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm text-muted-foreground">
+                這一輪沒有時間壓力，先把最真實的版本留下來。
+              </div>
+              <Button
+                type="button"
+                size="lg"
+                variant={answer.trim() ? 'primary' : 'secondary'}
+                disabled={submitting || !answer.trim()}
+                leftIcon={submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                onClick={() => void handleSubmit()}
+              >
+                {submitting ? '正在封存你的回答' : '送出這張卡片'}
+              </Button>
+            </div>
+          </div>
+        </DeckRoomStage>
+      ) : null}
+
+      {roomStatus === 'WAITING_PARTNER' ? (
+        <DeckRoomStage
+          eyebrow="等待對方"
+          title="你的回答已封存，現在輪到對方。"
+          description={`這一輪對話已經在進行中。等 ${partnerDisplayName} 也完成後，雙方內容會一起揭曉。`}
+          tone="mist"
+          footer={
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="primary"
+                size="lg"
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+                onClick={handleNextCard}
+              >
+                先抽下一張
+              </Button>
+              <Button variant="ghost" size="lg" onClick={handleBackToDecks}>
+                暫時離開，晚點再看
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <GlassCard className="rounded-[1.6rem] border-white/55 bg-white/78 p-5">
+              <div className="flex items-start gap-3">
+                <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/16 bg-primary/10 shadow-soft" aria-hidden>
+                  <LockKeyhole className="h-4 w-4 text-primary" />
+                </span>
+                <div className="space-y-2">
+                  <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">已封存</p>
+                  <p className="text-sm leading-7 text-card-foreground">
+                    你的版本已經被穩穩收好。現在這張卡暫時不需要再修改，只需要等待它完成雙向交換。
+                  </p>
+                </div>
+              </div>
+            </GlassCard>
+            <GlassCard className="rounded-[1.6rem] border-white/55 bg-white/74 p-5">
+              <div className="space-y-3">
+                <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">伴侶狀態</p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/80 px-3 py-2 text-sm text-card-foreground shadow-soft">
+                  <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
+                  {partnerDisplayName} 還在這張卡的另一端
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+        </DeckRoomStage>
+      ) : null}
+
+      {roomStatus === 'COMPLETED' && resultData && String(resultData.session_id) === String(session.id) ? (
+        <DeckRoomStage
+          eyebrow="雙向揭曉"
+          title="這輪對話已經完整展開。"
+          description="現在先好好把彼此的版本讀完，再決定要不要進到下一張卡。"
+          tone="ritual"
+          footer={
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={<Sparkles className="h-4 w-4" />}
+              onClick={handleNextCard}
+            >
+              聊聊下一個話題
+            </Button>
+          }
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <section className="rounded-[1.6rem] border border-primary/12 bg-primary/6 p-5">
+              <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">
+                <User className="h-4 w-4" aria-hidden />
+                我的版本
+              </div>
+              <p className="mt-4 text-sm leading-7 text-card-foreground">{resultData.my_answer}</p>
+            </section>
+            <section className="rounded-[1.6rem] border border-white/55 bg-white/76 p-5">
+              <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+                <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
+                {partnerDisplayName}
+              </div>
+              <p className="mt-4 text-sm leading-7 text-card-foreground">{resultData.partner_answer}</p>
+            </section>
+          </div>
+        </DeckRoomStage>
+      ) : null}
+    </DeckShell>
   );
 }

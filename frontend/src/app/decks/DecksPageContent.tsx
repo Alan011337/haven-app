@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { History, Sparkles } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { DECK_META_LIST } from '@/lib/deck-meta';
 import { useDeckCardCounts } from '@/hooks/queries';
 import { GlassCard } from '@/components/haven/GlassCard';
-import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
-import { CardBackVariant } from '@/components/haven/CardBackVariant';
+import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
+import {
+  DeckCollectionTile,
+  DeckHeroPanel,
+  DeckShell,
+  DeckStatePanel,
+} from '@/features/decks/ui/DeckPrimitives';
 
 const FILTER_MODES = ['all', 'in_progress', 'not_started', 'completed'] as const;
 const SORT_MODES = ['recommended', 'progress_desc', 'progress_asc', 'title'] as const;
@@ -52,9 +56,7 @@ export default function DecksPageContent() {
 
     const nextQuery = params.toString();
     const currentQuery = searchParams.toString();
-    if (nextQuery === currentQuery) {
-      return;
-    }
+    if (nextQuery === currentQuery) return;
 
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
       scroll: false,
@@ -74,9 +76,7 @@ export default function DecksPageContent() {
       shouldReplace = true;
     }
 
-    if (!shouldReplace) {
-      return;
-    }
+    if (!shouldReplace) return;
     const nextQuery = params.toString();
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
       scroll: false,
@@ -132,32 +132,17 @@ export default function DecksPageContent() {
     });
 
     const filtered = mapped.filter((item) => {
-      if (filterMode === 'all') {
-        return true;
-      }
-      if (filterMode === 'in_progress') {
-        return item.isStarted && !item.isCompleted;
-      }
-      if (filterMode === 'not_started') {
-        return !item.isStarted;
-      }
+      if (filterMode === 'all') return true;
+      if (filterMode === 'in_progress') return item.isStarted && !item.isCompleted;
+      if (filterMode === 'not_started') return !item.isStarted;
       return item.isCompleted;
     });
 
     filtered.sort((a, b) => {
-      if (sortMode === 'progress_desc') {
-        return b.completionRate - a.completionRate;
-      }
-      if (sortMode === 'progress_asc') {
-        return a.completionRate - b.completionRate;
-      }
-      if (sortMode === 'title') {
-        return a.deck.title.localeCompare(b.deck.title, 'zh-Hant');
-      }
-
-      if (a.statusRank !== b.statusRank) {
-        return a.statusRank - b.statusRank;
-      }
+      if (sortMode === 'progress_desc') return b.completionRate - a.completionRate;
+      if (sortMode === 'progress_asc') return a.completionRate - b.completionRate;
+      if (sortMode === 'title') return a.deck.title.localeCompare(b.deck.title, 'zh-Hant');
+      if (a.statusRank !== b.statusRank) return a.statusRank - b.statusRank;
       return b.completionRate - a.completionRate;
     });
 
@@ -166,206 +151,215 @@ export default function DecksPageContent() {
 
   const deckRoomQueryString = useMemo(() => {
     const params = new URLSearchParams();
-    if (filterMode !== 'all') {
-      params.set('filter', filterMode);
-    }
-    if (sortMode !== 'recommended') {
-      params.set('sort', sortMode);
-    }
+    if (filterMode !== 'all') params.set('filter', filterMode);
+    if (sortMode !== 'recommended') params.set('sort', sortMode);
     return params.toString();
   }, [filterMode, sortMode]);
 
   const buildDeckRoomHref = (deckId: string) =>
     deckRoomQueryString ? `/decks/${deckId}?${deckRoomQueryString}` : `/decks/${deckId}`;
 
-  return (
-    <div className="min-h-screen bg-ethereal-mesh pb-20">
-      <header className="sticky top-0 z-10 bg-card/90 backdrop-blur-md border-b border-border space-page flex items-center shadow-card py-4">
-        <Link
-          href="/"
-          aria-label="返回首頁"
-          className="p-2 -ml-2 hover:bg-muted rounded-button transition-colors duration-haven-fast ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          <ArrowLeft className="w-6 h-6 text-muted-foreground" aria-hidden />
-        </Link>
-        <h1 className="ml-2 text-title font-art font-bold text-card-foreground tracking-tight">牌組圖書館</h1>
-      </header>
-
-      <main className="space-page space-y-6 max-w-6xl mx-auto">
-        <div className="text-center space-y-2 mb-6 mt-2">
-          <h2 className="text-title font-art font-bold text-gradient-gold tracking-tight">今天想聊點什麼？</h2>
-          <p className="text-caption text-foreground/80 tracking-wide">選擇一套牌組，開啟無限話題。</p>
+  const heroAside = (
+    <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(249,252,250,0.84),rgba(240,246,242,0.78))] p-5">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-[0.7rem] uppercase tracking-[0.3em] text-primary/72">今晚焦點</p>
+          <h3 className="font-art text-[1.5rem] leading-tight text-card-foreground">
+            {countsLoading
+              ? '正在整理最適合延續的牌組…'
+              : nextFocusDeck
+                ? `下一步繼續 ${nextFocusDeck.deck.title}`
+                : '你們已經把目前的牌組走得很完整。'}
+          </h3>
+          <p className="text-sm leading-7 text-muted-foreground">
+            {countsLoading
+              ? '先把整體進度整理出來，再替今晚選一個最值得往下走的方向。'
+              : nextFocusDeck
+                ? getDeckEditorialCopy(nextFocusDeck.deck.id)?.shortHook ??
+                  '從最接近完成的牌組繼續，會讓整條對話體驗更有延續感。'
+                : '如果想換個方向，也可以直接從檔案館回看過去最常聊的主題。'}
+          </p>
         </div>
+        <div className="space-y-3">
+          {nextFocusDeck ? (
+            <Link
+              href={buildDeckRoomHref(nextFocusDeck.deck.id)}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/8 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              繼續這個牌組
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </Link>
+          ) : null}
+          <Link
+            href="/decks/history"
+            className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+          >
+            打開對話檔案館
+            <History className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+      </div>
+    </GlassCard>
+  );
 
-        <GlassCard className="p-5 md:p-6 relative overflow-hidden">
-          <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
-          <div className="flex items-start justify-between gap-4">
+  return (
+    <DeckShell
+      eyebrow="牌組圖書館"
+      title="牌組圖書館"
+      subtitle="把今晚的對話選成一種方向，而不是只抽一張隨機卡。這裡是你們共同的主題收藏庫，從日常到深談，都可以找到剛剛好的入口。"
+      backHref="/"
+      backLabel="回首頁"
+      actions={
+        <Link
+          href="/decks/history"
+          className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <History className="h-4 w-4" aria-hidden />
+          對話檔案館
+        </Link>
+      }
+      containerClassName="max-w-7xl"
+    >
+      <DeckHeroPanel
+        eyebrow="今日館藏"
+        title="今晚想把關係往哪個方向打開？"
+        description="每一套牌組都不是一堆題目的集合，而是一種對話場景。先選一個適合今天的方向，再讓問題替你們把節奏帶進去。"
+        metrics={[
+          {
+            label: '已解鎖',
+            value: countsLoading ? '...' : `${totals.answeredCards}/${totals.totalCards}`,
+            note: '目前累積完成的題數',
+          },
+          {
+            label: '整體進度',
+            value: countsLoading ? '...' : `${overallCompletionRate}%`,
+            note: '所有牌組的總體完成比例',
+          },
+          {
+            label: '完整牌組',
+            value: countsLoading ? '...' : `${completedDecks}/${DECK_META_LIST.length}`,
+            note: '已經走完整輪探索的分類數量',
+          },
+        ]}
+        aside={heroAside}
+      />
+
+      <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(247,243,236,0.76))] p-5 md:p-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
             <div className="space-y-2">
-              <p className="text-[11px] font-art font-semibold tracking-[0.18em] text-muted-foreground uppercase">學習進度</p>
-              {countsLoading ? (
-                <div className="space-y-2">
-                  <div className="h-6 w-40 rounded-md bg-muted animate-pulse" aria-hidden />
-                  <div className="h-4 w-56 rounded-md bg-muted animate-pulse" aria-hidden />
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-xl md:text-2xl font-bold text-card-foreground tabular-nums">
-                    已完成 {totals.answeredCards}/{totals.totalCards} 題
-                  </h3>
-                  <p className="text-body text-muted-foreground tabular-nums">
-                    八大牌組進度 {overallCompletionRate}% · 已全破 {completedDecks}/{DECK_META_LIST.length} 套
-                  </p>
-                </>
-              )}
+              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-primary/72">館藏整理</p>
+              <h2 className="font-art text-[1.55rem] text-card-foreground">按進度、狀態或名稱整理今晚的牌組。</h2>
+              <p className="text-sm leading-7 text-muted-foreground">
+                保留你現在的篩選與排序；進入某個牌組再返回時，瀏覽位置不會被打散。
+              </p>
             </div>
-            {!countsLoading && nextFocusDeck && (
-              <Link
-                href={buildDeckRoomHref(nextFocusDeck.deck.id)}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors duration-haven-fast ease-haven rounded-button inline-block"
-              >
-                <Button variant="primary" size="sm">
-                  繼續 {nextFocusDeck.deck.title}
-                </Button>
-              </Link>
-            )}
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/55 bg-white/72 px-4 py-3 text-sm text-muted-foreground shadow-soft">
+              <span className="uppercase tracking-[0.22em] text-primary/72">顯示中</span>
+              <span className="tabular-nums text-card-foreground">{deckCards.length}/{DECK_META_LIST.length}</span>
+            </div>
           </div>
-          <div className="mt-4 h-2 w-full rounded-full bg-muted shadow-glass-inset overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary/60 transition-all duration-haven ease-haven"
-              style={{ width: `${countsLoading ? 0 : Math.max(0, Math.min(100, overallCompletionRate))}%` }}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTER_MODES.map((mode) => {
+              const active = filterMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => syncQueryParams(mode, sortMode)}
+                  className={`rounded-full border px-4 py-2 text-xs font-medium transition-all duration-haven-fast ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    active
+                      ? 'border-primary/20 bg-primary/10 text-card-foreground shadow-soft'
+                      : 'border-white/55 bg-white/66 text-muted-foreground hover:border-primary/16 hover:text-card-foreground'
+                  }`}
+                  aria-pressed={active}
+                >
+                  {mode === 'all'
+                    ? '全部牌組'
+                    : mode === 'in_progress'
+                      ? '正在探索'
+                      : mode === 'not_started'
+                        ? '尚未開始'
+                        : '已完整走過'}
+                </button>
+              );
+            })}
+
+            <div className="ml-auto flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3 py-2 shadow-soft">
+              <label htmlFor="deck-sort" className="text-xs uppercase tracking-[0.2em] text-primary/70">
+                排序
+              </label>
+              <select
+                id="deck-sort"
+                aria-label="排序方式"
+                value={sortMode}
+                onChange={(event) => {
+                  const nextSort = event.target.value;
+                  if (!isSortMode(nextSort)) return;
+                  syncQueryParams(filterMode, nextSort);
+                }}
+                className="select-premium min-w-[7.5rem] border-0 bg-transparent text-xs shadow-none"
+              >
+                <option value="recommended">推薦排序</option>
+                <option value="progress_desc">進度高到低</option>
+                <option value="progress_asc">進度低到高</option>
+                <option value="title">名稱排序</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {deckCards.length === 0 && !countsLoading ? (
+          <div className="lg:col-span-12">
+            <DeckStatePanel
+              eyebrow="暫無結果"
+              title="目前沒有符合條件的牌組"
+              description="這不是沒有內容，只是目前的篩選條件把它們暫時收起來了。換個條件再看一次，圖書館就會重新打開。"
+              actionLabel="清除篩選"
+              onAction={() => syncQueryParams('all', 'recommended')}
             />
           </div>
-        </GlassCard>
+        ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(['all', 'in_progress', 'not_started', 'completed'] as const).map((mode) => (
-              <Badge
-                key={mode}
-                variant={filterMode === mode ? 'default' : 'outline'}
-                size="md"
-                className={`cursor-pointer transition-colors duration-haven-fast ease-haven ${
-                  filterMode === mode
-                    ? 'bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-primary shadow-satin-button'
-                    : 'hover:bg-muted'
-                }`}
-                onClick={() => syncQueryParams(mode, sortMode)}
-                role="button"
-                aria-pressed={filterMode === mode}
-              >
-                {mode === 'all' ? '全部' : mode === 'in_progress' ? '進行中' : mode === 'not_started' ? '未開始' : '已完成'}
-              </Badge>
-            ))}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <select
-              id="deck-sort"
-              aria-label="排序方式"
-              value={sortMode}
-              onChange={(event) => {
-                const nextSort = event.target.value;
-                if (!isSortMode(nextSort)) {
-                  return;
+        {deckCards.map(({ deck, totalCards, answeredCards, completionRate, isCompleted, isStarted }, index) => {
+          const editorialCopy = getDeckEditorialCopy(deck.id);
+          const isFeature = index === 0 || nextFocusDeck?.deck.id === deck.id;
+          const gridClass = isFeature
+            ? 'lg:col-span-7 xl:col-span-6'
+            : index % 3 === 0
+              ? 'lg:col-span-5 xl:col-span-3'
+              : 'lg:col-span-5 xl:col-span-3';
+
+          return (
+            <div key={deck.id} className={gridClass}>
+              <DeckCollectionTile
+                deck={deck}
+                href={buildDeckRoomHref(deck.id)}
+                eyebrow={editorialCopy?.eyebrow ?? '主題收藏'}
+                spotlight={editorialCopy?.spotlight ?? deck.description}
+                shortHook={editorialCopy?.shortHook ?? deck.description}
+                progressLabel={countsLoading ? '進度整理中' : `${answeredCards}/${totalCards} 已完成`}
+                countLabel={countsLoading ? '題庫整理中' : `${totalCards} 題`}
+                statusLabel={
+                  countsLoading
+                    ? '整理中'
+                    : isCompleted
+                      ? '完整走過'
+                      : isStarted
+                        ? '正在探索'
+                        : '尚未開始'
                 }
-                syncQueryParams(filterMode, nextSort);
-              }}
-              className="select-premium text-xs"
-            >
-              <option value="recommended">推薦排序</option>
-              <option value="progress_desc">進度高到低</option>
-              <option value="progress_asc">進度低到高</option>
-              <option value="title">名稱排序</option>
-            </select>
-            <span className="text-caption text-muted-foreground tabular-nums whitespace-nowrap">
-              {deckCards.length}/{DECK_META_LIST.length}
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-          {deckCards.length === 0 && !countsLoading && (
-            <GlassCard className="col-span-full p-10 text-center animate-slide-up-fade" role="status">
-              <p className="text-body font-art font-semibold text-foreground">目前沒有符合條件的牌組</p>
-              <p className="text-caption text-muted-foreground mt-1">換個篩選試試看。</p>
-            </GlassCard>
-          )}
-          {deckCards.map(({ deck, totalCards, answeredCards, completionRate, isCompleted, isStarted }, idx) => {
-            const countLabel = countsLoading ? '讀取中...' : `${totalCards} 題`;
-            const progressLabel = countsLoading ? '載入進度...' : `${answeredCards}/${totalCards} 完成`;
-            const progressWidth = countsLoading ? 0 : Math.max(0, Math.min(100, completionRate));
-            const statusLabel = countsLoading
-              ? '準備中'
-              : isCompleted
-                ? '已完成'
-                : isStarted
-                  ? '進行中'
-                  : '未開始';
-            const staggerClass = idx < 6 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : '';
-            return (
-              <Link key={deck.id} href={buildDeckRoomHref(deck.id)} className={staggerClass}>
-                <div
-                  className={`
-                    relative overflow-hidden rounded-2xl p-4 sm:p-6 min-h-[11rem] sm:h-44 flex flex-col justify-between
-                    shadow-soft transition-all duration-haven ease-haven hover:scale-[1.02] hover:shadow-lift cursor-pointer
-                    bg-gradient-to-br ${deck.color} group
-                  `}
-                >
-                  <div className="absolute top-3 right-3 w-12 h-16 rounded-lg overflow-hidden shadow-soft ring-2 ring-foreground/10" aria-hidden>
-                    <CardBackVariant deck={deck}>
-                      <deck.Icon className="w-5 h-5 text-white/90" strokeWidth={2} aria-hidden />
-                    </CardBackVariant>
-                  </div>
-
-                  <div className="absolute top-0 right-0 -mt-2 -mr-2 opacity-[0.08] select-none pointer-events-none group-hover:opacity-[0.15] transition-opacity duration-haven-fast ease-haven">
-                    <deck.Icon className={`w-24 h-24 ${deck.iconColor}`} strokeWidth={1.7} />
-                  </div>
-
-                  <div>
-                    <div className="mb-2">
-                      <deck.Icon className={`w-7 h-7 ${deck.iconColor}`} strokeWidth={2.2} />
-                    </div>
-                    <h3 className={`text-xl font-art font-bold truncate ${deck.textColor}`}>{deck.title}</h3>
-                    <p className={`text-sm mt-1 opacity-80 line-clamp-2 ${deck.textColor}`}>
-                      {deck.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 space-y-2">
-                    {countsLoading ? (
-                      <div className="space-y-2">
-                        <div className="h-1.5 w-full rounded-full bg-white/35 overflow-hidden">
-                          <div className="h-full w-1/3 rounded-full bg-white/70 animate-pulse" />
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="h-6 w-24 rounded-full bg-white/40 animate-pulse" />
-                          <span className="h-6 w-16 rounded-full bg-white/40 animate-pulse" />
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="h-1.5 w-full rounded-full bg-white/30 shadow-glass-inset overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-white/85 transition-all duration-haven ease-haven"
-                            style={{ width: `${progressWidth}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className={`text-xs font-medium tabular-nums ${deck.textColor} opacity-80`}>
-                            {progressLabel} · {countLabel}
-                          </span>
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-white/40 backdrop-blur-sm ${deck.textColor}`}>
-                            {statusLabel} →
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </main>
-    </div>
+                progressWidth={countsLoading ? 0 : completionRate}
+                emphasis={isFeature ? 'feature' : 'standard'}
+                loading={countsLoading}
+              />
+            </div>
+          );
+        })}
+      </section>
+    </DeckShell>
   );
 }

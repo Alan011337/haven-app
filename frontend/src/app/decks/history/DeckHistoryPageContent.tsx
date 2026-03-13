@@ -1,7 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { LibraryBig } from 'lucide-react';
+
+import { DeckShell } from '@/features/decks/ui/DeckPrimitives';
+import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
 import { useDeckHistory } from '@/features/deck-history/useDeckHistory';
 import DeckHistorySummaryCard from '@/features/deck-history/DeckHistorySummaryCard';
 import DeckHistoryFiltersBar from '@/features/deck-history/DeckHistoryFiltersBar';
@@ -30,50 +34,60 @@ export default function DeckHistoryPageContent() {
     handleExportCsv,
   } = useDeckHistory();
 
+  const archiveSubtitle = useMemo(() => {
+    const categoryCopy = getDeckEditorialCopy(normalizedCategoryFilter);
+    if (categoryCopy) {
+      return `${categoryCopy.archivePrompt} 你可以依時間、關鍵字或牌組，把這些對話重新整理成一份可回讀的檔案。`;
+    }
+    return '把你們已經完成的牌卡回應整理成一座真正可回讀的檔案館，而不是一串普通列表。';
+  }, [normalizedCategoryFilter]);
+
   return (
-    <div className="min-h-screen bg-muted/40 pb-20">
-      <header className="sticky top-0 z-10 bg-card/90 backdrop-blur-md border-b border-border px-4 py-4 flex items-center shadow-card relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
+    <DeckShell
+      eyebrow="對話檔案館"
+      title="對話檔案館"
+      subtitle={archiveSubtitle}
+      backHref={backToDecksHref}
+      backLabel="回牌組圖書館"
+      actions={
         <Link
-          href={backToDecksHref}
-          aria-label="返回牌組"
-          className="p-2 -ml-2 hover:bg-muted rounded-button transition-colors duration-haven-fast ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          href="/decks"
+          className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <ArrowLeft className="w-6 h-6 text-muted-foreground" aria-hidden />
+          <LibraryBig className="h-4 w-4" aria-hidden />
+          回到收藏
         </Link>
-        <h1 className="ml-2 text-xl font-art font-bold text-card-foreground tracking-tight">我們的對話時光</h1>
-      </header>
+      }
+      containerClassName="max-w-6xl"
+    >
+      <DeckHistorySummaryCard
+        summary={summary}
+        summaryLoading={summaryLoading}
+        summaryTopCategoryDisplay={summaryTopCategoryDisplay}
+        historyLength={history.length}
+      />
 
-      <main className="p-4 max-w-2xl mx-auto space-y-6 animate-page-enter">
-        <DeckHistorySummaryCard
-          summary={summary}
-          summaryLoading={summaryLoading}
-          summaryTopCategoryDisplay={summaryTopCategoryDisplay}
-          historyLength={history.length}
-        />
+      <DeckHistoryFiltersBar
+        normalizedCategoryFilter={normalizedCategoryFilter}
+        dateRangeMode={dateRangeMode}
+        sortMode={sortMode}
+        searchKeyword={searchKeyword}
+        setCategoryQuery={setCategoryQuery}
+        setDateRangeQuery={setDateRangeQuery}
+        setSortQuery={setSortQuery}
+        setSearchKeyword={setSearchKeyword}
+        onExportCsv={handleExportCsv}
+      />
 
-        <DeckHistoryFiltersBar
-          normalizedCategoryFilter={normalizedCategoryFilter}
-          dateRangeMode={dateRangeMode}
-          sortMode={sortMode}
-          searchKeyword={searchKeyword}
-          setCategoryQuery={setCategoryQuery}
-          setDateRangeQuery={setDateRangeQuery}
-          setSortQuery={setSortQuery}
-          setSearchKeyword={setSearchKeyword}
-          onExportCsv={handleExportCsv}
-        />
-
-        <DeckHistoryList
-          historyLength={history.length}
-          visibleHistory={visibleHistory}
-          loading={loading}
-          loadingMore={loadingMore}
-          hasMore={hasMore}
-          backToDecksHref={backToDecksHref}
-          onLoadMore={handleLoadMore}
-        />
-      </main>
-    </div>
+      <DeckHistoryList
+        historyLength={history.length}
+        visibleHistory={visibleHistory}
+        loading={loading}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        backToDecksHref={backToDecksHref}
+        onLoadMore={handleLoadMore}
+      />
+    </DeckShell>
   );
 }
