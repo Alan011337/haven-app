@@ -1,5 +1,5 @@
 ---
-description: "Haven frontend + UI/UX rules (Next.js App Router + shadcn/ui + Tailwind v4 + TS). Complements CLAUDE.md."
+description: "Haven frontend + UI/UX execution rules (Next.js App Router + TypeScript + Tailwind v4 + shadcn/ui). Complements CLAUDE.md and ART-DIRECTION.md."
 globs:
   - "frontend/**"
   - "app/**"
@@ -10,101 +10,642 @@ globs:
   - "*.css"
 alwaysApply: false
 ---
-# Haven UI/UX + Frontend Rules (Cursor)
+# Haven UI/UX + Frontend Execution Rules (v2)
 
-## 0) Relationship to CLAUDE.md (non-negotiable)
-- Treat `CLAUDE.md` as the process law: batching, tests, rollback, observability, security.
-- This file ONLY defines frontend/UI system constraints (tokens, component layering, Next.js architecture, UX/A11y).
-- Conflict rule:
-  - Process conflicts → `CLAUDE.md` wins.
-  - UI system / frontend architecture choice conflicts → this file wins.
+## 0) Authority & document order (non-negotiable)
 
-## 1) Haven aesthetic & The Token Contract (CRITICAL)
-- **🚨 MANDATORY READ**: Before writing ANY UI components, styling, or `globals.css`, you MUST read `docs/design/ART-DIRECTION.md` to get the exact OKLCH values, typography mappings, component recipes, and shadow/radius parameters.
-- **Aesthetic**: Premium editorial minimalism: generous whitespace, restrained palette, typography hierarchy, subtle elevation.
-- **Avoid**: harsh borders (high-contrast 1px outlines everywhere), noisy/high-saturation gradients, “default shadcn boxy look”.
-- Dark mode is a material (velvet/ink), not an inverted light theme.
+Read and apply documents in this order:
 
-## 2) Design tokens: single source of truth (MANDATORY)
-### 2.1 Where tokens live
-- Primary source: `frontend/src/app/globals.css`
-- Tailwind should reference semantic tokens; components should NOT hardcode ad-hoc colors.
+1. `CLAUDE.md`
+   - process law
+   - batching
+   - tests
+   - rollback
+   - observability
+   - security
+2. `docs/design/ART-DIRECTION.md`
+   - core art direction
+   - token law
+   - premium-feel constraints
+3. `docs/design/ART-DIRECTION-APPENDIX.md`
+   - composition rules
+   - component recipes
+   - golden screen laws
+   - review heuristics
+4. this file
+   - frontend execution law
+   - architecture rules
+   - UI quality gate
+   - anti-drift rules
 
-### 2.2 Token usage rules (Tailwind v4 + CSS-first)
-- Use semantic utilities everywhere:
-  - `bg-background`, `text-foreground`, `bg-card`, `border-border`, `bg-primary`, etc.
-- **🔥 HARD GUARDRAILS (Anti-Drift - Do Not Violate):**
-  - **NO ARBITRARY COLORS**: Never use `bg-[#...]`, `text-[rgb(...)]`, or `border-[oklch(...)]` in React components. 
-  - **NO ARBITRARY SHADOWS**: Never use `shadow-[...]`. Use only your defined semantic shadows (`shadow-soft`, `shadow-lift`, `shadow-modal`).
-  - **NO HARDCODED RADII**: Use `rounded-lg`, `rounded-full`, mapped to `--radius`.
-  - Exception: token definitions inside `globals.css` only.
+### Conflict rule
+- process / security / release conflicts → `CLAUDE.md` wins
+- aesthetic / token / premium-feel conflicts → `ART-DIRECTION.md` wins
+- screen-specific / composition interpretation → `ART-DIRECTION-APPENDIX.md` clarifies
+- frontend implementation / component layering / App Router execution → this file wins
 
-### 2.3 OKLCH consistency rule (prevents rgb(oklch(...)) bugs)
-- If tokens are stored as OKLCH triplets in CSS variables (e.g. `--primary: 0.205 0 0` or `--primary: oklch(0.205 0 0)`), then exports MUST remain OKLCH-consistent:
-  - In `@theme inline`, export as `oklch(var(--token))`
-  - In Tailwind config, use `oklch(var(--token) / <alpha-value>)` for alpha support
-- Never wrap OKLCH tokens with `rgb(var(--token))`.
+Do not ignore earlier documents.
+Do not improvise a new design system.
 
-### 2.4 Required semantic token set (must exist)
-Define and use at least:
-- colors: `--background`, `--foreground`, `--card`, `--popover`, `--primary`, `--secondary`, `--muted`, `--accent`, `--border`
-- geometry: `--radius` base + derived radii (`--radius-sm/md/lg`)
-- elevation: 2 shadow presets max (`soft` and `lift`, plus optional `modal`)
-- motion: 2 motion presets max (`duration` + `easing`)
+---
 
-## 3) shadcn/ui customization + component layering
-### 3.1 Layering (no exceptions)
-- `frontend/src/components/ui/*` = shadcn primitives (as generated) with theme-token styling.
-- `frontend/src/components/haven/*` = product wrappers/compositions (Haven look + behaviors).
-- Pages/features must prefer using `components/haven/*` instead of raw primitives.
+## 1) Mandatory read behavior before any UI work
 
-### 3.2 “No default shadcn look”
-- You MUST customize shadcn theme variables in `globals.css` to avoid harsh/boxy defaults: larger radii, soft borders, gentle focus-visible rings.
+Before writing or editing any UI code, you MUST:
 
-### 3.3 Interaction states (required)
-Every interactive component MUST support: `default` / `hover` / `active` / `focus-visible` / `disabled` / `loading` / `error`.
+1. read `CLAUDE.md`
+2. read `docs/design/ART-DIRECTION.md`
+3. if touching layout, forms, dialogs, dashboard, decks, journal, settings, or shared UI patterns:
+   - also read `docs/design/ART-DIRECTION-APPENDIX.md`
 
-## 4) Accessibility (A11y) is mandatory
-- **Keyboard-first UX**: every screen must be usable without mouse.
-- **Focus management**: correct for Dialog/Drawer/Menu/Popover/Combobox.
-- **Focus Rings**: Use `:focus-visible` (rings on keyboard nav; not permanently on mouse click). Never remove outlines without replacement.
-- **🔥 Strict A11y Guardrails**:
-  - Icon-only controls MUST have `aria-label` or `aria-labelledby` (`title` is not enough).
-  - Form inputs MUST have a `<label>` (visual or `sr-only`). A `placeholder` is NOT a label.
+You must explicitly acknowledge these reads in your output inventory.
 
-## 5) Next.js App Router architecture rules
-- Default to React Server Components (RSC).
-- Use `'use client'` ONLY at leaf interactive components: Zustand hooks, client-only interactions, animations.
-- Each major route segment should include: `loading.tsx` (skeletons), `error.tsx` (recoverable UI), `not-found.tsx`.
-- Prefer predictable structure: `frontend/src/app/(marketing)/*`, `frontend/src/app/(app)/*`.
+### Required acknowledgement format
+Include:
 
-## 6) Data & state rules (TanStack Query + Zustand)
-- TanStack Query: ALL server data fetching/caching/mutations, optimistic updates, consistent loading/empty/error states.
-- Zustand: ONLY ephemeral client UI state (filters, cmd palette, modal open, drafts). Never duplicate server state.
-- **Error handling UX**: inline errors for forms, non-blocking toasts for transient failures, empty state must have a clear soft CTA.
+- `Read: CLAUDE.md`
+- `Read: docs/design/ART-DIRECTION.md`
+- `Read: docs/design/ART-DIRECTION-APPENDIX.md` (if applicable)
 
-## 7) Motion & micro-interactions (subtle, tactile)
-- Micro-motion only: opacity / translate within 8px, 200–240ms, ease-out.
-- Hover = gentle lift; Active = subtle press (tiny scale down `active:scale-95`).
-- Loading: prefer skeletons/shimmers consistent with theme tokens. No generic spinners.
+If you did not read them, do not proceed.
 
-## 8) Golden Screens & Output requirements (align with CLAUDE.md)
-When implementing UI (e.g., Home, Deck List, Journal, Settings), ALWAYS provide:
-- Inventory: repo map + files to touch (+ **Acknowledge you read ART-DIRECTION.md**)
-- Top 3 ROI TODOs with DoD (as required by `CLAUDE.md`)
-- **UI Definition of Done (DoD) for Batch N**:
-  - ✅ **Guardrail Check**: No arbitrary bracket values (`-[...]`) for colors or shadows were used.
-  - ✅ **A11y Check**: Forms have labels; icons have `aria-label`; `:focus-visible` is implemented.
-  - ✅ **Motion Check**: `hover:scale` / `active:scale-95` and Haven easing applied.
-  - ✅ **State Check**: Loading/empty/error states & keyboard nav paths verified.
-- test commands + expected outcomes (`npm run lint`, `npm run build`).
-- rollback steps.
+---
 
-## 9) Guardrails (to prevent style drift)
-- No ad-hoc component styling that bypasses tokens.
-- No “one-off” radius/shadow/colors unless promoted into tokens first.
-- If you must break a rule, you MUST: explain why, keep scope minimal, add a TODO to migrate into tokens later.
+## 2) Haven aesthetic execution goal
 
-## 10) Documented exceptions (see ART-DIRECTION.md §8)
-- **global-error.tsx**: Allowed minimal inline hex colors only in that file, because it must render when the root layout and CSS pipeline are broken.
-- **Focus on primary/dark background**: `focus-visible:ring-white/90` (or future `--focus-over-primary`) is allowed for elements on primary or dark hero/header backgrounds; use `ring-ring` elsewhere.
+All frontend work must move Haven toward:
+
+- premium editorial minimalism
+- warm emotional modernism
+- restrained luxury
+- soft material depth
+- calm, intimate interaction quality
+- non-generic, non-boxy product feel
+
+### Always optimize for:
+- hierarchy
+- spacing rhythm
+- emotional tone
+- system consistency
+- refined restraint
+- premium perceived quality
+- usability and accessibility
+
+### Never optimize for:
+- trendiness alone
+- flashy effects
+- “more visual stuff”
+- generic SaaS polish
+- random Dribbble-style redesign
+- decoration without system value
+
+---
+
+## 3) Single source of truth for tokens
+
+## 3.1 Token source
+Primary source:
+- `frontend/src/app/globals.css`
+
+Optional secondary source:
+- theme mappings / Tailwind theme references that consume the semantic CSS variables
+
+### Components must NOT define ad-hoc visual tokens.
+
+---
+
+## 3.2 Token usage rules (hard guardrails)
+
+Use semantic utilities only:
+- `bg-background`
+- `text-foreground`
+- `bg-card`
+- `border-border`
+- `bg-primary`
+- `text-muted-foreground`
+- etc.
+
+### Forbidden
+- `bg-[#...]`
+- `text-[#...]`
+- `border-[#...]`
+- `text-[rgb(...)]`
+- `bg-[oklch(...)]`
+- `shadow-[...]`
+- ad-hoc radius values
+- repeated one-off spacing hacks that should be systematized
+
+### Allowed exception
+Only the documented exceptions in `ART-DIRECTION.md` are allowed.
+
+---
+
+## 3.3 OKLCH consistency rule
+If a token is stored as an OKLCH triplet in CSS variables:
+
+- export it consistently as `oklch(var(--token))`
+- when alpha is needed, use `oklch(var(--token) / <alpha-value>)`
+- never wrap OKLCH values with `rgb(...)`
+
+Do not mix token color syntaxes carelessly.
+
+---
+
+## 3.4 Required semantic token groups
+At minimum, the system must define and consistently use:
+
+### Color
+- `--background`
+- `--foreground`
+- `--card`
+- `--popover`
+- `--primary`
+- `--secondary`
+- `--muted`
+- `--accent`
+- `--border`
+- `--destructive`
+- `--ring`
+
+### Typography
+- font roles
+- heading hierarchy
+- body hierarchy
+- label/caption hierarchy
+
+### Geometry
+- base `--radius`
+- derived radii if needed
+
+### Elevation
+- `shadow-soft`
+- `shadow-lift`
+- optional `shadow-modal`
+
+### Motion
+- Haven duration token
+- Haven easing token
+
+### Space
+Must align with:
+- `--space-page`
+- `--space-section`
+- `--space-block`
+- `--space-stack`
+- `--space-inline`
+
+---
+
+## 4) shadcn/ui customization and component layering
+
+## 4.1 Layering law (no exceptions)
+
+- `frontend/src/components/ui/*`
+  - shadcn primitives
+  - theme-token aligned
+  - low-level reusable UI building blocks
+
+- `frontend/src/components/haven/*`
+  - Haven-specific wrappers / variants / compositions
+  - premium visual treatment
+  - repeated product-level patterns
+
+- feature/page-specific compositions
+  - live closer to the feature
+  - should not pollute primitives
+
+### Pages and features should prefer `components/haven/*` over raw primitives whenever a Haven-specific pattern already exists.
+
+---
+
+## 4.2 No default shadcn look
+Generated shadcn components must be customized to avoid:
+- harsh borders
+- boxy corners
+- default ring behavior
+- generic input appearance
+- unrefined density
+- generic SaaS feel
+
+If a component still looks like “default shadcn,” it is not done.
+
+---
+
+## 4.3 Component family consistency
+Buttons, cards, inputs, forms, dialogs, sheets, tabs, badges, nav, lists, empty states, loading states, and error states must feel like one family.
+
+Check consistency across:
+- radius
+- spacing
+- border softness
+- shadow style
+- type scale
+- focus treatment
+- hover/active behavior
+- motion timing
+
+---
+
+## 4.4 State completeness (required)
+Every interactive component must support, as applicable:
+
+- default
+- hover
+- active
+- focus-visible
+- disabled
+- loading
+- error
+- selected
+- empty (for composite views)
+
+Do not ship components with only the happy-path visual state.
+
+---
+
+## 5) Accessibility (A11y) is mandatory
+
+## 5.1 Keyboard-first UX
+Every major screen must be usable without a mouse.
+
+Required:
+- correct tab order
+- clear focus-visible states
+- navigable dialogs/sheets/menus/popovers/comboboxes
+- no focus traps unless intentionally managed
+
+---
+
+## 5.2 Form accessibility
+- every input must have a label
+- `placeholder` is not a label
+- `sr-only` labels are acceptable when appropriate
+- helper and error text must be connected when relevant
+
+---
+
+## 5.3 Icon-only controls
+Every icon-only control must have:
+- `aria-label` or
+- `aria-labelledby`
+
+`title` is not enough.
+
+---
+
+## 5.4 Focus ring rules
+- use `:focus-visible`
+- never remove outlines without replacement
+- focus treatment must feel premium and visible
+- use documented exceptions only when on primary/dark backgrounds
+
+Accessibility is part of product quality, not a polish pass.
+
+---
+
+## 6) Next.js App Router architecture rules
+
+## 6.1 Server-first by default
+Default to React Server Components.
+
+Use `'use client'` only where required:
+- Zustand hooks
+- client-only interactivity
+- animation logic
+- browser-only APIs
+- complex event handling
+
+Do not convert large trees to client components casually.
+
+---
+
+## 6.2 Route segment completeness
+Each major route segment should include when appropriate:
+- `loading.tsx`
+- `error.tsx`
+- `not-found.tsx`
+
+These should be designed, not treated as afterthoughts.
+
+Loading, empty, and error states are part of Haven quality.
+
+---
+
+## 6.3 Route organization
+Prefer predictable structure such as:
+- `frontend/src/app/(marketing)/*`
+- `frontend/src/app/(app)/*`
+
+Do not create route chaos or inconsistent page shell patterns.
+
+---
+
+## 6.4 Layout integrity
+Do not break:
+- layout nesting
+- rendering boundaries
+- SEO-sensitive surfaces
+- performance-sensitive surfaces
+- server/client separation
+
+UI polish must not damage architectural correctness.
+
+---
+
+## 7) Data and state rules
+
+## 7.1 TanStack Query
+Use for:
+- server data fetching
+- caching
+- mutations
+- optimistic updates where appropriate
+- consistent loading / empty / error handling
+
+## 7.2 Zustand
+Use only for ephemeral client UI state, such as:
+- modal open state
+- local filters
+- command palette
+- view mode
+- client-side drafts when appropriate
+
+Do NOT duplicate server state in Zustand.
+
+---
+
+## 7.3 State UX rule
+Every data-driven surface should explicitly handle:
+- loading
+- empty
+- success
+- recoverable error
+
+Do not leave the UI in vague or collapsed states.
+
+---
+
+## 8) Motion and micro-interactions
+
+## 8.1 Motion philosophy
+Motion should feel:
+- subtle
+- calm
+- tactile
+- premium
+- supportive of understanding
+
+It should never feel:
+- flashy
+- playful in a toy-like way
+- excessive
+- distracting
+- compensatory for weak hierarchy
+
+---
+
+## 8.2 Motion constraints
+Prefer:
+- opacity
+- translate within modest range
+- gentle scale
+- short duration
+- Haven easing
+
+Avoid:
+- large bounces
+- dramatic overshoot
+- long chained animations
+- excessive parallax
+- gimmicky transitions
+
+---
+
+## 8.3 Interaction defaults
+- hover = gentle lift / refinement
+- active = subtle press
+- loading = skeletons/shimmers preferred over generic spinners
+- skeletons must match Haven tone
+- reduced-motion users must not be ignored
+
+---
+
+## 9) Forms, empty states, error states, and supportive UX
+
+## 9.1 Forms
+Forms must feel:
+- calm
+- trustworthy
+- readable
+- grouped
+- non-boxy
+- emotionally safe
+
+Do not ship:
+- raw vertical stacks of default inputs
+- crowded label/input/helper/error clusters
+- aggressive error styling
+- visually mixed destructive actions
+
+---
+
+## 9.2 Empty states
+Empty states must include:
+- clear hierarchy
+- muted but readable tone
+- inviting CTA when appropriate
+- enough spacing to feel intentional
+
+They must not feel:
+- forgotten
+- abrupt
+- harsh
+- generic
+
+---
+
+## 9.3 Error states
+Error states should:
+- preserve calm
+- explain enough
+- support recovery
+- avoid alarmist styling unless truly necessary
+
+Use inline errors for forms and contextual recovery where possible.
+
+---
+
+## 10) Golden screen execution requirements
+
+If touching any of these screens, also read the appendix and follow its laws:
+
+- Home / Dashboard
+- Deck List
+- Journal / reflection surfaces
+- Settings
+- Dialogs / Sheets
+- shared form systems
+
+### Requirement
+When modifying golden screens, output must explain:
+- what premium-feel blockers were addressed
+- what composition changes were made
+- how the new result aligns with art direction
+- what generic patterns were removed
+
+---
+
+## 11) UI Quality Review Rubric (mandatory)
+
+Every UI batch must be evaluated against this rubric.
+
+## 11.1 Hierarchy
+- Is there a clear primary focus?
+- Is CTA hierarchy obvious?
+- Is the page easy to scan?
+
+## 11.2 Spacing rhythm
+- Does spacing create calm and cadence?
+- Are groups distinct without feeling fragmented?
+- Is anything cramped or over-boxed?
+
+## 11.3 Typography
+- Are headings, labels, body, caption, and helper text clearly differentiated?
+- Does typography feel editorial, not generic?
+- Is any metadata too tiny or too low-contrast?
+
+## 11.4 Token compliance
+- Any arbitrary colors?
+- Any arbitrary shadows?
+- Any hardcoded radii?
+- Any one-off visual hacks that should be promoted to tokens?
+
+## 11.5 Component consistency
+- Do affected components still feel like one product family?
+- Any regressions toward default shadcn or generic SaaS?
+
+## 11.6 Emotional tone
+- Does the UI feel intimate, calm, premium, and emotionally safe?
+- Did the change accidentally make it colder, louder, or more mechanical?
+
+## 11.7 Responsive quality
+- Does it stay elegant on desktop, tablet, and mobile?
+- Does spacing collapse badly on smaller screens?
+
+## 11.8 Accessibility
+- Keyboard path verified?
+- Focus-visible verified?
+- Labels / aria coverage verified?
+
+If the answer is weak in any of these areas, the batch is not done.
+
+---
+
+## 12) Required output for every UI batch
+
+In addition to `CLAUDE.md`, every frontend/UI response must include:
+
+### Inventory
+- repo map
+- files to inspect
+- files to touch
+- explicit acknowledgement of which design docs were read
+
+### Top ROI TODOs
+Maximum 3.
+
+Each must include:
+- purpose
+- user-visible outcome
+- design/system impact
+- engineering scope
+- Definition of Done
+
+### UI Definition of Done (must include all)
+- ✅ token compliance check
+- ✅ no arbitrary colors/shadows/radii introduced
+- ✅ typography hierarchy verified
+- ✅ spacing rhythm reviewed
+- ✅ focus-visible path verified
+- ✅ labels / aria verified
+- ✅ loading / empty / error states handled
+- ✅ responsive behavior checked
+- ✅ premium-feel blockers reduced
+- ✅ result still matches Haven art direction
+
+### Batch section
+- summary
+- risk assessment
+- exact files changed
+- test plan
+- rollback plan
+- observability notes if relevant
+- assumptions
+- open questions
+
+---
+
+## 13) Guardrails against style drift
+
+Do not:
+- bypass tokens for convenience
+- introduce one-off visual hacks
+- create new component styles without checking whether a Haven wrapper should exist
+- stack decorative effects to fake premium quality
+- rely on borders everywhere to create structure
+- create pages with equal-weight visual blocks
+- solve hierarchy only with bigger cards and more shadows
+
+### Drift rule
+If a new UI pattern appears more than once, it must be systematized.
+
+---
+
+## 14) Definition of “done” for UI implementation
+
+A UI change is done only if:
+
+1. it works functionally
+2. it passes lint/build/tests relevant to the batch
+3. it preserves App Router and state boundaries
+4. it respects tokens and system rules
+5. it improves or preserves accessibility
+6. it meaningfully improves perceived quality
+7. it does not regress into generic SaaS or default shadcn styling
+
+Functional correctness alone is not enough.
+Visual prettiness alone is not enough.
+“Haven quality” requires both.
+
+---
+
+## 15) Documented exceptions
+
+See `ART-DIRECTION.md` for:
+- `global-error.tsx`
+- focus ring on primary / dark background exceptions
+
+Do not invent new exceptions here.
+
+---
+
+## 16) Final execution reminder
+
+You are not here to make Haven merely “clean.”
+You are here to make it feel:
+- crafted
+- calm
+- premium
+- intimate
+- elegant
+- systemically coherent
+
+Prefer:
+- restraint over decoration
+- rhythm over stacking
+- hierarchy over noise
+- system over ad-hoc styling
+- emotional safety over harsh efficiency
+
+If something is technically valid but visually generic, it is still wrong.
+If something is visually impressive but systemically messy, it is still wrong.
