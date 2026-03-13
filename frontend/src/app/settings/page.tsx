@@ -13,7 +13,7 @@ const SettingsPageBody = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="max-w-4xl mx-auto w-full space-y-4 animate-page-enter-delay-1">
+      <div className="mx-auto w-full max-w-4xl stack-section animate-page-enter-delay-1">
         <Skeleton className="h-24 w-full rounded-card" variant="shimmer" aria-hidden />
         <Skeleton className="h-24 w-full rounded-card" variant="shimmer" aria-hidden />
         <Skeleton className="h-32 w-full rounded-card" variant="shimmer" aria-hidden />
@@ -33,7 +33,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
       onClick={() => onChange(!checked)}
       className={`
         relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent
-        transition-colors duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
+        transition-colors duration-haven ease-haven focus-ring-premium
         ${checked ? 'bg-primary shadow-satin-button' : 'bg-muted-foreground/25'}
       `}
     >
@@ -60,52 +60,53 @@ export default function SettingsPage() {
   const setSoundEnabled = useAppearanceStore((s) => s.setSoundEnabled);
 
   return (
-    <div className="min-h-screen bg-muted/40 space-page flex flex-col">
+    <div className="min-h-screen bg-muted/40 px-4 py-[var(--space-page)] md:px-6">
       {/* Back nav + page heading */}
-      <div className="max-w-4xl mx-auto w-full mb-8 animate-page-enter">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-[var(--space-section)] animate-page-enter">
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="group flex items-center text-muted-foreground hover:text-card-foreground transition-all duration-haven ease-haven font-medium px-4 py-2 rounded-button hover:bg-card/80 hover:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group inline-flex w-fit items-center gap-[var(--space-inline)] rounded-button border border-white/55 bg-card/78 px-4 py-2.5 type-label text-muted-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:border-primary/16 hover:bg-card hover:text-card-foreground hover:shadow-lift focus-ring-premium"
           aria-label="返回首頁"
         >
-          <div className="bg-card p-1.5 rounded-full shadow-soft border border-border/60 mr-3 group-hover:border-primary/20 transition-all duration-haven ease-haven" aria-hidden>
+          <div className="rounded-full border border-border/60 bg-card p-1.5 shadow-soft transition-all duration-haven ease-haven group-hover:border-primary/20" aria-hidden>
             <ArrowLeft className="w-4 h-4" />
           </div>
           回首頁
         </button>
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="stack-inline">
           <span className="icon-badge !w-10 !h-10 !rounded-2xl" aria-hidden>
             <Settings className="w-5 h-5" />
           </span>
-          <div>
-            <h1 className="text-title font-art font-bold text-card-foreground tracking-tight">設定</h1>
-            <p className="text-caption text-muted-foreground">自訂你的 Haven 體驗</p>
+          <div className="stack-block">
+            <p className="type-micro uppercase text-primary/72">Preference Center</p>
+            <h1 className="type-h2 text-card-foreground">設定</h1>
+            <p className="type-body-muted text-muted-foreground">把 Haven 的提醒、節奏與陪伴方式調到最適合你們的狀態。</p>
           </div>
         </div>
       </div>
 
       {/* Appearance section */}
-      <GlassCard className="max-w-4xl mx-auto w-full mb-6 p-6 relative overflow-hidden animate-page-enter-delay-1">
+      <GlassCard className="relative mx-auto mb-6 w-full max-w-4xl overflow-hidden p-6 animate-page-enter-delay-1 md:p-7">
         {/* top accent */}
         <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
 
-        <h2 className="text-body font-art font-semibold text-foreground mb-5 flex items-center gap-2">
+        <h2 className="mb-5 stack-inline type-section-title text-foreground">
           <span className="icon-badge" aria-hidden><Sparkles className="w-4 h-4" /></span>
           外觀偏好
         </h2>
 
-        <div className="space-y-5">
+        <div className="stack-section">
           {/* Card glow */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="stack-inline items-start">
               <span className="icon-badge" aria-hidden>
                 <Sparkles className="w-4 h-4" />
               </span>
-              <div>
-                <span className="text-body text-foreground font-medium">卡片解鎖發光效果</span>
-                <p className="text-caption text-muted-foreground">抽卡解鎖時的光暈動畫</p>
+              <div className="stack-block">
+                <span className="type-section-title text-foreground">卡片解鎖發光效果</span>
+                <p className="type-caption text-muted-foreground">抽卡解鎖時的光暈動畫</p>
               </div>
             </div>
             <Toggle checked={cardGlowEnabled} onChange={setCardGlowEnabled} label="卡片解鎖發光效果" />
@@ -115,21 +116,21 @@ export default function SettingsPage() {
 
           {/* Haptics */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="stack-inline items-start">
               <span className="icon-badge" aria-hidden>
                 <Vibrate className="w-4 h-4" />
               </span>
-              <div>
-                <span className="text-body text-foreground font-medium">觸覺回饋</span>
-                <p className="text-caption text-muted-foreground">互動時的震動反饋</p>
+              <div className="stack-block">
+                <span className="type-section-title text-foreground">觸覺回饋</span>
+                <p className="type-caption text-muted-foreground">互動時的震動反饋</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="stack-inline">
               {hapticsEnabled && (
                 <select
                   value={hapticStrength}
                   onChange={(e) => setHapticStrength(e.target.value as 'light' | 'medium')}
-                  className="rounded-xl border border-border/60 bg-muted/40 px-3 py-1 text-caption text-foreground transition-all duration-haven ease-haven focus-visible:ring-2 focus-visible:ring-ring focus-visible:shadow-focus-glow"
+                  className="select-premium min-w-[5.75rem] text-caption"
                 >
                   <option value="light">輕</option>
                   <option value="medium">中</option>
@@ -143,13 +144,13 @@ export default function SettingsPage() {
 
           {/* Sound */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="stack-inline items-start">
               <span className="icon-badge" aria-hidden>
                 <Volume2 className="w-4 h-4" />
               </span>
-              <div>
-                <span className="text-body text-foreground font-medium">音效</span>
-                <p className="text-caption text-muted-foreground">抽卡與解鎖的音效反饋</p>
+              <div className="stack-block">
+                <span className="type-section-title text-foreground">音效</span>
+                <p className="type-caption text-muted-foreground">抽卡與解鎖的音效反饋</p>
               </div>
             </div>
             <Toggle checked={soundEnabled} onChange={setSoundEnabled} label="音效" />

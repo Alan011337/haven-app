@@ -17,9 +17,9 @@ interface GlassPanelProps {
 export function GlassPanel({ children, className = '', variant = 'glass', as: Tag = 'div' }: GlassPanelProps) {
   const base = 'rounded-card';
   const style = variant === 'solid'
-    ? `${base} border border-foreground/10 bg-card shadow-soft`
+    ? `${base} surface-card`
     : variant === 'sidebar'
-      ? `${base} bg-card/80 backdrop-blur-2xl border-r border-foreground/5 shadow-glass-inset`
-      : `${base} border border-foreground/10 glass-panel-art`;
+      ? `${base} surface-glass-panel`
+      : `${base} surface-glass-card`;
   return <Tag className={`${style} ${className}`}>{children}</Tag>;
 }

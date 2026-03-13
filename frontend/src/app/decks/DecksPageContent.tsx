@@ -7,8 +7,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { DECK_META_LIST } from '@/lib/deck-meta';
 import { useDeckCardCounts } from '@/hooks/queries';
+import Badge from '@/components/ui/Badge';
 import { GlassCard } from '@/components/haven/GlassCard';
 import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
+import { getSelectionChipStateClass, routeLinkCtaClasses, selectionChipBaseClass } from '@/features/decks/ui/routeStyleHelpers';
 import {
   DeckCollectionTile,
   DeckHeroPanel,
@@ -161,17 +163,17 @@ export default function DecksPageContent() {
 
   const heroAside = (
     <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(249,252,250,0.84),rgba(240,246,242,0.78))] p-5">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-[0.7rem] uppercase tracking-[0.3em] text-primary/72">今晚焦點</p>
-          <h3 className="font-art text-[1.5rem] leading-tight text-card-foreground">
+      <div className="stack-section">
+        <div className="stack-block">
+          <p className="type-micro uppercase text-primary/72">今晚焦點</p>
+          <h3 className="type-h3 text-card-foreground">
             {countsLoading
               ? '正在整理最適合延續的牌組…'
               : nextFocusDeck
                 ? `下一步繼續 ${nextFocusDeck.deck.title}`
                 : '你們已經把目前的牌組走得很完整。'}
           </h3>
-          <p className="text-sm leading-7 text-muted-foreground">
+          <p className="type-body-muted text-muted-foreground">
             {countsLoading
               ? '先把整體進度整理出來，再替今晚選一個最值得往下走的方向。'
               : nextFocusDeck
@@ -180,11 +182,11 @@ export default function DecksPageContent() {
                 : '如果想換個方向，也可以直接從檔案館回看過去最常聊的主題。'}
           </p>
         </div>
-        <div className="space-y-3">
+        <div className="stack-block">
           {nextFocusDeck ? (
             <Link
               href={buildDeckRoomHref(nextFocusDeck.deck.id)}
-              className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/8 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+              className={routeLinkCtaClasses.neutral}
             >
               繼續這個牌組
               <Sparkles className="h-4 w-4" aria-hidden />
@@ -192,7 +194,7 @@ export default function DecksPageContent() {
           ) : null}
           <Link
             href="/decks/history"
-            className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+            className={routeLinkCtaClasses.neutral}
           >
             打開對話檔案館
             <History className="h-4 w-4" aria-hidden />
@@ -212,7 +214,7 @@ export default function DecksPageContent() {
       actions={
         <Link
           href="/decks/history"
-          className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className={routeLinkCtaClasses.neutral}
         >
           <History className="h-4 w-4" aria-hidden />
           對話檔案館
@@ -245,18 +247,20 @@ export default function DecksPageContent() {
       />
 
       <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(247,243,236,0.76))] p-5 md:p-6">
-        <div className="flex flex-col gap-4">
+        <div className="stack-section">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div className="space-y-2">
-              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-primary/72">館藏整理</p>
-              <h2 className="font-art text-[1.55rem] text-card-foreground">按進度、狀態或名稱整理今晚的牌組。</h2>
-              <p className="text-sm leading-7 text-muted-foreground">
+            <div className="stack-block">
+              <p className="type-micro uppercase text-primary/72">館藏整理</p>
+              <h2 className="type-h3 text-card-foreground">按進度、狀態或名稱整理今晚的牌組。</h2>
+              <p className="type-body-muted text-muted-foreground">
                 保留你現在的篩選與排序；進入某個牌組再返回時，瀏覽位置不會被打散。
               </p>
             </div>
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/55 bg-white/72 px-4 py-3 text-sm text-muted-foreground shadow-soft">
-              <span className="uppercase tracking-[0.22em] text-primary/72">顯示中</span>
-              <span className="tabular-nums text-card-foreground">{deckCards.length}/{DECK_META_LIST.length}</span>
+            <div className="stack-inline rounded-full border border-white/55 bg-white/72 px-4 py-3 shadow-soft">
+              <span className="type-micro uppercase text-primary/72">顯示中</span>
+              <Badge variant="metadata" size="md" className="bg-white/75 text-card-foreground tabular-nums">
+                {deckCards.length}/{DECK_META_LIST.length}
+              </Badge>
             </div>
           </div>
 
@@ -268,11 +272,7 @@ export default function DecksPageContent() {
                   key={mode}
                   type="button"
                   onClick={() => syncQueryParams(mode, sortMode)}
-                  className={`rounded-full border px-4 py-2 text-xs font-medium transition-all duration-haven-fast ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                    active
-                      ? 'border-primary/20 bg-primary/10 text-card-foreground shadow-soft'
-                      : 'border-white/55 bg-white/66 text-muted-foreground hover:border-primary/16 hover:text-card-foreground'
-                  }`}
+                  className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
                   aria-pressed={active}
                 >
                   {mode === 'all'
@@ -287,7 +287,7 @@ export default function DecksPageContent() {
             })}
 
             <div className="ml-auto flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3 py-2 shadow-soft">
-              <label htmlFor="deck-sort" className="text-xs uppercase tracking-[0.2em] text-primary/70">
+              <label htmlFor="deck-sort" className="type-micro uppercase text-primary/70">
                 排序
               </label>
               <select
@@ -299,7 +299,7 @@ export default function DecksPageContent() {
                   if (!isSortMode(nextSort)) return;
                   syncQueryParams(filterMode, nextSort);
                 }}
-                className="select-premium min-w-[7.5rem] border-0 bg-transparent text-xs shadow-none"
+                className="select-premium min-w-[7.5rem] border-0 bg-transparent type-caption text-card-foreground shadow-none"
               >
                 <option value="recommended">推薦排序</option>
                 <option value="progress_desc">進度高到低</option>
@@ -351,6 +351,15 @@ export default function DecksPageContent() {
                       : isStarted
                         ? '正在探索'
                         : '尚未開始'
+                }
+                statusVariant={
+                  countsLoading
+                    ? 'metadata'
+                    : isCompleted
+                      ? 'status'
+                      : isStarted
+                        ? 'filter'
+                        : 'metadata'
                 }
                 progressWidth={countsLoading ? 0 : completionRate}
                 emphasis={isFeature ? 'feature' : 'standard'}

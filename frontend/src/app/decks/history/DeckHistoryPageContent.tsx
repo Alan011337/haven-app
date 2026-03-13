@@ -10,6 +10,7 @@ import { useDeckHistory } from '@/features/deck-history/useDeckHistory';
 import DeckHistorySummaryCard from '@/features/deck-history/DeckHistorySummaryCard';
 import DeckHistoryFiltersBar from '@/features/deck-history/DeckHistoryFiltersBar';
 import DeckHistoryList from '@/features/deck-history/DeckHistoryList';
+import { routeLinkCtaClasses } from '@/features/decks/ui/routeStyleHelpers';
 
 export default function DeckHistoryPageContent() {
   const {
@@ -52,7 +53,7 @@ export default function DeckHistoryPageContent() {
       actions={
         <Link
           href="/decks"
-          className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className={routeLinkCtaClasses.neutral}
         >
           <LibraryBig className="h-4 w-4" aria-hidden />
           回到收藏

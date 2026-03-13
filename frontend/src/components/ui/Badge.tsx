@@ -1,19 +1,32 @@
 'use client';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'destructive' | 'outline';
+type BadgeVariant =
+  | 'default'
+  | 'metadata'
+  | 'status'
+  | 'success'
+  | 'warning'
+  | 'destructive'
+  | 'filter'
+  | 'count'
+  | 'outline';
 type BadgeSize = 'sm' | 'md';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-primary/10 text-primary border-primary/15 backdrop-blur-sm shadow-glass-inset',
-  success: 'bg-accent/10 text-accent border-accent/15 backdrop-blur-sm shadow-glass-inset',
-  warning: 'bg-primary/20 text-primary border-primary/20 backdrop-blur-sm shadow-glass-inset',
-  destructive: 'bg-destructive/10 text-destructive border-destructive/15 backdrop-blur-sm shadow-glass-inset',
-  outline: 'border border-border/80 bg-card/80 text-card-foreground backdrop-blur-sm',
+  default: 'border-primary/15 bg-primary/10 text-primary',
+  metadata: 'border-border/70 bg-card/72 text-muted-foreground',
+  status: 'border-accent/18 bg-accent/10 text-card-foreground',
+  success: 'border-accent/22 bg-accent/14 text-card-foreground',
+  warning: 'border-primary/22 bg-primary/14 text-card-foreground',
+  destructive: 'border-destructive/20 bg-destructive/12 text-destructive',
+  filter: 'border-border/78 bg-background/78 text-card-foreground',
+  count: 'border-transparent bg-primary text-primary-foreground shadow-soft',
+  outline: 'border-border/82 bg-transparent text-card-foreground',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'text-[10px] px-2.5 py-0.5',
-  md: 'text-xs px-3 py-1',
+  sm: 'type-micro px-2.5 py-1',
+  md: 'type-caption px-3 py-1.5',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -30,7 +43,7 @@ export default function Badge({
   return (
     <span
       className={[
-        'inline-flex items-center rounded-full border font-semibold tracking-wide cursor-default transition-all duration-haven-fast ease-haven hover:brightness-[1.08]',
+        'inline-flex items-center rounded-full border cursor-default whitespace-nowrap transition-[background-color,border-color,color,box-shadow] duration-haven-fast ease-haven',
         variantClasses[variant],
         sizeClasses[size],
         className,

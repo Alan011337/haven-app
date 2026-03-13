@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import { LibraryBig, Search } from 'lucide-react';
 
+import Button from '@/components/ui/Button';
 import { DeckArchiveCard, DeckStatePanel } from '@/features/decks/ui/DeckPrimitives';
 import type { DeckHistoryEntry } from '@/services/deckService';
+
+const historyBackLinkClass =
+  'inline-flex items-center gap-[var(--space-inline)] rounded-button border border-white/55 bg-white/72 px-5 py-3 type-label text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium';
 
 interface DeckHistoryListProps {
   historyLength: number;
@@ -27,7 +31,7 @@ export default function DeckHistoryList({
 }: DeckHistoryListProps) {
   if (loading) {
     return (
-      <div className="space-y-4" aria-busy="true" aria-live="polite">
+      <div className="stack-section" aria-busy="true" aria-live="polite">
         {[1, 2, 3].map((item) => (
           <div
             key={item}
@@ -66,7 +70,7 @@ export default function DeckHistoryList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="stack-section">
       {visibleHistory.map((entry, index) => {
         const staggerClass = index < 5 ? `animate-slide-up-fade${index > 0 ? `-${index}` : ''}` : '';
         return <DeckArchiveCard key={entry.session_id} entry={entry} className={staggerClass} />;
@@ -74,24 +78,22 @@ export default function DeckHistoryList({
 
       {hasMore ? (
         <div className="flex justify-center pt-2">
-          <button
+          <Button
             type="button"
+            variant={loadingMore ? 'secondary' : 'primary'}
+            size="lg"
+            loading={loadingMore}
             onClick={() => void onLoadMore()}
             disabled={loadingMore}
-            className={`rounded-full px-5 py-3 text-sm font-medium transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-              loadingMore
-                ? 'border border-white/55 bg-white/68 text-muted-foreground'
-                : 'border border-primary/16 bg-primary/8 text-card-foreground shadow-soft hover:-translate-y-0.5 hover:shadow-lift'
-            }`}
           >
             {loadingMore ? '正在整理更多檔案…' : '載入更多對話檔案'}
-          </button>
+          </Button>
         </div>
       ) : historyLength > 0 ? (
         <div className="flex justify-center pt-2">
           <Link
             href={backToDecksHref}
-            className="rounded-full border border-white/55 bg-white/72 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className={historyBackLinkClass}
           >
             回到牌組圖書館
           </Link>

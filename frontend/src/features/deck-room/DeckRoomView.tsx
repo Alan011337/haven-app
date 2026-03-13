@@ -19,7 +19,9 @@ import {
   DeckShell,
   DeckStatePanel,
 } from '@/features/decks/ui/DeckPrimitives';
+import { routeLinkCtaClasses } from '@/features/decks/ui/routeStyleHelpers';
 import Skeleton from '@/components/ui/Skeleton';
+import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { GlassCard } from '@/components/haven/GlassCard';
@@ -59,7 +61,7 @@ export default function DeckRoomView({
         actions={
           <Link
             href={historyHref}
-            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className={routeLinkCtaClasses.neutral}
           >
             <History className="h-4 w-4" aria-hidden />
             歷史檔案館
@@ -93,7 +95,7 @@ export default function DeckRoomView({
         actions={
           <Link
             href={historyHref}
-            className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className={routeLinkCtaClasses.neutral}
           >
             <History className="h-4 w-4" aria-hidden />
             歷史檔案館
@@ -115,7 +117,7 @@ export default function DeckRoomView({
   const topActions = (
     <Link
       href={historyHref}
-      className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className={routeLinkCtaClasses.neutral}
     >
       <History className="h-4 w-4" aria-hidden />
       歷史檔案館
@@ -150,27 +152,29 @@ export default function DeckRoomView({
           badge={`深度 ${depthLevel} · ${depthStyles.label}`}
         >
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
-          <div className="space-y-4">
+          <div className="stack-block">
             {session.card.title ? (
-              <p className="text-sm font-medium italic text-muted-foreground">—— {session.card.title} ——</p>
+              <p className="type-caption font-medium italic text-muted-foreground">—— {session.card.title} ——</p>
             ) : null}
             {session.card.tags && session.card.tags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {session.card.tags.slice(0, 4).map((tag) => (
-                  <span
+                  <Badge
                     key={tag}
-                    className="rounded-full border border-white/55 bg-white/72 px-3 py-1 text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground"
+                    variant="metadata"
+                    size="sm"
+                    className="bg-white/72 text-muted-foreground shadow-none"
                   >
                     {tag}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             ) : null}
           </div>
           <GlassCard className={`rounded-[1.6rem] border-white/55 p-5 ${depthStyles.badgeClass}`}>
-            <div className="space-y-3">
-              <p className="text-[0.7rem] uppercase tracking-[0.28em] text-card-foreground/72">場景提示</p>
-              <p className="text-sm leading-7 text-card-foreground/88">
+            <div className="stack-block">
+              <p className="type-micro uppercase text-card-foreground/72">場景提示</p>
+              <p className="type-body-muted text-card-foreground/88">
                 {editorialCopy?.shortHook ?? '讓這張卡片替今晚先打開一個恰到好處的入口。'}
               </p>
             </div>
@@ -186,7 +190,7 @@ export default function DeckRoomView({
           tone="paper"
           footer={
             partnerTyping ? (
-              <div className="inline-flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <div className="stack-inline type-caption text-muted-foreground" role="status">
                 <span className="inline-flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
                   <span className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
@@ -197,7 +201,7 @@ export default function DeckRoomView({
             ) : null
           }
         >
-          <div className="space-y-4">
+          <div className="stack-section">
             <Textarea
               value={answer}
               onChange={(e) => handleAnswerChange(e.target.value)}
@@ -207,7 +211,7 @@ export default function DeckRoomView({
               aria-label="分享給伴侶的回答"
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
+              <div className="type-caption text-muted-foreground">
                 這一輪沒有時間壓力，先把最真實的版本留下來。
               </div>
               <Button
@@ -253,21 +257,21 @@ export default function DeckRoomView({
                 <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/16 bg-primary/10 shadow-soft" aria-hidden>
                   <LockKeyhole className="h-4 w-4 text-primary" />
                 </span>
-                <div className="space-y-2">
-                  <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">已封存</p>
-                  <p className="text-sm leading-7 text-card-foreground">
+                <div className="stack-block">
+                  <p className="type-micro uppercase text-primary/72">已封存</p>
+                  <p className="type-body text-card-foreground">
                     你的版本已經被穩穩收好。現在這張卡暫時不需要再修改，只需要等待它完成雙向交換。
                   </p>
                 </div>
               </div>
             </GlassCard>
             <GlassCard className="rounded-[1.6rem] border-white/55 bg-white/74 p-5">
-              <div className="space-y-3">
-                <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">伴侶狀態</p>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/80 px-3 py-2 text-sm text-card-foreground shadow-soft">
+              <div className="stack-block">
+                <p className="type-micro uppercase text-primary/72">伴侶狀態</p>
+                <Badge variant="status" size="md" className="w-fit bg-white/80 px-3 py-2 text-card-foreground shadow-soft">
                   <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
                   {partnerDisplayName} 還在這張卡的另一端
-                </div>
+                </Badge>
               </div>
             </GlassCard>
           </div>
@@ -293,18 +297,18 @@ export default function DeckRoomView({
         >
           <div className="grid gap-4 md:grid-cols-2">
             <section className="rounded-[1.6rem] border border-primary/12 bg-primary/6 p-5">
-              <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">
+              <div className="stack-inline type-micro uppercase text-primary/72">
                 <User className="h-4 w-4" aria-hidden />
                 我的版本
               </div>
-              <p className="mt-4 text-sm leading-7 text-card-foreground">{resultData.my_answer}</p>
+              <p className="mt-4 type-body text-card-foreground">{resultData.my_answer}</p>
             </section>
             <section className="rounded-[1.6rem] border border-white/55 bg-white/76 p-5">
-              <div className="flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">
+              <div className="stack-inline type-micro uppercase text-muted-foreground">
                 <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
                 {partnerDisplayName}
               </div>
-              <p className="mt-4 text-sm leading-7 text-card-foreground">{resultData.partner_answer}</p>
+              <p className="mt-4 type-body text-card-foreground">{resultData.partner_answer}</p>
             </section>
           </div>
         </DeckRoomStage>

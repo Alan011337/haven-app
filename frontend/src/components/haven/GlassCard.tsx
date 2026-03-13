@@ -13,10 +13,11 @@ interface GlassCardProps extends React.ComponentPropsWithoutRef<'div'> {
 }
 
 export function GlassCard({ children, className = '', variant = 'glass', ...rest }: GlassCardProps) {
-  const base = 'relative overflow-hidden rounded-card border border-foreground/10 transition-shadow duration-haven ease-haven card-accent-bar';
+  const base =
+    'relative overflow-hidden rounded-card transition-[box-shadow,border-color,transform,background-color] duration-haven ease-haven card-accent-bar';
   const style = variant === 'solid'
-    ? `${base} bg-card shadow-soft hover:shadow-lift`
-    : `${base} glass-panel-art shadow-soft hover:shadow-lift`;
+    ? `${base} surface-card surface-card-interactive`
+    : `${base} surface-glass-card surface-card-interactive`;
   return (
     <div className={`${style} ${className}`} {...rest}>
       {children}

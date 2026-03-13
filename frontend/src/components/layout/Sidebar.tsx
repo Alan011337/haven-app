@@ -19,6 +19,28 @@ interface SidebarProps {
   variant?: 'default' | 'home';
 }
 
+const homeRailButtonBase =
+  'group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border transition-all duration-haven ease-haven';
+const homeRailButtonActive = 'border-primary/15 bg-white/82 text-card-foreground shadow-soft';
+const homeRailButtonIdle =
+  'border-transparent bg-white/30 text-muted-foreground hover:border-primary/10 hover:bg-white/68 hover:text-card-foreground';
+const homeRailLabelBase =
+  'home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 type-caption font-medium text-card-foreground transition-all duration-haven ease-haven';
+const homeRailLabelVisible = 'translate-x-0 opacity-100';
+const homeRailLabelHidden = 'translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100';
+const navLinkBase =
+  'relative flex items-center justify-between rounded-[1.3rem] border transition-all duration-haven ease-haven';
+const navLinkActive = 'border-primary/15 bg-white/78 text-card-foreground font-semibold shadow-soft';
+const navLinkIdle = 'border-transparent text-muted-foreground hover:border-primary/10 hover:bg-white/52 hover:text-card-foreground';
+const homeRailCountBadge =
+  'absolute -right-1 -top-1 inline-flex min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-center type-micro tracking-[0.02em] text-destructive-foreground shadow-soft';
+const navCountBadge =
+  'inline-flex min-w-[22px] items-center justify-center rounded-full bg-destructive px-2 py-0.5 type-micro tracking-[0.02em] text-destructive-foreground';
+const navInfoBadge =
+  'inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 type-micro tracking-[0.02em] text-foreground/84';
+const topBarActionButton =
+  'p-2 rounded-button text-muted-foreground transition-colors duration-haven ease-haven hover:bg-primary/5 hover:text-primary focus-ring-premium';
+
 export default function Sidebar({ variant = 'default' }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
@@ -104,24 +126,16 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       <Link
         key={item.href}
         href={item.href}
-        className={`
-          group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border transition-all duration-haven ease-haven
-          ${isActive ? 'border-primary/15 bg-white/82 text-card-foreground shadow-soft' : 'border-transparent bg-white/30 text-muted-foreground hover:border-primary/10 hover:bg-white/68 hover:text-card-foreground'}
-        `}
+        className={`${homeRailButtonBase} ${isActive ? homeRailButtonActive : homeRailButtonIdle}`}
         aria-label={item.name}
       >
         <item.icon className={`h-[18px] w-[18px] ${isActive ? 'text-primary' : ''}`} />
         {notificationBadgeCount > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-[20px] rounded-full bg-destructive px-1.5 py-0.5 text-center text-[10px] font-semibold text-destructive-foreground shadow-soft">
+          <span className={homeRailCountBadge}>
             {notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}
           </span>
         ) : null}
-        <span
-          className={`
-            home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven
-            ${isActive ? 'opacity-100 translate-x-0' : 'translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100'}
-          `}
-        >
+        <span className={`${homeRailLabelBase} ${isActive ? homeRailLabelVisible : homeRailLabelHidden}`}>
           {item.name}
         </span>
       </Link>
@@ -140,9 +154,9 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
         onClick={onNavClick}
         style={staggerStyle}
         className={`
-          relative flex items-center justify-between rounded-[1.3rem] transition-all duration-haven ease-haven group border
+          ${navLinkBase} group
           ${isHomeVariant ? 'px-3.5 py-3' : 'px-4 py-3.5'}
-          ${isActive ? 'border-primary/15 bg-white/78 text-card-foreground font-semibold shadow-soft' : 'border-transparent text-muted-foreground hover:border-primary/10 hover:bg-white/52 hover:text-card-foreground'}
+          ${isActive ? navLinkActive : navLinkIdle}
           ${staggerStyle ? 'animate-slide-up-fade' : ''}
         `}
       >
@@ -155,16 +169,8 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
           </span>
           {item.name}
         </div>
-        {notificationBadgeCount > 0 && (
-          <span className="text-[10px] bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full whitespace-nowrap min-w-[22px] text-center font-semibold">
-            {notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}
-          </span>
-        )}
-        {item.badge && notificationBadgeCount <= 0 && (
-          <span className="text-[10px] bg-muted text-foreground px-2 py-0.5 rounded-full whitespace-nowrap font-medium">
-            {item.badge}
-          </span>
-        )}
+        {notificationBadgeCount > 0 && <span className={navCountBadge}>{notificationBadgeCount > 99 ? '99+' : notificationBadgeCount}</span>}
+        {item.badge && notificationBadgeCount <= 0 && <span className={navInfoBadge}>{item.badge}</span>}
       </Link>
     );
   };
@@ -247,7 +253,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
               <Heart className="h-4.5 w-4.5 fill-primary-foreground text-primary-foreground" />
             </div>
           </div>
-          <div className="text-[0.6rem] font-semibold uppercase tracking-[0.32em] text-primary/78">
+          <div className="type-micro uppercase text-primary/78">
             Haven
           </div>
         </div>
@@ -266,11 +272,11 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
             void handleUpgrade();
           }}
           disabled={upgradeLoading}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/30 text-muted-foreground transition-all duration-haven ease-haven hover:border-primary/10 hover:bg-white/68 hover:text-card-foreground"
+          className={`${homeRailButtonBase} ${homeRailButtonIdle}`}
           aria-label={upgradeNavItem.name}
         >
           <upgradeNavItem.icon className="h-[18px] w-[18px]" />
-          <span className="home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+          <span className={`${homeRailLabelBase} ${homeRailLabelHidden}`}>
             {upgradeLoading ? '載入中…' : upgradeNavItem.name}
           </span>
         </button>
@@ -281,11 +287,11 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       <div className="px-4 pb-5">
         <button
           onClick={handleLogout}
-          className="group relative flex h-12 w-12 items-center justify-center rounded-[1.35rem] border border-transparent bg-white/28 text-muted-foreground transition-all duration-haven ease-haven hover:border-destructive/10 hover:bg-destructive/8 hover:text-destructive"
+          className={`${homeRailButtonBase} border-transparent bg-white/28 text-muted-foreground hover:border-destructive/10 hover:bg-destructive/8 hover:text-destructive`}
           aria-label="登出"
         >
           <LogOut className="h-[18px] w-[18px]" />
-          <span className="home-rail-label pointer-events-none absolute left-[calc(100%+0.85rem)] top-1/2 -translate-y-1/2 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+          <span className={`${homeRailLabelBase} ${homeRailLabelHidden}`}>
             登出
           </span>
         </button>
@@ -329,7 +335,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
-          className="p-2 rounded-button hover:bg-primary/5 text-muted-foreground hover:text-primary transition-colors duration-haven ease-haven"
+          className={topBarActionButton}
           aria-label="開啟選單"
         >
           <Menu className="w-5 h-5" />
@@ -350,7 +356,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="p-2 rounded-button hover:bg-primary/5 text-muted-foreground hover:text-primary transition-colors duration-haven ease-haven"
+                className={topBarActionButton}
                 aria-label="關閉選單"
               >
                 <X className="w-5 h-5" />

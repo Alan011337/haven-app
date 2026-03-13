@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
+import Button from "@/components/ui/Button";
 import {
   fetchOnboardingConsent,
   upsertOnboardingConsent,
@@ -114,11 +115,11 @@ export default function OnboardingConsentCard({
   return (
     <GlassCard id="onboarding-consent-card" className="max-w-4xl mx-auto w-full mb-6 p-6 relative overflow-hidden">
       <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
-      <h2 className="text-title font-art font-semibold text-foreground mb-2 flex items-center gap-2">
+      <h2 className="mb-2 stack-inline type-h3 text-foreground">
         <span className="icon-badge" aria-hidden><Shield className="w-4 h-4" /></span>
         {mode === "onboarding" ? "隱私、通知與 AI 偏好" : "安全感與通知"}
       </h2>
-      <p className="text-caption text-muted-foreground mb-4">
+      <p className="mb-4 type-body-muted text-muted-foreground">
         {mode === "onboarding"
           ? "註冊時已完成最小法遵同意；這一步把隱私範圍、通知節奏與 AI 介入方式講清楚，讓你在正式開始前知道 Haven 會怎麼運作。"
           : "隱私範圍、通知頻率與 AI 介入強度（溫和引導或直接點出）。"}
@@ -131,15 +132,15 @@ export default function OnboardingConsentCard({
             return (
               <div
                 key={item.title}
-                className="rounded-[1.3rem] border border-white/55 bg-white/70 p-4 shadow-soft"
+                className="surface-card rounded-[1.3rem] bg-white/70 p-4"
               >
-                <div className="flex items-center gap-2">
+                <div className="stack-inline">
                   <span className="icon-badge" aria-hidden>
                     <Icon className="h-4 w-4" />
                   </span>
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="type-section-title text-foreground">{item.title}</p>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                <p className="mt-3 type-caption text-muted-foreground">
                   {item.description}
                 </p>
               </div>
@@ -150,11 +151,11 @@ export default function OnboardingConsentCard({
 
       <div className="space-y-4">
         {mode === "onboarding" ? (
-          <div className="rounded-[1.3rem] border border-primary/12 bg-primary/6 p-4">
-            <p className="text-[0.72rem] uppercase tracking-[0.26em] text-primary/70">
+          <div className="rounded-[1.3rem] border border-primary/12 bg-primary/6 p-4 stack-block">
+            <p className="type-micro uppercase text-primary/70">
               你現在確認的是什麼
             </p>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-foreground">
+            <ul className="mt-3 space-y-2 type-caption text-foreground">
               <li>1. Haven 可以在目前政策範圍內處理你的帳號、互動與安全資料。</li>
               <li>2. 你希望通知偏向安靜還是積極提醒。</li>
               <li>3. AI 在首頁與互動流程中要採溫和引導，還是更直接的提示方式。</li>
@@ -162,14 +163,14 @@ export default function OnboardingConsentCard({
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
               <Link
                 href="/legal/privacy"
-                className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-2 text-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+                className="inline-flex items-center gap-[var(--space-inline)] rounded-button border border-white/60 bg-white/80 px-3 py-2 type-label text-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
               >
                 閱讀隱私權政策
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               </Link>
               <Link
                 href="/legal/terms"
-                className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-2 text-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+                className="inline-flex items-center gap-[var(--space-inline)] rounded-button border border-white/60 bg-white/80 px-3 py-2 type-label text-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
               >
                 閱讀服務條款
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -186,15 +187,15 @@ export default function OnboardingConsentCard({
             className="rounded border-border h-5 w-5 text-primary focus-visible:ring-2 focus-visible:ring-ring"
             aria-describedby="privacy-desc"
           />
-          <span id="privacy-desc" className="text-body text-foreground">
+          <span id="privacy-desc" className="type-body text-foreground">
             {mode === "onboarding"
               ? "我已閱讀上方摘要，並同意 Haven 依目前政策範圍處理我的資料與互動紀錄"
               : "我同意目前的隱私範圍與資料使用方式"}
           </span>
         </label>
         <div>
-          <label htmlFor="notification-frequency" className="block text-body text-foreground font-medium mb-1">
-            <span className="inline-flex items-center gap-2">
+          <label htmlFor="notification-frequency" className="mb-1 block type-section-title text-foreground">
+            <span className="inline-flex items-center gap-[var(--space-inline)]">
               <BellRing className="h-4 w-4 text-primary/80" aria-hidden />
               通知頻率
             </span>
@@ -211,14 +212,14 @@ export default function OnboardingConsentCard({
             <option value="off">關閉 Email 備援</option>
           </select>
           {mode === "onboarding" ? (
-            <p className="mt-2 text-caption text-muted-foreground">
+            <p className="mt-2 type-caption text-muted-foreground">
               「較少」適合想把提醒降到最低的人；「一般」適合大多數使用者；「較多」會更主動提醒你跟上儀式與互動節奏。
             </p>
           ) : null}
         </div>
         <div>
-          <label htmlFor="ai-intensity" className="block text-body text-foreground font-medium mb-1">
-            <span className="inline-flex items-center gap-2">
+          <label htmlFor="ai-intensity" className="mb-1 block type-section-title text-foreground">
+            <span className="inline-flex items-center gap-[var(--space-inline)]">
               <Bot className="h-4 w-4 text-primary/80" aria-hidden />
               AI 介入強度
             </span>
@@ -233,36 +234,24 @@ export default function OnboardingConsentCard({
             <option value="direct">直接點出</option>
           </select>
           {mode === "onboarding" ? (
-            <p className="mt-2 text-caption text-muted-foreground">
+            <p className="mt-2 type-caption text-muted-foreground">
               溫和引導會先給你線索與提問；直接點出會更明白地指出模式、盲點與下一步建議。
             </p>
           ) : null}
         </div>
         {consent?.updated_at && (
-          <p className="text-caption text-muted-foreground tabular-nums">
+          <p className="type-caption tabular-nums text-muted-foreground">
             上次更新：{new Date(consent.updated_at).toLocaleString("zh-TW")}
           </p>
         )}
         {mode === "onboarding" ? (
-          <p className="text-caption leading-6 text-muted-foreground">
+          <p className="type-caption leading-6 text-muted-foreground">
             完整法律條文與資料權利仍以「服務條款」和「隱私權政策」為準；這一頁的角色是先把你真正會碰到的資料使用方式與可調設定講清楚。
           </p>
         ) : null}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-button bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 px-5 py-2.5 font-medium shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
-        >
-          {saving ? (
-            <span className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-              儲存中...
-            </span>
-          ) : (
-            "儲存設定"
-          )}
-        </button>
+        <Button type="button" onClick={handleSave} disabled={saving} loading={saving} className="w-fit">
+          {saving ? "儲存中..." : "儲存設定"}
+        </Button>
       </div>
     </GlassCard>
   );

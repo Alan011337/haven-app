@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { ArrowLeft, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react';
 
 import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 import { GlassCard } from '@/components/haven/GlassCard';
 import { CardBackVariant } from '@/components/haven/CardBackVariant';
+import { routeLinkCtaClasses } from './routeStyleHelpers';
 import { getDeckDisplayName, getDeckMeta, type DeckMeta } from '@/lib/deck-meta';
 import { getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
 import type { DeckHistoryEntry } from '@/services/deckService';
@@ -37,13 +39,13 @@ export function DeckShell({
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,181,136,0.18),transparent_22%),radial-gradient(circle_at_top_right,rgba(210,223,214,0.25),transparent_26%),linear-gradient(180deg,#faf7f2_0%,#f5f2ec_52%,#f2efe8_100%)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_62%)]" aria-hidden />
-      <div className={`relative mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8 ${containerClassName}`}>
-        <div className="flex items-center justify-between gap-4">
+      <div className={`relative mx-auto stack-section px-4 py-6 sm:px-6 lg:px-8 ${containerClassName}`}>
+        <div className="stack-inline justify-between">
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className={routeLinkCtaClasses.neutral}
             >
               <ArrowLeft className="h-4 w-4" aria-hidden />
               {backLabel}
@@ -51,7 +53,7 @@ export function DeckShell({
           ) : (
             <Link
               href={backHref ?? '/'}
-              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/74 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className={routeLinkCtaClasses.neutral}
             >
               <ArrowLeft className="h-4 w-4" aria-hidden />
               {backLabel}
@@ -62,12 +64,12 @@ export function DeckShell({
 
         <GlassCard className="overflow-hidden rounded-[2rem] border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,244,238,0.72))] p-6 shadow-[0_22px_80px_rgba(63,44,26,0.08)] md:p-8">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px] xl:items-end">
-            <div className="space-y-4">
-              <p className="text-[0.74rem] uppercase tracking-[0.34em] text-primary/72">{eyebrow}</p>
-              <h1 className="max-w-4xl font-art text-[2rem] leading-tight text-card-foreground md:text-[3.2rem]">
+            <div className="stack-block">
+              <p className="type-micro uppercase text-primary/72">{eyebrow}</p>
+              <h1 className="max-w-4xl type-h1 text-card-foreground">
                 {title}
               </h1>
-              <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+              <p className="max-w-3xl type-body-muted text-muted-foreground">
                 {subtitle}
               </p>
             </div>
@@ -105,13 +107,13 @@ export function DeckHeroPanel({
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_360px] xl:items-stretch">
       <GlassCard className="overflow-hidden rounded-[2rem] border-white/52 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,243,236,0.75))] p-6 md:p-7">
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <p className="text-[0.72rem] uppercase tracking-[0.32em] text-primary/70">{eyebrow}</p>
-            <h2 className="max-w-3xl font-art text-[1.8rem] leading-tight text-card-foreground md:text-[2.5rem]">
+        <div className="stack-section">
+          <div className="stack-block">
+            <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
+            <h2 className="max-w-3xl type-h2 text-card-foreground">
               {title}
             </h2>
-            <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+            <p className="max-w-3xl type-body-muted text-muted-foreground">
               {description}
             </p>
           </div>
@@ -121,9 +123,9 @@ export function DeckHeroPanel({
                 key={metric.label}
                 className={`rounded-[1.4rem] border border-white/55 bg-white/68 p-4 shadow-soft animate-slide-up-fade${index > 0 ? `-${Math.min(index, 5)}` : ''}`}
               >
-                <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/68">{metric.label}</p>
+                <p className="type-micro uppercase text-primary/68">{metric.label}</p>
                 <p className="mt-3 text-2xl font-semibold text-card-foreground tabular-nums">{metric.value}</p>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">{metric.note}</p>
+                <p className="mt-2 type-caption text-muted-foreground">{metric.note}</p>
               </div>
             ))}
           </div>
@@ -144,6 +146,7 @@ type DeckCollectionTileProps = {
   progressLabel: string;
   countLabel: string;
   statusLabel: string;
+  statusVariant?: 'metadata' | 'status' | 'filter';
   progressWidth: number;
   emphasis?: 'feature' | 'standard';
   loading?: boolean;
@@ -158,6 +161,7 @@ export function DeckCollectionTile({
   progressLabel,
   countLabel,
   statusLabel,
+  statusVariant = 'metadata',
   progressWidth,
   emphasis = 'standard',
   loading = false,
@@ -174,13 +178,13 @@ export function DeckCollectionTile({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.5),transparent_40%)]" aria-hidden />
         <div className="relative flex h-full flex-col justify-between">
           <div className="flex items-start justify-between gap-4">
-            <div className="space-y-3">
-              <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/70">{eyebrow}</p>
-              <div className="space-y-2">
-                <h3 className="font-art text-[1.45rem] leading-tight text-card-foreground md:text-[1.7rem]">
+            <div className="stack-block">
+              <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
+              <div className="stack-block">
+                <h3 className="type-h3 text-card-foreground">
                   {deck.title}
                 </h3>
-                <p className="max-w-[32rem] text-sm leading-6 text-muted-foreground">{spotlight}</p>
+                <p className="max-w-[32rem] type-caption text-muted-foreground">{spotlight}</p>
               </div>
             </div>
             <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-[1rem] shadow-soft ring-1 ring-black/5">
@@ -190,8 +194,8 @@ export function DeckCollectionTile({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <p className="text-sm leading-6 text-card-foreground/88">{shortHook}</p>
+          <div className="stack-block">
+            <p className="type-body-muted text-card-foreground/88">{shortHook}</p>
             {loading ? (
               <div className="space-y-3">
                 <div className="h-2 w-full rounded-full bg-muted/70 animate-pulse" aria-hidden />
@@ -199,21 +203,23 @@ export function DeckCollectionTile({
               </div>
             ) : (
               <>
-                <div className="space-y-2">
+                <div className="stack-block">
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70">
                     <div
                       className={`h-full rounded-full bg-gradient-to-r ${deck.color} transition-all duration-haven ease-haven`}
                       style={{ width: `${Math.max(0, Math.min(100, progressWidth))}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 type-caption text-muted-foreground">
                     <span className="tabular-nums">{progressLabel}</span>
                     <span>{countLabel}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-full border border-white/55 bg-white/66 px-4 py-3">
-                  <span className="text-xs font-medium uppercase tracking-[0.22em] text-primary/72">{statusLabel}</span>
-                  <span className="inline-flex items-center gap-1 text-sm font-medium text-card-foreground">
+                <div className="stack-inline justify-between rounded-full border border-white/55 bg-white/66 px-4 py-3">
+                  <Badge variant={statusVariant} size="sm" className="bg-white/78 text-card-foreground/82 shadow-none">
+                    {statusLabel}
+                  </Badge>
+                  <span className="stack-inline type-label text-card-foreground">
                     打開牌組
                     <ChevronRight className="h-4 w-4 transition-transform duration-haven ease-haven group-hover:translate-x-0.5" aria-hidden />
                   </span>
@@ -264,10 +270,10 @@ export function DeckStatePanel({
           <span className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/55 bg-white/74 shadow-soft" aria-hidden>
             <Icon className="h-4 w-4 text-primary" />
           </span>
-          <div className="space-y-2">
-            <p className="text-[0.7rem] uppercase tracking-[0.3em] text-primary/70">{eyebrow}</p>
-            <h3 className="font-art text-[1.5rem] leading-tight text-card-foreground">{title}</h3>
-            <p className="max-w-2xl text-sm leading-7 text-muted-foreground">{description}</p>
+          <div className="stack-block">
+            <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
           </div>
         </div>
         {children}
@@ -275,7 +281,7 @@ export function DeckStatePanel({
           ? actionHref ? (
               <Link
                 href={actionHref}
-                className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/8 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+                className={routeLinkCtaClasses.primary}
               >
                 {actionLabel}
                 <ChevronRight className="h-4 w-4" aria-hidden />
@@ -319,20 +325,20 @@ export function DeckRoomStage({
 
   return (
     <GlassCard className={`overflow-hidden rounded-[2rem] border-white/55 p-6 md:p-8 ${toneClass}`}>
-      <div className="space-y-6">
-        <div className="space-y-3">
+      <div className="stack-section">
+        <div className="stack-block">
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-[0.72rem] uppercase tracking-[0.3em] text-primary/70">{eyebrow}</p>
+            <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
             {badge ? (
-              <span className="rounded-full border border-white/55 bg-white/74 px-3 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-card-foreground shadow-soft">
+              <Badge variant="metadata" size="sm" className="bg-white/74 text-card-foreground shadow-soft">
                 {badge}
-              </span>
+              </Badge>
             ) : null}
           </div>
-          <h2 className="font-art text-[1.9rem] leading-tight text-card-foreground md:text-[2.6rem]">
+          <h2 className="type-h2 text-card-foreground">
             {title}
           </h2>
-          <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+          <p className="max-w-3xl type-body-muted text-muted-foreground">
             {description}
           </p>
         </div>
@@ -359,24 +365,24 @@ export function DeckArchiveCard({ entry, className = '' }: DeckArchiveCardProps)
       className={`relative overflow-hidden rounded-[2rem] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,244,238,0.78))] shadow-soft ${className}`}
     >
       <div className={`absolute inset-x-0 top-0 h-1 ${depth.topAccentClass}`} aria-hidden />
-      <div className="space-y-6 p-6 md:p-7">
+      <div className="stack-section p-6 md:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
+          <div className="stack-block">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/55 bg-white/72 px-3 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-primary/72">
+              <Badge variant="metadata" size="sm" className="bg-white/72 text-primary/72">
                 {deckTitle}
-              </span>
-              <span className={`rounded-full px-3 py-1 text-[0.66rem] uppercase tracking-[0.24em] ${depth.badgeClass}`}>
+              </Badge>
+              <Badge variant="status" size="sm" className={depth.badgeClass}>
                 深度 {depthLevel} · {depth.label}
-              </span>
+              </Badge>
             </div>
-            <h3 className="max-w-3xl font-art text-[1.35rem] leading-tight text-card-foreground md:text-[1.6rem]">
+            <h3 className="max-w-3xl type-h3 text-card-foreground">
               {entry.card_question}
             </h3>
           </div>
-          <div className="space-y-2 text-right">
-            <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">解鎖日期</div>
-            <div className="text-sm font-medium tabular-nums text-card-foreground">
+          <div className="stack-block text-right">
+            <div className="type-micro uppercase text-muted-foreground">解鎖日期</div>
+            <div className="type-caption tabular-nums text-card-foreground">
               {new Date(entry.revealed_at).toLocaleDateString('zh-TW')}
             </div>
             {deckMeta ? (
@@ -389,12 +395,12 @@ export function DeckArchiveCard({ entry, className = '' }: DeckArchiveCardProps)
 
         <div className="grid gap-4 md:grid-cols-2">
           <section className="rounded-[1.5rem] border border-primary/12 bg-primary/6 p-5">
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/72">我的回應</p>
-            <p className="mt-3 text-sm leading-7 text-card-foreground">{entry.my_answer}</p>
+            <p className="type-micro uppercase text-primary/72">我的回應</p>
+            <p className="mt-3 type-body text-card-foreground">{entry.my_answer}</p>
           </section>
           <section className="rounded-[1.5rem] border border-white/55 bg-white/74 p-5">
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-muted-foreground">伴侶回應</p>
-            <p className="mt-3 text-sm leading-7 text-card-foreground">{entry.partner_answer}</p>
+            <p className="type-micro uppercase text-muted-foreground">伴侶回應</p>
+            <p className="mt-3 type-body text-card-foreground">{entry.partner_answer}</p>
           </section>
         </div>
       </div>
