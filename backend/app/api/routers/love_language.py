@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, verify_active_partner_id
@@ -72,6 +72,8 @@ def get_weekly_task(
     current_user: CurrentUser,
 ) -> WeeklyTaskPublic | None:
     partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        return None
     uid1, uid2 = _canonical(current_user.id, partner_id)
     week = _week_number()
     task_idx = week % len(LOVE_LANGUAGE_TASKS)
@@ -113,6 +115,11 @@ def complete_weekly_task(
 ) -> WeeklyTaskPublic:
     from app.core.datetime_utils import utcnow
     partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要先完成雙向綁定",
+        )
     uid1, uid2 = _canonical(current_user.id, partner_id)
     week = _week_number()
     task_idx = week % len(LOVE_LANGUAGE_TASKS)

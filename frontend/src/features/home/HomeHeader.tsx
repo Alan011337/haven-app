@@ -101,6 +101,7 @@ export default function HomeHeader({
   onAckFirstDelight,
 }: HomeHeaderProps) {
   void getTabStyle;
+  void syncNudges;
   const tabRefs = useRef<Record<HomeTabId, HTMLButtonElement | null>>({
     mine: null,
     partner: null,

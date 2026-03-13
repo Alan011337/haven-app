@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, Loader2, Check } from "lucide-react";
+import { Sparkles, Loader2, Check, RefreshCw } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
 import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
 import {
@@ -16,14 +16,19 @@ import { cn } from "@/lib/utils";
 export default function LoveLanguageWeeklyCard({ className }: { className?: string }) {
   const [task, setTask] = useState<WeeklyTaskPublic | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [completing, setCompleting] = useState(false);
   const { showToast } = useToast();
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setLoadFailed(false);
     try {
       const t = await fetchWeeklyTask({ timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS });
       setTask(t ?? null);
     } catch (e) {
+      setTask(null);
+      setLoadFailed(true);
       logClientError("weekly-task-fetch-failed", e);
     } finally {
       setLoading(false);
@@ -57,6 +62,31 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
     );
   }
   if (!task) {
+    if (loadFailed) {
+      return (
+        <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
+          <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
+            <span className="icon-badge">
+              <Sparkles className="w-5 h-5 text-primary" aria-hidden />
+            </span>
+            本週愛之語小任務
+          </h3>
+          <p className="text-sm text-muted-foreground/80 leading-relaxed">
+            任務資料還在同步，剛剛這次沒有成功載入。這不代表本週沒有任務。
+          </p>
+          <button
+            type="button"
+            onClick={load}
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-white/82 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            重新同步任務
+          </button>
+        </GlassCard>
+      );
+    }
+
     return (
       <GlassCard className={cn("p-6 md:p-8 relative overflow-hidden", className)}>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
@@ -67,7 +97,7 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
           本週愛之語小任務
         </h3>
         <p className="text-sm text-muted-foreground/70 leading-relaxed">
-          本週暫無新任務，好好享受彼此的陪伴。
+          完成雙向綁定後，這裡會出現每週愛之語小任務。
         </p>
       </GlassCard>
     );
