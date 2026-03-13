@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Heart, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Heart, Loader2, RefreshCw } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
-import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
-import {
-  fetchAppreciations,
-  createAppreciation,
-  type AppreciationPublic,
-} from "@/services/api-client";
+import { useHomeAppreciationHistory } from "@/hooks/queries";
+import { HOME_APPRECIATION_HISTORY_QUERY_KEY_PREFIX } from "@/lib/home-appreciation-history";
+import { createAppreciation } from "@/services/api-client";
 import { logClientError } from "@/lib/safe-error-log";
 import { trackAppreciationSent } from "@/lib/relationship-events";
 import { capturePosthogEvent } from "@/lib/posthog";
@@ -17,54 +15,25 @@ import { cn } from "@/lib/utils";
 
 const APPRECIATION_EMOJIS = ['💛', '🌸', '✨', '🤝', '☕', '🌿', '💕', '🫶'];
 
-function getWeekRange(): { from: string; to: string } {
-  const now = new Date();
-  const day = now.getDay();
-  const mon = new Date(now);
-  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  return {
-    from: mon.toISOString().slice(0, 10),
-    to: sun.toISOString().slice(0, 10),
-  };
-}
-
 export default function AppreciationCard({ className }: { className?: string }) {
-  const [list, setList] = useState<AppreciationPublic[]>([]);
-  const [weekList, setWeekList] = useState<AppreciationPublic[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, refetch } = useHomeAppreciationHistory();
   const [submitting, setSubmitting] = useState(false);
   const [loopCompletedToday, setLoopCompletedToday] = useState(false);
   const [text, setText] = useState("");
   const { showToast } = useToast();
 
-  const load = useCallback(async () => {
-    try {
-      const { from, to } = getWeekRange();
-      const [data, weekData] = await Promise.all([
-        fetchAppreciations({ limit: 20 }, { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS }),
-        fetchAppreciations(
-          { from_date: from, to_date: to, limit: 50 },
-          { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
-        ),
-      ]);
-      setList(data);
-      setWeekList(weekData);
-      capturePosthogEvent("appreciation_viewed", {
-        list_count: data.length,
-        week_list_count: weekData.length,
-      });
-    } catch (e) {
-      logClientError("appreciation-fetch-failed", e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const recentList = data?.recent ?? [];
+  const weekList = data?.thisWeek ?? [];
+  const historyList = weekList.length > 0 ? weekList : recentList.slice(0, 5);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!data) return;
+    capturePosthogEvent("appreciation_viewed", {
+      list_count: data.recent.length,
+      week_list_count: data.thisWeek.length,
+    });
+  }, [data]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +45,8 @@ export default function AppreciationCard({ className }: { className?: string }) 
       const completed = await trackAppreciationSent({ content_length: trimmed.length });
       setLoopCompletedToday(completed);
       setText("");
-      await load();
+      await queryClient.invalidateQueries({ queryKey: HOME_APPRECIATION_HISTORY_QUERY_KEY_PREFIX });
+      await refetch();
       showToast("感恩便利貼已送出", "success");
       if (completed) {
         showToast("今日連結循環完成，做得很好", "success");
@@ -89,24 +59,17 @@ export default function AppreciationCard({ className }: { className?: string }) 
     }
   };
 
-  if (loading) {
-    return (
-      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[100px]", className)}>
-        <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
-      </GlassCard>
-    );
-  }
-
   return (
     <GlassCard className={cn("p-6 md:p-8", className)}>
-      <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
+      <h3 className="mb-2 flex items-center gap-2 font-art text-lg font-semibold text-card-foreground">
         <span className="icon-badge">
-          <Heart className="w-5 h-5 text-primary" aria-hidden />
+          <Heart className="h-5 w-5 text-primary" aria-hidden />
         </span>
         感恩便利貼
       </h3>
-      <p className="text-caption text-muted-foreground mb-4">寫一句具體感謝給對方</p>
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+      <p className="mb-4 text-caption text-muted-foreground">寫一句具體感謝給對方</p>
+
+      <form onSubmit={handleSubmit} className="mb-4 flex gap-2">
         <label htmlFor="appreciation-text" className="sr-only">
           感恩內容
         </label>
@@ -117,42 +80,78 @@ export default function AppreciationCard({ className }: { className?: string }) 
           onChange={(e) => setText(e.target.value)}
           placeholder="例如：謝謝你今天幫我買咖啡"
           maxLength={500}
-          className="flex-1 rounded-input border border-input bg-muted/30 px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:shadow-focus-glow focus-visible:border-transparent focus-visible:bg-card transition-all duration-haven ease-haven"
+          className="flex-1 rounded-input border border-input bg-muted/30 px-4 py-2.5 text-foreground placeholder:text-muted-foreground/50 placeholder:font-light transition-all duration-haven ease-haven focus-visible:border-transparent focus-visible:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:shadow-focus-glow"
         />
         <button
           type="submit"
           disabled={submitting || !text.trim()}
-          className="rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground px-5 py-2 font-medium border-t border-t-white/30 shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
+          className="rounded-full border-t border-t-white/30 bg-gradient-to-b from-primary to-primary/90 px-5 py-2 text-primary-foreground shadow-satin-button transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         >
           {submitting ? "送出中..." : "送出"}
         </button>
       </form>
-      {(weekList.length > 0 || list.length > 0) && (
-        <>
-          <div className="section-divider" aria-hidden />
-          <div className="space-y-2 mt-3">
-            <p className="text-caption font-art font-medium text-muted-foreground tracking-wide">
-              {weekList.length > 0 ? "本週感恩回顧" : "近期回顧"}
-            </p>
-            <ul className="space-y-1.5">
-              {(weekList.length > 0 ? weekList : list.slice(0, 5)).map((a, idx) => (
-                <li
-                  key={a.id}
-                  className="list-item-premium group"
-                >
-                  <span className="mr-1.5 text-sm opacity-60 group-hover:opacity-100 transition-opacity duration-haven" aria-hidden>
-                    {APPRECIATION_EMOJIS[idx % APPRECIATION_EMOJIS.length]}
-                  </span>
-                  <span className="text-body text-foreground/90">{a.body_text}</span>
-                  <span className="text-caption text-muted-foreground ml-auto pl-2 tabular-nums shrink-0">
-                    {new Date(a.created_at).toLocaleDateString("zh-TW")}
-                  </span>
-                </li>
-              ))}
-            </ul>
+
+      <div className="section-divider" aria-hidden />
+      <div className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-caption font-art font-medium tracking-wide text-muted-foreground">
+            {weekList.length > 0 ? "本週感恩回顧" : "近期回顧"}
+          </p>
+          {isError ? (
+            <button
+              type="button"
+              onClick={() => {
+                void refetch();
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-white/82 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+              重新載入
+            </button>
+          ) : null}
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2 rounded-[1.4rem] border border-border/55 bg-white/72 p-4 shadow-soft">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+              正在整理近期感恩紀錄…
+            </div>
+            {[1, 2, 3].map((row) => (
+              <div
+                key={row}
+                className="h-10 rounded-2xl bg-[linear-gradient(90deg,rgba(244,238,231,0.55),rgba(255,255,255,0.86),rgba(244,238,231,0.55))] animate-pulse"
+              />
+            ))}
           </div>
-        </>
-      )}
+        ) : isError ? (
+          <div className="rounded-[1.4rem] border border-amber-200/65 bg-amber-50/70 p-4 text-sm leading-relaxed text-muted-foreground shadow-soft">
+            歷史紀錄這次沒有成功同步，這不代表你們沒有感恩便利貼。你仍然可以先寫下今天的新感謝。
+          </div>
+        ) : historyList.length > 0 ? (
+          <ul className="space-y-1.5">
+            {historyList.map((item, idx) => (
+              <li key={item.id} className="list-item-premium group">
+                <span
+                  className="mr-1.5 text-sm opacity-60 transition-opacity duration-haven group-hover:opacity-100"
+                  aria-hidden
+                >
+                  {APPRECIATION_EMOJIS[idx % APPRECIATION_EMOJIS.length]}
+                </span>
+                <span className="text-body text-foreground/90">{item.body_text}</span>
+                <span className="ml-auto shrink-0 pl-2 text-caption tabular-nums text-muted-foreground">
+                  {new Date(item.created_at).toLocaleDateString("zh-TW")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="rounded-[1.4rem] border border-border/55 bg-white/72 p-4 text-sm leading-relaxed text-muted-foreground shadow-soft">
+            寫下第一張感恩便利貼後，這裡就會保留你們最近的感謝。
+          </div>
+        )}
+      </div>
+
       {loopCompletedToday ? (
         <>
           <div className="section-divider" aria-hidden />

@@ -7,6 +7,7 @@ export {
   useOnboardingQuest,
   useSyncNudges,
   useFirstDelight,
+  useHomeAppreciationHistory,
   usePartnerJournals,
 } from './useHomeQueries';
 export {

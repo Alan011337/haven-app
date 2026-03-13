@@ -1,10 +1,16 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
+import { HOME_OPTIONAL_DATA_TIMEOUT_MS, HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
+import {
+  buildHomeAppreciationHistoryQueryKey,
+  getHomeAppreciationWeekRange,
+} from '@/lib/home-appreciation-history';
 import { queryKeys } from '@/lib/query-keys';
 import {
+  fetchAppreciations,
   fetchFeatureFlags,
   fetchGamificationSummary,
   fetchOnboardingQuest,
@@ -13,6 +19,16 @@ import {
   fetchPartnerJournals,
   JOURNALS_INITIAL_LIMIT,
 } from '@/services/api-client';
+import type { AppreciationPublic } from '@/services/api-client';
+
+export interface HomeAppreciationHistory {
+  recent: AppreciationPublic[];
+  thisWeek: AppreciationPublic[];
+  weekRange: {
+    from: string;
+    to: string;
+  };
+}
 
 export function useFeatureFlags(enabled = true) {
   const { user } = useAuth();
@@ -59,6 +75,32 @@ export function useFirstDelight(enabled = true) {
     queryKey: queryKeys.firstDelight(),
     queryFn: fetchFirstDelight,
     enabled: !!user && enabled,
+  });
+}
+
+export function useHomeAppreciationHistory(enabled = true) {
+  const { user } = useAuth();
+  const weekRange = useMemo(() => getHomeAppreciationWeekRange(), []);
+
+  return useQuery<HomeAppreciationHistory>({
+    queryKey: buildHomeAppreciationHistoryQueryKey(weekRange.from, weekRange.to),
+    queryFn: async () => {
+      const [recent, thisWeek] = await Promise.all([
+        fetchAppreciations({ limit: 20 }, { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS }),
+        fetchAppreciations(
+          { from_date: weekRange.from, to_date: weekRange.to, limit: 50 },
+          { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
+        ),
+      ]);
+      return {
+        recent,
+        thisWeek,
+        weekRange,
+      };
+    },
+    enabled: !!user && enabled,
+    retry: false,
+    staleTime: 60_000,
   });
 }
 

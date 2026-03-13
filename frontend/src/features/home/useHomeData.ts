@@ -8,9 +8,11 @@ import {
   useJournals,
   usePartnerJournals,
   useGamificationSummary,
+  useHomeAppreciationHistory,
   useOnboardingQuest,
   useSyncNudges,
   useFirstDelight,
+  useDailySyncStatus,
 } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { getJournalSafetyBand } from '@/lib/safety';
@@ -96,6 +98,8 @@ export function useHomeData() {
   const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus();
   const journalsQuery = useJournals(initialHomeBootstrapPlan.loadMineJournals);
   const partnerJournalsQuery = usePartnerJournals(initialHomeBootstrapPlan.loadPartnerJournals);
+  useDailySyncStatus(activeTab === 'mine');
+  useHomeAppreciationHistory(activeTab === 'mine');
   const criticalTabDataReady =
     activeTab === 'mine'
       ? journalsQuery.isFetched
@@ -106,8 +110,8 @@ export function useHomeData() {
     activeTab,
     criticalTabDataReady,
   );
-  const gamificationQuery = useGamificationSummary(homeBootstrapPlan.loadHeaderEnhancements);
-  const onboardingQuery = useOnboardingQuest(homeBootstrapPlan.loadHeaderEnhancements);
+  const gamificationQuery = useGamificationSummary(true);
+  const onboardingQuery = useOnboardingQuest(true);
   const syncNudgesQuery = useSyncNudges(homeBootstrapPlan.loadHeaderEnhancements);
   const firstDelightQuery = useFirstDelight(homeBootstrapPlan.loadHeaderEnhancements);
 
@@ -376,6 +380,12 @@ export function useHomeData() {
     [pathname, router, searchParams],
   );
 
+  const handleActivateOnboardingStep = useCallback(() => {
+    const step = nextOnboardingStep;
+    if (!step || step.completed) return;
+    router.push('/onboarding');
+  }, [nextOnboardingStep, router]);
+
   const getTabStyle = useCallback(
     (tabName: string) => {
       const isActive = activeTab === tabName;
@@ -411,6 +421,7 @@ export function useHomeData() {
     secondaryContentReady: homeBootstrapPlan.loadMineSecondaryCards,
     loadData,
     handleTabChange,
+    handleActivateOnboardingStep,
     getTabStyle,
     handleDismissPartnerSafetyBanner,
     acknowledgeSyncNudge,

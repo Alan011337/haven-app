@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Shield, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
 import {
@@ -10,12 +11,14 @@ import {
   type OnboardingConsentCreate,
 } from "@/services/user";
 import { logClientError } from "@/lib/safe-error-log";
+import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/hooks/useToast";
 
 type NotifFreq = "off" | "low" | "normal" | "high";
 type AIIntensity = "gentle" | "direct";
 
 export default function OnboardingConsentCard() {
+  const queryClient = useQueryClient();
   const [consent, setConsent] = useState<OnboardingConsentPublic | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,7 +47,7 @@ export default function OnboardingConsentCard() {
     load();
   }, [load]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       const body: OnboardingConsentCreate = {
@@ -54,6 +57,7 @@ export default function OnboardingConsentCard() {
       };
       const updated = await upsertOnboardingConsent(body);
       setConsent(updated);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.onboardingQuest() });
       showToast("已儲存安全感與通知設定", "success");
     } catch (e) {
       logClientError("onboarding-consent-save-failed", e);
@@ -61,7 +65,7 @@ export default function OnboardingConsentCard() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [aiIntensity, notificationFrequency, privacyScope, queryClient, showToast]);
 
   if (loading) {
     return (
@@ -72,7 +76,7 @@ export default function OnboardingConsentCard() {
   }
 
   return (
-    <GlassCard className="max-w-4xl mx-auto w-full mb-6 p-6 relative overflow-hidden">
+    <GlassCard id="onboarding-consent-card" className="max-w-4xl mx-auto w-full mb-6 p-6 relative overflow-hidden">
       <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
       <h2 className="text-title font-art font-semibold text-foreground mb-2 flex items-center gap-2">
         <span className="icon-badge" aria-hidden><Shield className="w-4 h-4" /></span>

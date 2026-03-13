@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sun, Loader2, Lock, Unlock } from "lucide-react";
+import { Sun, Loader2, Lock, RefreshCw, Unlock } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
 import { useDailySyncStatus } from "@/hooks/queries";
 import { queryKeys } from "@/lib/query-keys";
@@ -27,11 +27,13 @@ function getMoodEmoji(score: number | null | undefined): string {
 
 export default function DailySyncCard({ className }: { className?: string }) {
   const queryClient = useQueryClient();
-  const { data: status, isLoading: loading } = useDailySyncStatus();
+  const { data: status, isLoading: loading, isError, refetch } = useDailySyncStatus();
   const [submitting, setSubmitting] = useState(false);
   const [mood, setMood] = useState(3);
   const [answer, setAnswer] = useState("");
   const { showToast } = useToast();
+  const hasPendingMyAnswerDetails = Boolean(status?.my_filled && !status?.my_answer_text);
+  const hasPendingPartnerAnswerDetails = Boolean(status?.unlocked && !status?.partner_answer_text);
 
   useEffect(() => {
     if (!status) return;
@@ -63,8 +65,18 @@ export default function DailySyncCard({ className }: { className?: string }) {
 
   if (loading) {
     return (
-      <GlassCard className={cn("p-6 flex items-center justify-center min-h-[140px]", className)}>
-        <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
+      <GlassCard className={cn("p-6 min-h-[140px]", className)}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden />
+            正在準備今天的同步問題…
+          </div>
+          <div className="space-y-2">
+            <div className="h-4 w-28 rounded-full bg-white/75 animate-pulse" />
+            <div className="h-12 rounded-[1.2rem] bg-white/72 animate-pulse" />
+            <div className="h-20 rounded-[1.4rem] bg-white/68 animate-pulse" />
+          </div>
+        </div>
       </GlassCard>
     );
   }
@@ -78,9 +90,27 @@ export default function DailySyncCard({ className }: { className?: string }) {
           </span>
           每日 3 分鐘同步
         </h3>
-        <p className="text-sm text-muted-foreground/70 leading-relaxed">
-          今日的同步問題正在準備中，稍後即可填寫。
-        </p>
+        {isError ? (
+          <>
+            <p className="text-sm text-muted-foreground/80 leading-relaxed">
+              同步資料這次沒有成功載入，這不代表今天沒有題目。可以現在重新同步。
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                void refetch();
+              }}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-white/82 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden />
+              重新同步題目
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground/70 leading-relaxed">
+            今日的同步問題正在準備中，稍後即可填寫。
+          </p>
+        )}
       </GlassCard>
     );
   }
@@ -162,7 +192,9 @@ export default function DailySyncCard({ className }: { className?: string }) {
             你今日已填寫：情緒 <span className="tabular-nums font-medium">{status.my_mood_score}</span> 分，{status.today_question_label}
           </p>
           <div className="list-item-premium">
-            <p className="text-caption text-muted-foreground italic">「{status.my_answer_text}」</p>
+            <p className="text-caption text-muted-foreground italic">
+              {hasPendingMyAnswerDetails ? '你的同步內容正在更新…' : <>「{status.my_answer_text}」</>}
+            </p>
           </div>
           {!status.unlocked ? (
             <p className="text-caption text-muted-foreground flex items-center gap-2.5">
@@ -184,7 +216,9 @@ export default function DailySyncCard({ className }: { className?: string }) {
                   情緒 <span className="tabular-nums font-medium">{status.partner_mood_score}</span> 分
                 </p>
                 <div className="list-item-premium mt-2">
-                  <p className="text-caption text-muted-foreground italic">「{status.partner_answer_text}」</p>
+                  <p className="text-caption text-muted-foreground italic">
+                    {hasPendingPartnerAnswerDetails ? '伴侶的同步內容正在更新…' : <>「{status.partner_answer_text}」</>}
+                  </p>
                 </div>
               </div>
             </>

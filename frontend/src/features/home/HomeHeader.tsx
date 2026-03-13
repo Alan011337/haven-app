@@ -31,6 +31,7 @@ interface HomeHeaderProps {
   hasNewPartnerContent: boolean;
   getTabStyle: (tabName: string) => string;
   onTabChange: (tab: 'mine' | 'partner' | 'card') => void;
+  onActivateOnboardingStep: () => void;
   onAckSyncNudge: () => void;
   onAckFirstDelight: () => void;
 }
@@ -97,6 +98,7 @@ export default function HomeHeader({
   hasNewPartnerContent,
   getTabStyle,
   onTabChange,
+  onActivateOnboardingStep,
   onAckSyncNudge,
   onAckFirstDelight,
 }: HomeHeaderProps) {
@@ -196,14 +198,14 @@ export default function HomeHeader({
           onAction: onAckSyncNudge,
         }
       : {
-          eyebrow: nextOnboardingStep ? `Quest Day ${nextOnboardingStep.quest_day}` : 'Editorial Note',
+          eyebrow: nextOnboardingStep ? `Onboarding Day ${nextOnboardingStep.quest_day}` : 'Editorial Note',
           title: nextOnboardingStep?.title ?? '把首頁留給今天真正重要的那一段。',
           description: '',
       };
 
   const questMeta =
     nextOnboardingStep && !nextOnboardingStep.completed
-      ? `Quest Day ${nextOnboardingStep.quest_day} · ${nextOnboardingStep.title}`
+      ? `新手引導 Day ${nextOnboardingStep.quest_day} · ${nextOnboardingStep.title}`
       : `本週進度 ${onboardingQuest.completed_steps}/${onboardingQuest.total_steps}`;
 
   return (
@@ -226,6 +228,15 @@ export default function HomeHeader({
               <span className="h-2 w-2 rounded-full bg-primary/70" aria-hidden />
               <span>{questMeta}</span>
             </div>
+            {nextOnboardingStep && !nextOnboardingStep.completed ? (
+              <button
+                type="button"
+                onClick={onActivateOnboardingStep}
+                className="inline-flex max-w-max items-center gap-2 rounded-full border border-primary/16 bg-primary/8 px-4 py-2 text-xs font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift"
+              >
+                打開新手引導
+              </button>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3">

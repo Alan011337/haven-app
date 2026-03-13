@@ -46,6 +46,7 @@ function HomeContent() {
     showFirstDelightCard,
     loadData,
     handleTabChange,
+    handleActivateOnboardingStep,
     getTabStyle,
     handleDismissPartnerSafetyBanner,
     acknowledgeSyncNudge,
@@ -83,6 +84,7 @@ function HomeContent() {
               hasNewPartnerContent={hasNewPartnerContent}
               getTabStyle={getTabStyle}
               onTabChange={handleTabChange}
+              onActivateOnboardingStep={handleActivateOnboardingStep}
               onAckSyncNudge={acknowledgeSyncNudge}
               onAckFirstDelight={acknowledgeFirstDelightCard}
             />
