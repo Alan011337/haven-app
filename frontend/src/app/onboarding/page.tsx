@@ -138,10 +138,13 @@ function CurrentStepPanel({ step }: { step: OnboardingQuestStep | undefined }) {
           <p className="text-[0.72rem] uppercase tracking-[0.3em] text-primary/70">Current Step</p>
           <h2 className="mt-3 font-art text-3xl text-card-foreground">{step.title}</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-            這一步不是一般設定，而是新手引導的正式第一步。你可以直接在這一頁完成條款、通知與 AI 介入偏好的確認。
+            帳號建立時，Haven 已記錄最小法遵同意流程。這一頁會把隱私範圍、資料使用摘要、通知節奏與 AI 介入偏好整理清楚，讓你在正式開始前先知道產品會如何陪你們運作。
+          </p>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+            如果你要看完整法律文件，這裡也會直接提供服務條款與隱私權政策入口；不需要回到其他頁面再自己找。
           </p>
         </GlassCard>
-        <OnboardingConsentCard />
+        <OnboardingConsentCard mode="onboarding" />
       </div>
     );
   }
