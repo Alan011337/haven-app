@@ -157,10 +157,7 @@ export default function Home() {
                 <Loader2 className="relative z-10 h-10 w-10 animate-spin text-primary" />
               </div>
               <div className="space-y-2">
-                <p className="font-art text-2xl text-card-foreground md:text-[2.4rem]">正在整理今天的首頁舞台</p>
-                <p className="max-w-xl text-sm leading-7 text-muted-foreground">
-                  先讓寫日記成為前景，再把其餘提醒與儀式安靜地排進第二層。
-                </p>
+                <p className="font-art text-2xl text-card-foreground md:text-[2.4rem]">正在準備你的首頁…</p>
               </div>
             </div>
           </div>

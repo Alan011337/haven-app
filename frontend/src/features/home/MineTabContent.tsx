@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Feather, Heart, RefreshCw, Sparkles } from 'lucide-react';
+import { Feather, RefreshCw, Sparkles } from 'lucide-react';
 import JournalCard from '@/components/features/JournalCard';
 import JournalInput from '@/components/features/JournalInput';
 import DailySyncCard from '@/components/features/DailySyncCard';
@@ -78,41 +78,25 @@ export default function MineTabContent({
 
   const pulseLine = useMemo(() => {
     if (relationshipPulse.hasNewPartnerContent) {
-      return (
-        <>
-          伴侶今天也有新的內容，但它會先留在第二層。
-          <strong className="font-medium text-card-foreground"> 你先把自己的頁面寫完整，首頁才算真正打開。</strong>
-        </>
-      );
+      return <>伴侶有新內容，寫完再看。</>;
     }
     if (myJournals.length === 0) {
-      return (
-        <>
-          今天還沒有任何頁面。
-          <strong className="font-medium text-card-foreground"> 第一篇寫下去之後，這個首頁的時間感才會真正亮起。</strong>
-        </>
-      );
+      return <>今天還沒寫。開始第一篇吧。</>;
     }
-    return (
-      <>
-        先寫自己，再靠近彼此。
-        <strong className="font-medium text-card-foreground"> 這一版首頁會刻意把你今天真正想留下的那句話放在最前景。</strong>
-      </>
-    );
+    return <>先寫自己，再靠近彼此。</>;
   }, [myJournals.length, relationshipPulse.hasNewPartnerContent]);
 
   return (
     <div className="flex flex-col gap-[var(--space-section)]">
       <HomeCoverStage
         eyebrow="My Journal"
-        title="把今天真正重要的那一句，放到封面最前景。"
-        description="這一屏不再要你同時處理所有 flow。它先替你的文字留出最好的一塊稿紙，再把其餘提醒安靜排到後面。"
+        title="今天想說什麼？"
         pulse={pulseLine}
         note={
           <EditorialPaperCard
             eyebrow="Editorial Note"
             title={`${relationshipPulse.score} 分的關係脈搏，適合先留白一下。`}
-            description={`已連續互動 ${relationshipPulse.streakDays} 天。這一版首頁故意先把你自己的頁面撐成前景，再讓彼此靠近。`}
+            description=""
             tone="mist"
             className="rounded-[2rem]"
           >
@@ -122,10 +106,7 @@ export default function MineTabContent({
                 {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
               </Badge>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Heart className="h-4 w-4 text-primary" aria-hidden />
-              <span>把今天寫成一頁，比把所有提醒都處理完更重要。</span>
-            </div>
+            {null}
           </EditorialPaperCard>
         }
       >
@@ -138,8 +119,7 @@ export default function MineTabContent({
 
       <HomeSectionFrame
         eyebrow="Second Layer"
-        title="其餘 flow 還在，只是退到了更安靜的位置。"
-        description="每日同步、約會提案、感恩便利貼與修復入口仍然存在，但不再搶走你首頁第一屏的注意力。"
+        title="其餘的，在這裡安靜等你。"
         aside={<Badge variant="outline" className="border-primary/25 text-primary/70">Editorial Mosaic</Badge>}
         className="bg-[linear-gradient(180deg,rgba(255,252,248,0.74),rgba(248,244,238,0.64))]"
       >
@@ -161,7 +141,7 @@ export default function MineTabContent({
       <EditorialTimelineColumn
         eyebrow="Memory Lane"
         title="時光迴廊"
-        description="現在它更像被編排的欄目，而不是一串功能卡。每篇日記都被留出自己的段落、日期與閱讀空氣。"
+        description=""
         aside={<Badge variant="outline" className="border-primary/25 text-primary/70">{myJournals.length} 篇日記</Badge>}
         className="bg-[linear-gradient(180deg,rgba(255,254,251,0.96),rgba(249,245,239,0.9))]"
       >
@@ -182,7 +162,7 @@ export default function MineTabContent({
             <EditorialDeferredState
               icon={Sparkles}
               title="時光迴廊還在安靜同步"
-              description="首頁主體已可使用。你可以先把今天寫下來，舊日記會在連線恢復後補上，不需要卡在這裡等待。"
+              description="舊日記正在同步，先寫今天的吧。"
               actionLabel="重新同步日記"
               onAction={onRetryTimeline}
             />
@@ -192,7 +172,7 @@ export default function MineTabContent({
             <EditorialEmptyState
               icon={Feather}
               title="第一篇日記，會從這裡開始發光。"
-              description="先寫下今天的一點心緒。當你開始留下內容，首頁就會從空白頁變成你們關係的編輯檯。"
+              description="寫下第一篇，這裡就會亮起來。"
             />
           </div>
         ) : (

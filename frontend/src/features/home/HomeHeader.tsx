@@ -112,21 +112,18 @@ export default function HomeHeader({
     () => ({
       mine: {
         eyebrow: 'Cover Story',
-        title: '把首頁收安靜，讓今天先被寫成一頁。',
-        description:
-          '這裡不是資訊總覽，而是一張被好好留白的封面。你先寫，其他 flow 會安靜退到第二層。',
+        title: '讓今天先被寫成一頁。',
+        description: '',
       },
       partner: {
         eyebrow: 'Reading Room',
-        title: '先慢慢讀，再決定今天要怎麼靠近對方。',
-        description:
-          '伴侶內容在這一頁不再像通知。它被整理成更像來信的閱讀場景，讓你先理解，再回應。',
+        title: '慢慢讀，再靠近。',
+        description: '',
       },
       card: {
         eyebrow: 'Night Ritual',
-        title: '今晚最值得一起回答的問題，只留在一個舞台上。',
-        description:
-          'Daily ritual 的周圍噪音被刻意降到最低。抽卡、等待與揭曉，都應該像一場被照亮的儀式。',
+        title: '今晚的儀式，只留在這裡。',
+        description: '',
       },
     }),
     [],
@@ -193,19 +190,14 @@ export default function HomeHeader({
       ? {
           eyebrow: 'Gentle Nudge',
           title: '今天適合主動靠近一下。',
-          description:
-            '同步提醒不再佔滿首頁。它只留下最輕的一句提示，等你寫完自己的頁面之後再回頭看。',
+          description: '',
           actionLabel: '稍後再提醒',
           onAction: onAckSyncNudge,
         }
       : {
           eyebrow: nextOnboardingStep ? `Quest Day ${nextOnboardingStep.quest_day}` : 'Editorial Note',
           title: nextOnboardingStep?.title ?? '把首頁留給今天真正重要的那一段。',
-          description: nextOnboardingStep?.completed
-            ? '今天的 quest 已完成，首頁會把更多空間還給你的文字。'
-            : syncNudges.enabled
-              ? `目前還有 ${syncNudges.nudges.length} 則 gentle nudges，但它們會安靜待在第二層。`
-              : '當首頁變得夠安靜，真正有價值的互動自然會留下來。',
+          description: '',
       };
 
   const questMeta =
@@ -224,9 +216,11 @@ export default function HomeHeader({
             <h1 className="max-w-4xl font-art text-[1.9rem] leading-[1.02] text-gradient-gold md:text-[2.7rem] xl:text-[3.05rem]">
               {activeMasthead.title}
             </h1>
-            <p className="max-w-3xl text-sm leading-7 tracking-wide text-muted-foreground md:text-[0.98rem]">
-              {activeMasthead.description}
-            </p>
+            {activeMasthead.description ? (
+              <p className="max-w-3xl text-sm leading-7 tracking-wide text-muted-foreground md:text-[0.98rem]">
+                {activeMasthead.description}
+              </p>
+            ) : null}
             <div className="inline-flex max-w-max items-center gap-2 rounded-full border border-white/50 bg-white/74 px-3 py-2 text-[0.68rem] uppercase tracking-[0.24em] text-primary/75 shadow-soft">
               <span className="h-2 w-2 rounded-full bg-primary/70" aria-hidden />
               <span>{questMeta}</span>
@@ -274,30 +268,11 @@ export default function HomeHeader({
                     ? '伴侶那邊有新的內容，但先別急。'
                     : '今天維持低噪音首頁。'
             }
-            description={
-              activeTab === 'partner'
-                ? '在這個分頁裡，新的內容不被設計成要立刻清掉的 badge，而是一封可以慢慢展開的信。'
-                : activeTab === 'card'
-                  ? '這一頁不追求資訊量。它只留下最值得被一起完成的那張卡與那個節奏。'
-                  : hasNewPartnerContent
-                    ? '首頁會先把你的文字放到前景；伴侶內容會安靜待在第二層，等你寫完之後再讀。'
-                    : '讓首頁先照顧你自己的文字與情緒，其他互動就會自然排進正確位置。'
-            }
+            description=""
             tone="mist"
             className="rounded-[2rem]"
           >
-            <div className="flex items-center gap-2 text-sm text-card-foreground">
-              {activeTab === 'partner' ? <BookHeart className="h-4 w-4 text-primary" aria-hidden /> : null}
-              {activeTab === 'card' ? <Sparkles className="h-4 w-4 text-primary" aria-hidden /> : null}
-              {activeTab === 'mine' ? <User className="h-4 w-4 text-primary" aria-hidden /> : null}
-              <span>
-                {activeTab === 'mine'
-                  ? '先寫，再看，最後再進入 ritual。'
-                  : activeTab === 'partner'
-                    ? '先理解，再回應；先慢下來，再靠近。'
-                    : '抽卡、回答、等待與揭曉，都值得被慢慢完成。'}
-              </span>
-            </div>
+            {null}
           </EditorialPaperCard>
         </div>
       </div>
