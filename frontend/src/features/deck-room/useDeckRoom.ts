@@ -39,6 +39,8 @@ type SocketEvent = {
   from_user_id?: string;
 };
 
+const WAITING_PARTNER_REFRESH_INTERVAL_MS = 4000;
+
 export function useDeckRoom(): DeckRoomViewModel {
   const params = useParams();
   const router = useRouter();
@@ -72,6 +74,10 @@ export function useDeckRoom(): DeckRoomViewModel {
     () => buildDecksReturnUrl(libraryFilter, librarySort),
     [libraryFilter, librarySort],
   );
+  const autoLoadKey = useMemo(
+    () => (user?.id && normalizedCategory ? `${user.id}:${normalizedCategory}` : null),
+    [normalizedCategory, user?.id],
+  );
 
   const historyHref = useMemo(
     () => buildHistoryHref(normalizedCategory, libraryFilter, librarySort),
@@ -101,6 +107,7 @@ export function useDeckRoom(): DeckRoomViewModel {
   const resultRequestIdRef = useRef(0);
   const myTypingSentRef = useRef(false);
   const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoLoadKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -308,9 +315,11 @@ export function useDeckRoom(): DeckRoomViewModel {
 
   // Only auto-draw when user is authenticated (token in localStorage); avoid 401 storm from draw before auth ready
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !autoLoadKey) return;
+    if (autoLoadKeyRef.current === autoLoadKey) return;
+    autoLoadKeyRef.current = autoLoadKey;
     void loadCard();
-  }, [loadCard, user?.id]);
+  }, [autoLoadKey, loadCard, user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -356,6 +365,44 @@ export function useDeckRoom(): DeckRoomViewModel {
   }, []);
 
   const socketRef = useSocket(user?.id, handleSocketMessage, handlePartnerAction);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    if (roomStatus !== 'WAITING_PARTNER' || !session?.id) {
+      return;
+    }
+
+    const syncRevealState = () => {
+      const activeSession = sessionRef.current ?? session;
+      if (!activeSession || roomStatusRef.current !== 'WAITING_PARTNER') {
+        return;
+      }
+      void fetchResult(activeSession);
+    };
+
+    syncRevealState();
+
+    const intervalId = window.setInterval(syncRevealState, WAITING_PARTNER_REFRESH_INTERVAL_MS);
+    const handleWindowFocus = () => {
+      syncRevealState();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncRevealState();
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchResult, roomStatus, session]);
 
   const clearTypingStopTimer = useCallback(() => {
     if (typingStopTimerRef.current) {
