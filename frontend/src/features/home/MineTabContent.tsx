@@ -16,9 +16,7 @@ import {
   EditorialEmptyState,
   EditorialPaperCard,
   EditorialTimelineColumn,
-  HomeCoverStage,
   HomeMosaicRail,
-  HomeSectionFrame,
   TimelineDateRail,
 } from '@/features/home/HomePrimitives';
 import { resolveHomeTimelineStage } from '@/lib/home-timeline-state';
@@ -78,51 +76,46 @@ export default function MineTabContent({
 
   const pulseLine = useMemo(() => {
     if (relationshipPulse.hasNewPartnerContent) {
-      return <>伴侶有新內容，寫完再看。</>;
+      return '伴侶有新內容，寫完再看。';
     }
     if (myJournals.length === 0) {
-      return <>今天還沒寫。開始第一篇吧。</>;
+      return '今天還沒寫。開始第一篇吧。';
     }
-    return <>先寫自己，再靠近彼此。</>;
+    return '先寫自己，再靠近彼此。';
   }, [myJournals.length, relationshipPulse.hasNewPartnerContent]);
 
   return (
-    <div className="flex flex-col gap-[var(--space-section)]">
-      <HomeCoverStage
-        eyebrow="My Journal"
-        title="今天想說什麼？"
-        pulse={pulseLine}
-        note={
-          <EditorialPaperCard
-            eyebrow="Editorial Note"
-            title={`${relationshipPulse.score} 分的關係脈搏，適合先留白一下。`}
-            description=""
-            tone="mist"
-            className="rounded-[2rem]"
-          >
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">先寫自己</Badge>
-              <Badge variant="success">
-                {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
-              </Badge>
-            </div>
-            {null}
-          </EditorialPaperCard>
-        }
-      >
-        <JournalInput
-          onJournalCreated={onJournalCreated}
-          variant="cover"
-          className="border-white/55 bg-transparent shadow-none"
-        />
-      </HomeCoverStage>
+    <div className="flex flex-col gap-10 md:gap-14">
 
-      <HomeSectionFrame
-        eyebrow="Second Layer"
-        title="其餘的，在這裡安靜等你。"
-        aside={<Badge variant="outline" className="border-primary/25 text-primary/70">Editorial Mosaic</Badge>}
-        className="bg-[linear-gradient(180deg,rgba(255,252,248,0.74),rgba(248,244,238,0.64))]"
-      >
+      {/* ═══ 1. Journal Input — the hero, immediately visible ═══ */}
+      <section className="space-y-4">
+        {/* Pulse context — one quiet line */}
+        <div className="flex items-center gap-3 animate-slide-up-fade">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-primary/60 shadow-[0_0_0_6px_rgba(201,163,100,0.08)] animate-breathe" aria-hidden />
+          <p className="text-sm text-muted-foreground">{pulseLine}</p>
+        </div>
+
+        {/* The writing surface */}
+        <div className="animate-slide-up-fade-1">
+          <JournalInput
+            onJournalCreated={onJournalCreated}
+            variant="cover"
+            className="border-white/50 bg-white/40 shadow-soft backdrop-blur-xl"
+          />
+        </div>
+      </section>
+
+      {/* ═══ 2. Mosaic — curated activity cards ═══ */}
+      <section className="space-y-5 animate-slide-up-fade-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-art text-[1.35rem] text-card-foreground md:text-[1.5rem]">
+            今日動態
+          </h2>
+          <Badge variant="outline" className="border-primary/20 text-primary/65 text-[0.64rem]">
+            {relationshipPulse.streakDays} 天連續
+          </Badge>
+        </div>
+
         <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
           <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
             <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
@@ -136,8 +129,9 @@ export default function MineTabContent({
             <LoveLanguageWeeklyCard className="h-full border-white/45 bg-[linear-gradient(180deg,rgba(247,250,248,0.93),rgba(240,246,242,0.88))]" />
           </div>
         </HomeMosaicRail>
-      </HomeSectionFrame>
+      </section>
 
+      {/* ═══ 3. Memory Lane — timeline ═══ */}
       <EditorialTimelineColumn
         eyebrow="Memory Lane"
         title="時光迴廊"
