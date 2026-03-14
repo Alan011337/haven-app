@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ListTodo, Loader2 } from 'lucide-react';
-import { GlassCard } from '@/components/haven/GlassCard';
+import { Sparkles } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Input';
 import { useBlueprint } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { addBlueprintItem } from '@/services/api-client';
@@ -40,89 +42,120 @@ export default function BlueprintPageContent() {
     }
   };
 
+  /* ── Loading ── */
+
   if (loading) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden />
+      <div className="flex min-h-[40vh] items-center justify-center" role="status">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+        <span className="sr-only">載入中</span>
       </div>
     );
   }
 
+  /* ── Content ── */
+
   return (
-    <>
-      <h1 className="font-art text-2xl font-bold text-foreground mb-2 flex items-center gap-2.5 animate-slide-up-fade">
-        <span className="icon-badge !w-10 !h-10" aria-hidden><ListTodo className="w-5 h-5" /></span>
-        藍圖與願望清單
-      </h1>
-      <p className="text-body text-muted-foreground mb-8">
-        一起寫下想做的事，兩週沒互動時會提醒你們來場小約會。
-      </p>
+    <div className="space-y-8 md:space-y-10">
+      {/* Page identity */}
+      <div className="space-y-3 animate-slide-up-fade">
+        <h1 className="font-art text-[2rem] leading-[1.05] tracking-tight text-gradient-gold md:text-[2.8rem]">
+          藍圖與願望清單
+        </h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          寫下你們共同的願望，讓夢想成為兩人之間的約定。
+        </p>
+      </div>
 
-      <GlassCard className="p-6 mb-6 relative overflow-hidden animate-slide-up-fade-1">
-        <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
-        <h2 className="font-art text-lg font-semibold text-card-foreground mb-4">新增願望</h2>
+      {/* Add-wish form */}
+      <section className="animate-slide-up-fade-1 rounded-[2rem] border border-white/50 bg-[linear-gradient(180deg,rgba(248,252,250,0.90),rgba(241,247,244,0.82))] p-6 shadow-soft md:p-8">
+        <h2 className="mb-5 font-art text-lg text-card-foreground">
+          寫下一個新願望
+        </h2>
         <form onSubmit={handleAdd} className="space-y-4">
-          <div>
-            <label htmlFor="blueprint-title" className="block text-body font-medium text-foreground mb-1">
-              標題
-            </label>
-            <input
-              id="blueprint-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="例如：週末一起去爬山"
-              maxLength={500}
-              className="w-full rounded-input border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            />
+          <Input
+            id="blueprint-title"
+            label="願望"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="例如：週末一起去爬山"
+            maxLength={500}
+          />
+          <Textarea
+            id="blueprint-notes"
+            label="備註（選填）"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="想補充什麼都可以寫在這裡…"
+            maxLength={2000}
+            className="min-h-[72px]"
+          />
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              loading={submitting}
+              aria-label="加入願望清單"
+            >
+              許下願望
+            </Button>
           </div>
-          <div>
-            <label htmlFor="blueprint-notes" className="block text-body font-medium text-foreground mb-1">
-              備註（選填）
-            </label>
-            <textarea
-              id="blueprint-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="補充說明..."
-              maxLength={2000}
-              className="w-full rounded-input border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring min-h-[72px] resize-y"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 px-6 py-2.5 font-medium shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-            aria-label="加入願望清單"
-          >
-            {submitting ? <Loader2 className="w-5 h-5 animate-spin inline" aria-hidden /> : '加入'}
-          </button>
         </form>
-      </GlassCard>
+      </section>
 
-      <div className="section-divider mb-4" />
-      <h2 className="font-art text-lg font-semibold text-card-foreground mb-3 animate-slide-up-fade-2">願望清單</h2>
+      {/* Wish collection */}
+      {items.length > 0 && (
+        <p className="animate-slide-up-fade-2 text-xs tabular-nums text-muted-foreground/70">
+          {items.length} 個共同願望
+        </p>
+      )}
       {items.length === 0 ? (
-        <GlassCard className="p-8 text-center animate-slide-up-fade-3">
-          <p className="text-body text-muted-foreground">還沒有願望，新增一筆吧！</p>
-        </GlassCard>
+        <div className="animate-slide-up-fade-2 rounded-[2rem] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.78))] px-6 py-12 text-center shadow-soft">
+          <Sparkles
+            className="mx-auto h-8 w-8 text-primary/40"
+            aria-hidden
+          />
+          <p className="mt-4 font-art text-lg text-card-foreground/80">
+            還沒有願望
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            寫下第一個願望，開始收集你們的夢想。
+          </p>
+        </div>
       ) : (
         <ul className="space-y-3">
-          {items.map((item) => (
-            <li key={item.id}>
-              <GlassCard className="p-4 list-item-premium">
-                <p className="text-body font-medium text-foreground">{item.title}</p>
-                {item.notes && (
-                  <p className="text-caption text-muted-foreground mt-1">{item.notes}</p>
-                )}
-                <p className="text-caption text-muted-foreground mt-2">
-                  {item.added_by_me ? '我新增' : '伴侶新增'} · {new Date(item.created_at).toLocaleDateString('zh-TW')}
+          {items.map((item, idx) => (
+            <li
+              key={item.id}
+              className={[
+                'rounded-[1.5rem] border border-white/50 bg-white/70 px-5 py-4 shadow-soft backdrop-blur-sm',
+                'transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift',
+                idx < 4 ? `animate-slide-up-fade-${Math.min(idx + 2, 5)}` : '',
+              ].join(' ')}
+            >
+              <div
+                className={[
+                  'border-l-[3px] pl-4',
+                  item.added_by_me ? 'border-l-primary/35' : 'border-l-[rgba(214,181,136,0.45)]',
+                ].join(' ')}
+              >
+                <p className="text-sm font-medium leading-relaxed text-card-foreground">
+                  {item.title}
                 </p>
-              </GlassCard>
+                {item.notes && (
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    {item.notes}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground/70">
+                  {item.added_by_me ? '我' : '伴侶'} · {new Date(item.created_at).toLocaleDateString('zh-TW')}
+                </p>
+              </div>
             </li>
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }
