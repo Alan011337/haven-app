@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Heart, Loader2 } from 'lucide-react';
-import { GlassCard } from '@/components/haven/GlassCard';
+import { Textarea } from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 import { useLoveMapCards, useLoveMapNotes } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
 import { createOrUpdateLoveMapNote } from '@/services/api-client';
@@ -12,7 +12,32 @@ import { useToast } from '@/hooks/useToast';
 import type { LoveMapNotePublic } from '@/services/api-client';
 
 const LAYERS = ['safe', 'medium', 'deep'] as const;
-const LAYER_LABELS: Record<string, string> = { safe: '安全層', medium: '中層', deep: '深層' };
+
+const LAYER_CONFIG: Record<string, {
+  label: string;
+  depth: number;
+  surface: string;
+  questionAccent: string;
+}> = {
+  safe: {
+    label: '安全層',
+    depth: 1,
+    surface: 'bg-[linear-gradient(180deg,rgba(248,252,250,0.90),rgba(241,247,244,0.82))]',
+    questionAccent: 'border-l-primary/20',
+  },
+  medium: {
+    label: '中層',
+    depth: 2,
+    surface: 'bg-[linear-gradient(180deg,rgba(255,252,248,0.90),rgba(248,244,238,0.82))]',
+    questionAccent: 'border-l-primary/35',
+  },
+  deep: {
+    label: '深層',
+    depth: 3,
+    surface: 'bg-[linear-gradient(180deg,rgba(255,250,247,0.90),rgba(250,243,234,0.82))]',
+    questionAccent: 'border-l-primary/50',
+  },
+};
 
 export default function LoveMapPageContent() {
   const queryClient = useQueryClient();
@@ -49,71 +74,98 @@ export default function LoveMapPageContent() {
 
   if (loading || !cards) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden />
+      <div className="space-y-8 md:space-y-10">
+        <div className="space-y-3">
+          <div className="h-10 w-36 animate-pulse rounded-[1.5rem] bg-muted/60" aria-hidden />
+          <div className="h-4 w-56 animate-pulse rounded-full bg-muted/40" aria-hidden />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-48 animate-pulse rounded-[2rem] bg-white/60 shadow-soft" aria-hidden />
+        ))}
       </div>
     );
   }
 
   return (
-    <>
-      <h1 className="font-art text-2xl font-bold text-foreground mb-2 flex items-center gap-2.5 animate-slide-up-fade">
-        <span className="icon-badge !w-10 !h-10" aria-hidden><Heart className="w-5 h-5" /></span>
-        愛情地圖
-      </h1>
-      <p className="text-body text-muted-foreground mb-8">
-        依深度分層的題目與你的筆記，一起更認識彼此。
-      </p>
+    <div className="space-y-8 md:space-y-10">
 
-      {LAYERS.map((layer, idx) => (
-        <section key={layer} className={`mb-8 animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}`}>
-          <h2 className="font-art text-lg font-semibold text-card-foreground mb-3 flex items-center gap-2">
-            <span className="icon-badge" aria-hidden><Heart className="w-3.5 h-3.5" /></span>
-            {LAYER_LABELS[layer] ?? layer}
-          </h2>
-          <GlassCard className="p-6 mb-4 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
-            <h3 className="text-body font-art font-medium text-foreground mb-2">題目</h3>
-            <ul className="space-y-2">
-              {(layer === 'safe' ? cards.safe : layer === 'medium' ? cards.medium : cards.deep).map((c) => (
-                <li key={c.id} className="text-caption text-muted-foreground border-l-2 border-primary/30 pl-3">
-                  {c.question}
-                </li>
-              ))}
-              {((layer === 'safe' ? cards.safe : layer === 'medium' ? cards.medium : cards.deep).length === 0) && (
-                <li className="text-caption text-muted-foreground">暫無題目</li>
-              )}
-            </ul>
-          </GlassCard>
-          <GlassCard className="p-6 relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/15 to-transparent" aria-hidden />
-            <label htmlFor={`note-${layer}`} className="block text-body font-art font-medium text-foreground mb-2">
-              我的筆記
-            </label>
-            <textarea
-              id={`note-${layer}`}
-              value={draft[layer] ?? ''}
-              onChange={(e) => setDraft((d) => ({ ...d, [layer]: e.target.value }))}
-              placeholder="寫下你的想法..."
-              className="w-full rounded-input border border-input bg-background px-3 py-2 text-foreground focus-visible:ring-2 focus-visible:ring-ring min-h-[100px] resize-y"
-              maxLength={5000}
-            />
-            <button
-              type="button"
-              onClick={() => handleSaveNote(layer)}
-              disabled={saving === layer}
-              className="mt-3 rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 px-5 py-2 text-body font-medium shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-              aria-label={`儲存${LAYER_LABELS[layer]}筆記`}
-            >
-              {saving === layer ? (
-                <Loader2 className="w-4 h-4 animate-spin inline" aria-hidden />
+      {/* ── Page identity ── */}
+      <div className="space-y-3 animate-slide-up-fade">
+        <h1 className="font-art text-[2rem] leading-[1.05] text-gradient-gold md:text-[2.8rem]">
+          愛情地圖
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          一起慢慢認識彼此更深的地方。
+        </p>
+      </div>
+
+      {/* ── Layer sections ── */}
+      {LAYERS.map((layer, idx) => {
+        const config = LAYER_CONFIG[layer];
+        const questions = layer === 'safe' ? cards.safe : layer === 'medium' ? cards.medium : cards.deep;
+
+        return (
+          <section
+            key={layer}
+            className={`rounded-[2rem] border border-white/50 ${config.surface} p-6 shadow-soft md:p-8 animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}`}
+          >
+            <div className="space-y-6">
+
+              {/* Layer header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/55 bg-white/70 font-art text-sm font-medium text-primary/80 shadow-soft">
+                    {config.depth}
+                  </span>
+                  <h2 className="font-art text-xl text-card-foreground">{config.label}</h2>
+                </div>
+                <span className="text-xs text-muted-foreground">{questions.length} 題</span>
+              </div>
+
+              {/* Questions */}
+              {questions.length > 0 ? (
+                <div className="space-y-2">
+                  {questions.map((q) => (
+                    <div
+                      key={q.id}
+                      className={`rounded-[1.2rem] border-l-[3px] ${config.questionAccent} bg-white/55 px-4 py-3 text-sm leading-relaxed text-card-foreground backdrop-blur-sm`}
+                    >
+                      {q.question}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                '儲存'
+                <p className="text-sm text-muted-foreground">這一層暫時沒有題目。</p>
               )}
-            </button>
-          </GlassCard>
-        </section>
-      ))}
-    </>
+
+              {/* Note area */}
+              <div className="space-y-3">
+                <Textarea
+                  id={`note-${layer}`}
+                  label="我的筆記"
+                  value={draft[layer] ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, [layer]: e.target.value }))}
+                  placeholder="寫下你的想法…"
+                  maxLength={5000}
+                  className="min-h-[120px] border-white/50 bg-white/40 backdrop-blur-xl"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={saving === layer}
+                    onClick={() => handleSaveNote(layer)}
+                    aria-label={`儲存${config.label}筆記`}
+                  >
+                    儲存
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          </section>
+        );
+      })}
+    </div>
   );
 }
