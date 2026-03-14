@@ -7,6 +7,9 @@ import Skeleton from '@/components/ui/Skeleton';
 import { useMediationStatus } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 
+const iconContainerClass =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/12 to-primary/4 border border-primary/8';
+
 export default function MediationEntryBanner({ className }: { className?: string }) {
   const { data: status, isLoading: loading } = useMediationStatus();
   const inMediation = status?.in_mediation === true;
@@ -16,7 +19,7 @@ export default function MediationEntryBanner({ className }: { className?: string
       <GlassCard className={cn('p-5 md:p-6 relative overflow-hidden', className)}>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
         <div className="flex items-center gap-3">
-          <span className="icon-badge !w-9 !h-9" aria-hidden>
+          <span className={iconContainerClass} aria-hidden>
             <HandHeart className="w-[18px] h-[18px]" />
           </span>
           <div className="space-y-1.5 flex-1">
@@ -34,7 +37,7 @@ export default function MediationEntryBanner({ className }: { className?: string
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="icon-badge !w-9 !h-9 animate-breathe" aria-hidden>
+            <span className={cn(iconContainerClass, 'animate-breathe')} aria-hidden>
               <HandHeart className="w-[18px] h-[18px]" />
             </span>
             <div>
@@ -44,7 +47,7 @@ export default function MediationEntryBanner({ className }: { className?: string
           </div>
           <Link
             href="/mediation"
-            className="shrink-0 rounded-full border border-border bg-white/70 px-4 py-2 text-caption font-medium text-muted-foreground hover:text-card-foreground hover:shadow-soft transition-all duration-haven ease-haven"
+            className="shrink-0 rounded-button border border-border bg-white/70 px-4 py-2 text-caption font-medium text-muted-foreground hover:text-card-foreground hover:shadow-soft transition-all duration-haven ease-haven focus-ring-premium"
             aria-label="前往調解模式"
           >
             前往修復入口
@@ -59,7 +62,7 @@ export default function MediationEntryBanner({ className }: { className?: string
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="icon-badge !w-9 !h-9" aria-hidden>
+          <span className={iconContainerClass} aria-hidden>
             <HandHeart className="w-[18px] h-[18px]" />
           </span>
           <div>
@@ -69,7 +72,7 @@ export default function MediationEntryBanner({ className }: { className?: string
         </div>
         <Link
           href="/mediation"
-          className="shrink-0 rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 px-5 py-2.5 text-body font-semibold shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 rounded-button bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 px-5 py-2.5 text-body font-semibold shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-ring-premium"
           aria-label="前往調解模式"
         >
           前往填寫

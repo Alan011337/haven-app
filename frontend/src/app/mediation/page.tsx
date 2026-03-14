@@ -3,27 +3,52 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import Skeleton from '@/components/ui/Skeleton';
+
+function MediationSkeleton() {
+  return (
+    <div className="space-y-8 md:space-y-10" aria-hidden>
+      {/* Title skeleton */}
+      <div className="space-y-3">
+        <div className="h-10 w-40 animate-pulse rounded-[1.5rem] bg-muted/50" />
+        <div className="h-4 w-64 animate-pulse rounded-full bg-muted/30" />
+      </div>
+      {/* Step dots skeleton */}
+      <div className="flex items-center justify-between gap-1 px-2">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex flex-1 items-center gap-1">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="h-8 w-8 animate-pulse rounded-full bg-muted/40" />
+              <div className="h-2 w-8 animate-pulse rounded-full bg-muted/25" />
+            </div>
+            {i < 5 && <div className="mb-5 h-px flex-1 bg-muted/20" />}
+          </div>
+        ))}
+      </div>
+      {/* Card skeleton */}
+      <div className="h-52 animate-pulse rounded-[2rem] bg-white/60 shadow-soft" />
+    </div>
+  );
+}
 
 const MediationPageContent = dynamic(
   () => import('./MediationPageContent').then((m) => m.default),
-  {
-    loading: () => (
-      <Skeleton className="h-[50vh] w-full rounded-card" aria-label="載入中" />
-    ),
-  },
+  { loading: () => <MediationSkeleton /> },
 );
 
 export default function MediationPage() {
   return (
-    <div className="min-h-screen bg-muted/40 space-page pb-24">
-      <div className="max-w-4xl mx-auto w-full">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,181,136,0.18),transparent_22%),radial-gradient(circle_at_top_right,rgba(210,223,214,0.25),transparent_26%),linear-gradient(180deg,#faf7f2_0%,#f5f2ec_52%,#f2efe8_100%)]">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_62%)]"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-3xl space-y-8 px-4 py-6 pb-24 sm:px-6 lg:px-8 md:space-y-10">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground font-medium mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-button px-2 py-1"
+          className="inline-flex items-center gap-[var(--space-inline)] rounded-button border border-white/60 bg-white/74 px-4 py-2.5 type-label text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
           aria-label="返回首頁"
         >
-          <ArrowLeft className="w-5 h-5" aria-hidden />
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           回首頁
         </Link>
 
