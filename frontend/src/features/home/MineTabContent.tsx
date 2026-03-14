@@ -89,20 +89,21 @@ export default function MineTabContent({
   return (
     <div className="flex flex-col gap-[var(--space-section)]">
       <HomeCoverStage
-        eyebrow="My Journal"
-        title="今天想說什麼？"
+        eyebrow="Private Writing Desk"
+        title="今天這一頁，先只留給你自己。"
+        description="這裡不是輸入框，也不是更新動態的地方。它是一張暫時只屬於你的首頁封面，讓你先把心情寫下來，再決定要不要把世界叫進來。"
         pulse={pulseLine}
         note={
           <EditorialPaperCard
-            eyebrow="Editorial Note"
-            title={`${relationshipPulse.score} 分的關係脈搏，適合先留白一下。`}
-            description=""
+            eyebrow="House Mood"
+            title={`${relationshipPulse.score} 分的關係脈搏，今天適合先把語氣放慢。`}
+            description="先讓自己的版本落下來，首頁其他層才會變得有意義。"
             tone="mist"
-            className="rounded-[2rem]"
+            className="rounded-[2.25rem]"
           >
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">先寫自己</Badge>
-              <Badge variant="success">
+              <Badge variant="metadata">先寫自己</Badge>
+              <Badge variant="status">
                 {relationshipPulse.hasNewPartnerContent ? '有新來信待閱讀' : '低噪音模式'}
               </Badge>
             </div>
@@ -118,10 +119,10 @@ export default function MineTabContent({
       </HomeCoverStage>
 
       <HomeSectionFrame
-        eyebrow="Second Layer"
-        title="其餘的，在這裡安靜等你。"
-        aside={<Badge variant="outline" className="border-primary/25 text-primary/70">Editorial Mosaic</Badge>}
-        className="bg-[linear-gradient(180deg,rgba(255,252,248,0.74),rgba(248,244,238,0.64))]"
+        eyebrow="Curated Companion Pieces"
+        title="等你把今天這一頁落下，其他內容才慢慢展開。"
+        description="首頁的第二層不該和封面搶聲量。它更像幾個靜靜等著被打開的 companion pieces，而不是一組平均分配注意力的 dashboard 卡片。"
+        aside={<Badge variant="metadata" size="md" className="bg-white/72 text-primary/72">Editorial Mosaic</Badge>}
       >
         <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
           <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
@@ -140,9 +141,9 @@ export default function MineTabContent({
 
       <EditorialTimelineColumn
         eyebrow="Memory Lane"
-        title="時光迴廊"
-        description=""
-        aside={<Badge variant="outline" className="border-primary/25 text-primary/70">{myJournals.length} 篇日記</Badge>}
+        title="寫下來的東西，會在這裡慢慢長出重量。"
+        description="你的日記不只是往下堆的列表。首頁把它們排成一條可以回看的時間廊道，讓每一篇都像一頁真正被保留過的稿件。"
+        aside={<Badge variant="metadata" size="md" className="bg-white/72 text-primary/72">{myJournals.length} 篇日記</Badge>}
         className="bg-[linear-gradient(180deg,rgba(255,254,251,0.96),rgba(249,245,239,0.9))]"
       >
         {timelineStage === 'loading' ? (

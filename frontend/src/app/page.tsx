@@ -62,14 +62,14 @@ function HomeContent() {
 
   return (
     <div className="home-backdrop-cover relative flex min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-ethereal-mesh opacity-40" aria-hidden />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.62),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(228,238,231,0.34),transparent_30%)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-ethereal-mesh opacity-35" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_34%),radial-gradient(circle_at_82%_12%,rgba(248,241,232,0.4),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(228,238,231,0.34),transparent_30%)]" aria-hidden />
       <div className="pointer-events-none absolute -left-20 top-24 h-72 w-72 rounded-full bg-primary/7 blur-hero-orb animate-float" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-accent/8 blur-hero-orb animate-float-delayed" aria-hidden />
       <Sidebar variant="home" />
 
-      <main className="relative z-10 flex-1 px-4 pb-10 pt-16 transition-all duration-haven ease-haven md:pl-[7rem] md:pr-10 md:pt-8 xl:pr-14">
-        <div className="mx-auto max-w-[1480px] space-y-[var(--space-page)]">
+      <main className="relative z-10 flex-1 px-4 pb-14 pt-16 transition-all duration-haven ease-haven md:pl-[7rem] md:pr-10 md:pt-8 xl:pr-16">
+        <div className="mx-auto max-w-[1540px] space-y-[clamp(1.75rem,3vw,2.75rem)]">
           <div className="animate-page-enter">
             <HomeHeader
               savingsScore={savingsScore}
@@ -151,15 +151,18 @@ export default function Home() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(248,244,238,0.94))] px-4">
-          <div className="w-full max-w-2xl rounded-[2.4rem] border border-white/45 bg-white/78 p-8 shadow-lift backdrop-blur-xl animate-slide-up-fade md:p-10">
-            <div className="mb-5 text-[0.72rem] uppercase tracking-[0.34em] text-primary/80">Home Loading</div>
+          <div className="w-full max-w-3xl rounded-[2.9rem] border border-white/45 bg-white/78 p-8 shadow-lift backdrop-blur-xl animate-slide-up-fade md:p-10">
+            <div className="mb-5 type-micro uppercase text-primary/80">Home Loading</div>
             <div className="grid items-center gap-5 md:grid-cols-[auto_minmax(0,1fr)]">
               <div className="relative">
                 <div className="absolute inset-0 rounded-full bg-primary/15 blur-hero-orb-sm animate-breathe" aria-hidden />
                 <Loader2 className="relative z-10 h-10 w-10 animate-spin text-primary" />
               </div>
-              <div className="space-y-2">
-                <p className="font-art text-2xl text-card-foreground md:text-[2.4rem]">正在準備你的首頁…</p>
+              <div className="stack-block">
+                <p className="type-h3 text-card-foreground">正在準備你的首頁…</p>
+                <p className="type-body-muted text-muted-foreground">
+                  把今天真正值得被看見的那幾件事，重新排成一個更安靜的順序。
+                </p>
               </div>
             </div>
           </div>

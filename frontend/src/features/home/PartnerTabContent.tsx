@@ -60,8 +60,8 @@ export default function PartnerTabContent({
     <div className="space-y-[var(--space-section)]">
       <HomeCoverStage
         eyebrow="Partner Letters"
-        title="把對方今天留下的內容，當成一封安靜展開的來信。"
-        description="這一頁刻意減少通知感與效率感。你不需要快速處理它，只需要在夠平穩的節奏裡慢慢讀。"
+        title="把對方今天留下的內容，讀成一封被好好展開的來信。"
+        description="這一頁刻意減少通知感與效率感。你不需要立刻做什麼，只需要進入一個足夠平穩的閱讀節奏，讓理解先於反應。"
         pulse={
           <>
             今天共收進 <strong className="font-medium text-card-foreground">{partnerJournals.length} 則來信</strong>。
@@ -74,11 +74,11 @@ export default function PartnerTabContent({
             title="先理解，再回應；先慢下來，再靠近。"
             description="伴侶來信被放進閱讀室，而不是通知中心。首頁會把它變成一種閱讀經驗，而不是待處理事項。"
             tone="paper"
-            className="rounded-[2rem]"
+            className="rounded-[2.25rem]"
           >
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Reading Room</Badge>
-              <Badge variant="success">{partnerJournals.length} 則來信</Badge>
+              <Badge variant="metadata">Reading Room</Badge>
+              <Badge variant="status">{partnerJournals.length} 則來信</Badge>
               {partnerSafetyBanner ? <Badge variant="warning">安全提示已啟用</Badge> : null}
             </div>
             {partnerSafetyBanner ? (
@@ -99,8 +99,8 @@ export default function PartnerTabContent({
 
       <EditorialTimelineColumn
         eyebrow="Letter Shelf"
-        title="伴侶來信"
-        description="每一篇內容都像展開的稿頁，被放進更安靜的閱讀節奏裡。"
+        title="每一則來信，都值得有一段安靜的閱讀距離。"
+        description="這裡不是訊息串，而是一條慢慢展開的 letter shelf。首頁會把每一篇內容留在足夠有空氣的版面上，而不是把它們擠成待清單。"
         aside={
           <button
             type="button"
