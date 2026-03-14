@@ -139,7 +139,7 @@ export default function LoginPage() {
             disabled={loading}
             rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
           >
-            登入 Haven
+            進入 Haven
           </Button>
         </div>
       </form>
