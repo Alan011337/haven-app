@@ -2,19 +2,15 @@
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { History, Sparkles } from 'lucide-react';
+import { ArrowLeft, History } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { DECK_META_LIST } from '@/lib/deck-meta';
 import { useDeckCardCounts } from '@/hooks/queries';
-import Badge from '@/components/ui/Badge';
-import { GlassCard } from '@/components/haven/GlassCard';
 import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
 import { getSelectionChipStateClass, routeLinkCtaClasses, selectionChipBaseClass } from '@/features/decks/ui/routeStyleHelpers';
 import {
   DeckCollectionTile,
-  DeckHeroPanel,
-  DeckShell,
   DeckStatePanel,
 } from '@/features/decks/ui/DeckPrimitives';
 
@@ -29,6 +25,13 @@ const isFilterMode = (value: string): value is FilterMode =>
 
 const isSortMode = (value: string): value is SortMode =>
   (SORT_MODES as readonly string[]).includes(value);
+
+const FILTER_LABELS: Record<FilterMode, string> = {
+  all: '全部',
+  in_progress: '探索中',
+  not_started: '尚未開始',
+  completed: '已完成',
+};
 
 export default function DecksPageContent() {
   const router = useRouter();
@@ -94,8 +97,6 @@ export default function DecksPageContent() {
     },
     { totalCards: 0, answeredCards: 0 },
   );
-  const overallCompletionRate =
-    totals.totalCards > 0 ? Math.round((totals.answeredCards / totals.totalCards) * 1000) / 10 : 0;
   const completedDecks = DECK_META_LIST.filter((deck) => {
     const stats = deckStats[deck.id];
     return Boolean(stats && stats.total_cards > 0 && stats.completion_rate >= 100);
@@ -161,214 +162,114 @@ export default function DecksPageContent() {
   const buildDeckRoomHref = (deckId: string) =>
     deckRoomQueryString ? `/decks/${deckId}?${deckRoomQueryString}` : `/decks/${deckId}`;
 
-  const heroAside = (
-    <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(249,252,250,0.84),rgba(240,246,242,0.78))] p-5">
-      <div className="stack-section">
-        <div className="stack-block">
-          <p className="type-micro uppercase text-primary/72">今晚焦點</p>
-          <h3 className="type-h3 text-card-foreground">
-            {countsLoading
-              ? '正在整理最適合延續的牌組…'
-              : nextFocusDeck
-                ? `下一步繼續 ${nextFocusDeck.deck.title}`
-                : '你們已經把目前的牌組走得很完整。'}
-          </h3>
-          <p className="type-body-muted text-muted-foreground">
-            {countsLoading
-              ? '先把整體進度整理出來，再替今晚選一個最值得往下走的方向。'
-              : nextFocusDeck
-                ? getDeckEditorialCopy(nextFocusDeck.deck.id)?.shortHook ??
-                  '從最接近完成的牌組繼續，會讓整條對話體驗更有延續感。'
-                : '如果想換個方向，也可以直接從檔案館回看過去最常聊的主題。'}
-          </p>
-        </div>
-        <div className="stack-block">
-          {nextFocusDeck ? (
-            <Link
-              href={buildDeckRoomHref(nextFocusDeck.deck.id)}
-              className={routeLinkCtaClasses.neutral}
-            >
-              繼續這個牌組
-              <Sparkles className="h-4 w-4" aria-hidden />
-            </Link>
-          ) : null}
-          <Link
-            href="/decks/history"
-            className={routeLinkCtaClasses.neutral}
-          >
-            打開對話檔案館
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,181,136,0.18),transparent_22%),radial-gradient(circle_at_top_right,rgba(210,223,214,0.25),transparent_26%),linear-gradient(180deg,#faf7f2_0%,#f5f2ec_52%,#f2efe8_100%)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_62%)]" aria-hidden />
+
+      <div className="relative mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8 md:space-y-10">
+
+        {/* ── Top bar ── */}
+        <div className="flex items-center justify-between">
+          <Link href="/" className={routeLinkCtaClasses.neutral}>
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            回首頁
+          </Link>
+          <Link href="/decks/history" className={routeLinkCtaClasses.neutral}>
             <History className="h-4 w-4" aria-hidden />
+            對話檔案館
           </Link>
         </div>
-      </div>
-    </GlassCard>
-  );
 
-  return (
-    <DeckShell
-      eyebrow="牌組圖書館"
-      title="牌組圖書館"
-      subtitle="把今晚的對話選成一種方向，而不是只抽一張隨機卡。這裡是你們共同的主題收藏庫，從日常到深談，都可以找到剛剛好的入口。"
-      backHref="/"
-      backLabel="回首頁"
-      actions={
-        <Link
-          href="/decks/history"
-          className={routeLinkCtaClasses.neutral}
-        >
-          <History className="h-4 w-4" aria-hidden />
-          對話檔案館
-        </Link>
-      }
-      containerClassName="max-w-7xl"
-    >
-      <DeckHeroPanel
-        eyebrow="今日館藏"
-        title="今晚想把關係往哪個方向打開？"
-        description="每一套牌組都不是一堆題目的集合，而是一種對話場景。先選一個適合今天的方向，再讓問題替你們把節奏帶進去。"
-        metrics={[
-          {
-            label: '已解鎖',
-            value: countsLoading ? '...' : `${totals.answeredCards}/${totals.totalCards}`,
-            note: '目前累積完成的題數',
-          },
-          {
-            label: '整體進度',
-            value: countsLoading ? '...' : `${overallCompletionRate}%`,
-            note: '所有牌組的總體完成比例',
-          },
-          {
-            label: '完整牌組',
-            value: countsLoading ? '...' : `${completedDecks}/${DECK_META_LIST.length}`,
-            note: '已經走完整輪探索的分類數量',
-          },
-        ]}
-        aside={heroAside}
-      />
+        {/* ── Page identity — bare typography on gradient ── */}
+        <div className="space-y-3 animate-slide-up-fade">
+          <h1 className="font-art text-[2rem] leading-[1.05] text-gradient-gold md:text-[2.8rem] xl:text-[3.2rem]">
+            牌組收藏
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {countsLoading
+              ? '正在整理收藏…'
+              : `${totals.answeredCards}/${totals.totalCards} 題已完成 · ${completedDecks} 套走完整輪`}
+          </p>
+        </div>
 
-      <GlassCard className="overflow-hidden rounded-[2rem] border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(247,243,236,0.76))] p-5 md:p-6">
-        <div className="stack-section">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div className="stack-block">
-              <p className="type-micro uppercase text-primary/72">館藏整理</p>
-              <h2 className="type-h3 text-card-foreground">按進度、狀態或名稱整理今晚的牌組。</h2>
-              <p className="type-body-muted text-muted-foreground">
-                保留你現在的篩選與排序；進入某個牌組再返回時，瀏覽位置不會被打散。
-              </p>
-            </div>
-            <div className="stack-inline rounded-full border border-white/55 bg-white/72 px-4 py-3 shadow-soft">
-              <span className="type-micro uppercase text-primary/72">顯示中</span>
-              <Badge variant="metadata" size="md" className="bg-white/75 text-card-foreground tabular-nums">
-                {deckCards.length}/{DECK_META_LIST.length}
-              </Badge>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTER_MODES.map((mode) => {
-              const active = filterMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => syncQueryParams(mode, sortMode)}
-                  className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
-                  aria-pressed={active}
-                >
-                  {mode === 'all'
-                    ? '全部牌組'
-                    : mode === 'in_progress'
-                      ? '正在探索'
-                      : mode === 'not_started'
-                        ? '尚未開始'
-                        : '已完整走過'}
-                </button>
-              );
-            })}
-
-            <div className="ml-auto flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3 py-2 shadow-soft">
-              <label htmlFor="deck-sort" className="type-micro uppercase text-primary/70">
-                排序
-              </label>
-              <select
-                id="deck-sort"
-                aria-label="排序方式"
-                value={sortMode}
-                onChange={(event) => {
-                  const nextSort = event.target.value;
-                  if (!isSortMode(nextSort)) return;
-                  syncQueryParams(filterMode, nextSort);
-                }}
-                className="select-premium min-w-[7.5rem] border-0 bg-transparent type-caption text-card-foreground shadow-none"
+        {/* ── Inline filters — no wrapper card ── */}
+        <div className="flex flex-wrap items-center gap-2 animate-slide-up-fade-1">
+          {FILTER_MODES.map((mode) => {
+            const active = filterMode === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => syncQueryParams(mode, sortMode)}
+                className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
+                aria-pressed={active}
               >
-                <option value="recommended">推薦排序</option>
-                <option value="progress_desc">進度高到低</option>
-                <option value="progress_asc">進度低到高</option>
-                <option value="title">名稱排序</option>
-              </select>
-            </div>
+                {FILTER_LABELS[mode]}
+              </button>
+            );
+          })}
+
+          <div className="ml-auto flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3 py-2 shadow-soft">
+            <label htmlFor="deck-sort" className="type-micro uppercase text-primary/70">
+              排序
+            </label>
+            <select
+              id="deck-sort"
+              aria-label="排序方式"
+              value={sortMode}
+              onChange={(event) => {
+                const nextSort = event.target.value;
+                if (!isSortMode(nextSort)) return;
+                syncQueryParams(filterMode, nextSort);
+              }}
+              className="select-premium min-w-[7.5rem] border-0 bg-transparent type-caption text-card-foreground shadow-none"
+            >
+              <option value="recommended">推薦排序</option>
+              <option value="progress_desc">進度高到低</option>
+              <option value="progress_asc">進度低到高</option>
+              <option value="title">名稱排序</option>
+            </select>
           </div>
         </div>
-      </GlassCard>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {deckCards.length === 0 && !countsLoading ? (
-          <div className="lg:col-span-12">
-            <DeckStatePanel
-              eyebrow="暫無結果"
-              title="目前沒有符合條件的牌組"
-              description="這不是沒有內容，只是目前的篩選條件把它們暫時收起來了。換個條件再看一次，圖書館就會重新打開。"
-              actionLabel="清除篩選"
-              onAction={() => syncQueryParams('all', 'recommended')}
-            />
-          </div>
-        ) : null}
-
-        {deckCards.map(({ deck, totalCards, answeredCards, completionRate, isCompleted, isStarted }, index) => {
-          const editorialCopy = getDeckEditorialCopy(deck.id);
-          const isFeature = index === 0 || nextFocusDeck?.deck.id === deck.id;
-          const gridClass = isFeature
-            ? 'lg:col-span-7 xl:col-span-6'
-            : index % 3 === 0
-              ? 'lg:col-span-5 xl:col-span-3'
-              : 'lg:col-span-5 xl:col-span-3';
-
-          return (
-            <div key={deck.id} className={gridClass}>
-              <DeckCollectionTile
-                deck={deck}
-                href={buildDeckRoomHref(deck.id)}
-                eyebrow={editorialCopy?.eyebrow ?? '主題收藏'}
-                spotlight={editorialCopy?.spotlight ?? deck.description}
-                shortHook={editorialCopy?.shortHook ?? deck.description}
-                progressLabel={countsLoading ? '進度整理中' : `${answeredCards}/${totalCards} 已完成`}
-                countLabel={countsLoading ? '題庫整理中' : `${totalCards} 題`}
-                statusLabel={
-                  countsLoading
-                    ? '整理中'
-                    : isCompleted
-                      ? '完整走過'
-                      : isStarted
-                        ? '正在探索'
-                        : '尚未開始'
-                }
-                statusVariant={
-                  countsLoading
-                    ? 'metadata'
-                    : isCompleted
-                      ? 'status'
-                      : isStarted
-                        ? 'filter'
-                        : 'metadata'
-                }
-                progressWidth={countsLoading ? 0 : completionRate}
-                emphasis={isFeature ? 'feature' : 'standard'}
-                loading={countsLoading}
+        {/* ── Collection grid ── */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-slide-up-fade-2">
+          {deckCards.length === 0 && !countsLoading ? (
+            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <DeckStatePanel
+                eyebrow="暫無結果"
+                title="目前沒有符合條件的牌組"
+                description="換個條件再看一次。"
+                actionLabel="清除篩選"
+                onAction={() => syncQueryParams('all', 'recommended')}
               />
             </div>
-          );
-        })}
-      </section>
-    </DeckShell>
+          ) : null}
+
+          {deckCards.map(({ deck, totalCards, answeredCards, completionRate }) => {
+            const editorialCopy = getDeckEditorialCopy(deck.id);
+            const isFeatured = nextFocusDeck?.deck.id === deck.id;
+
+            return (
+              <div
+                key={deck.id}
+                className={isFeatured ? 'sm:col-span-2' : ''}
+              >
+                <DeckCollectionTile
+                  deck={deck}
+                  href={buildDeckRoomHref(deck.id)}
+                  shortHook={editorialCopy?.shortHook ?? deck.description}
+                  progressLabel={countsLoading ? '整理中…' : `${answeredCards}/${totalCards}`}
+                  progressWidth={countsLoading ? 0 : completionRate}
+                  emphasis={isFeatured ? 'feature' : 'standard'}
+                  loading={countsLoading}
+                />
+              </div>
+            );
+          })}
+        </section>
+
+      </div>
+    </div>
   );
 }

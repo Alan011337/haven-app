@@ -5,7 +5,6 @@ import { ArrowLeft, ChevronRight, Sparkles, type LucideIcon } from 'lucide-react
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { GlassCard } from '@/components/haven/GlassCard';
-import { CardBackVariant } from '@/components/haven/CardBackVariant';
 import { routeLinkCtaClasses } from './routeStyleHelpers';
 import { getDeckDisplayName, getDeckMeta, type DeckMeta } from '@/lib/deck-meta';
 import { getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
@@ -83,70 +82,11 @@ export function DeckShell({
   );
 }
 
-type DeckHeroMetric = {
-  label: string;
-  value: string;
-  note: string;
-};
-
-type DeckHeroPanelProps = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  metrics: DeckHeroMetric[];
-  aside: ReactNode;
-};
-
-export function DeckHeroPanel({
-  eyebrow,
-  title,
-  description,
-  metrics,
-  aside,
-}: DeckHeroPanelProps) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_360px] xl:items-stretch">
-      <GlassCard className="overflow-hidden rounded-[2rem] border-white/52 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,243,236,0.75))] p-6 md:p-7">
-        <div className="stack-section">
-          <div className="stack-block">
-            <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
-            <h2 className="max-w-3xl type-h2 text-card-foreground">
-              {title}
-            </h2>
-            <p className="max-w-3xl type-body-muted text-muted-foreground">
-              {description}
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {metrics.map((metric, index) => (
-              <div
-                key={metric.label}
-                className={`rounded-[1.4rem] border border-white/55 bg-white/68 p-4 shadow-soft animate-slide-up-fade${index > 0 ? `-${Math.min(index, 5)}` : ''}`}
-              >
-                <p className="type-micro uppercase text-primary/68">{metric.label}</p>
-                <p className="mt-3 text-2xl font-semibold text-card-foreground tabular-nums">{metric.value}</p>
-                <p className="mt-2 type-caption text-muted-foreground">{metric.note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </GlassCard>
-
-      {aside}
-    </div>
-  );
-}
-
 type DeckCollectionTileProps = {
   deck: DeckMeta;
   href: string;
-  eyebrow: string;
-  spotlight: string;
   shortHook: string;
   progressLabel: string;
-  countLabel: string;
-  statusLabel: string;
-  statusVariant?: 'metadata' | 'status' | 'filter';
   progressWidth: number;
   emphasis?: 'feature' | 'standard';
   loading?: boolean;
@@ -155,13 +95,8 @@ type DeckCollectionTileProps = {
 export function DeckCollectionTile({
   deck,
   href,
-  eyebrow,
-  spotlight,
   shortHook,
   progressLabel,
-  countLabel,
-  statusLabel,
-  statusVariant = 'metadata',
   progressWidth,
   emphasis = 'standard',
   loading = false,
@@ -171,62 +106,52 @@ export function DeckCollectionTile({
   return (
     <Link href={href} prefetch className="group focus-visible:outline-none">
       <article
-        className={`relative overflow-hidden rounded-[2rem] border border-white/52 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(246,241,234,0.76))] p-5 shadow-soft transition-all duration-haven ease-haven hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(63,44,26,0.12)] ${
-          isFeature ? 'min-h-[22rem] md:min-h-[24rem]' : 'min-h-[18rem]'
+        className={`relative overflow-hidden rounded-[2rem] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.78))] shadow-soft transition-all duration-haven ease-haven hover:-translate-y-1 hover:shadow-lift focus-visible:ring-2 focus-visible:ring-ring${
+          isFeature ? ' ring-1 ring-primary/10' : ''
         }`}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.5),transparent_40%)]" aria-hidden />
-        <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between gap-4">
-            <div className="stack-block">
-              <p className="type-micro uppercase text-primary/70">{eyebrow}</p>
-              <div className="stack-block">
-                <h3 className="type-h3 text-card-foreground">
-                  {deck.title}
-                </h3>
-                <p className="max-w-[32rem] type-caption text-muted-foreground">{spotlight}</p>
-              </div>
-            </div>
-            <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-[1rem] shadow-soft ring-1 ring-black/5">
-              <CardBackVariant deck={deck}>
-                <deck.Icon className={`h-5 w-5 ${deck.iconColor}`} strokeWidth={2.2} aria-hidden />
-              </CardBackVariant>
+        {/* Deck color accent strip */}
+        <div className={`h-1.5 w-full bg-gradient-to-r ${deck.color}`} aria-hidden />
+
+        <div className={isFeature ? 'space-y-4 p-6' : 'space-y-4 p-5'}>
+          {/* Icon + Title + Hook */}
+          <div className="flex items-start gap-3.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/55 bg-white/74 shadow-soft" aria-hidden>
+              <deck.Icon className={`h-5 w-5 ${deck.iconColor}`} strokeWidth={2.2} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-art text-lg leading-tight text-card-foreground">
+                {deck.title}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                {shortHook}
+              </p>
             </div>
           </div>
 
-          <div className="stack-block">
-            <p className="type-body-muted text-card-foreground/88">{shortHook}</p>
-            {loading ? (
-              <div className="space-y-3">
-                <div className="h-2 w-full rounded-full bg-muted/70 animate-pulse" aria-hidden />
-                <div className="h-9 w-full rounded-full bg-muted/70 animate-pulse" aria-hidden />
+          {/* Progress */}
+          {loading ? (
+            <div className="space-y-2.5">
+              <div className="h-1.5 w-full rounded-full bg-muted/70 animate-pulse" aria-hidden />
+              <div className="h-4 w-20 rounded-full bg-muted/50 animate-pulse" aria-hidden />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${deck.color} transition-all duration-haven ease-haven`}
+                  style={{ width: `${Math.max(0, Math.min(100, progressWidth))}%` }}
+                />
               </div>
-            ) : (
-              <>
-                <div className="stack-block">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${deck.color} transition-all duration-haven ease-haven`}
-                      style={{ width: `${Math.max(0, Math.min(100, progressWidth))}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3 type-caption text-muted-foreground">
-                    <span className="tabular-nums">{progressLabel}</span>
-                    <span>{countLabel}</span>
-                  </div>
-                </div>
-                <div className="stack-inline justify-between rounded-full border border-white/55 bg-white/66 px-4 py-3">
-                  <Badge variant={statusVariant} size="sm" className="bg-white/78 text-card-foreground/82 shadow-none">
-                    {statusLabel}
-                  </Badge>
-                  <span className="stack-inline type-label text-card-foreground">
-                    打開牌組
-                    <ChevronRight className="h-4 w-4 transition-transform duration-haven ease-haven group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs tabular-nums text-muted-foreground">{progressLabel}</span>
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-card-foreground/60 transition-colors duration-haven group-hover:text-card-foreground">
+                  打開
+                  <ChevronRight className="h-3.5 w-3.5 transition-transform duration-haven ease-haven group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </article>
     </Link>
