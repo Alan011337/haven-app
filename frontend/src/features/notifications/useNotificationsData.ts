@@ -22,6 +22,13 @@ const notificationsRefetchInterval = buildAdaptiveRefetchInterval(NOTIFICATIONS_
   hiddenMultiplier: 4,
 });
 
+type NotificationActionFilter =
+  | 'ALL'
+  | 'JOURNAL'
+  | 'CARD'
+  | 'COOLDOWN_STARTED'
+  | 'MEDIATION_INVITE';
+
 export const formatTime = (value: string) =>
   new Date(value).toLocaleString('zh-TW', {
     month: '2-digit',
@@ -60,7 +67,7 @@ export function useNotificationsData() {
   const [statsWindowDays, setStatsWindowDays] = useState<7 | 30>(7);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [onlyUnread, setOnlyUnread] = useState(false);
-  const [actionFilter, setActionFilter] = useState<'ALL' | 'JOURNAL' | 'CARD'>('ALL');
+  const [actionFilter, setActionFilter] = useState<NotificationActionFilter>('ALL');
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'QUEUED' | 'SENT' | 'FAILED' | 'THROTTLED'
   >('ALL');
@@ -100,6 +107,9 @@ export function useNotificationsData() {
   const loading = listQuery.isLoading || statsQuery.isLoading;
   const refreshing =
     (listQuery.isFetching || statsQuery.isFetching) && !listQuery.isLoading && !statsQuery.isLoading;
+  const listError = listQuery.isError;
+  const statsError = statsQuery.isError;
+  const hasDiagnosticsData = Boolean(statsQuery.data);
 
   const unreadCount = useMemo(
     () => (listQuery.data ?? []).filter((item) => !item.is_read).length,
@@ -136,9 +146,22 @@ export function useNotificationsData() {
 
   const handleMarkAllRead = useCallback(async () => {
     try {
-      await markNotificationsRead(
-        actionFilter === 'ALL' ? undefined : (actionFilter.toLowerCase() as 'journal' | 'card'),
-      );
+      const scopedActionType =
+        actionFilter === 'JOURNAL'
+          ? 'journal'
+          : actionFilter === 'CARD'
+            ? 'card'
+            : undefined;
+
+      if (
+        actionFilter !== 'ALL' &&
+        actionFilter !== 'JOURNAL' &&
+        actionFilter !== 'CARD'
+      ) {
+        return;
+      }
+
+      await markNotificationsRead(scopedActionType);
       await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
       await queryClient.invalidateQueries({ queryKey: queryKeys.notificationStats() });
     } catch (error) {
@@ -163,7 +186,7 @@ export function useNotificationsData() {
     [queryClient],
   );
 
-  const handleActionFilterChange = useCallback((nextFilter: 'ALL' | 'JOURNAL' | 'CARD') => {
+  const handleActionFilterChange = useCallback((nextFilter: NotificationActionFilter) => {
     setActionFilter(nextFilter);
   }, []);
 
@@ -230,6 +253,9 @@ export function useNotificationsData() {
   return {
     items,
     stats,
+    listError,
+    statsError,
+    hasDiagnosticsData,
     hoveredDay,
     setHoveredDay,
     statsWindowDays,

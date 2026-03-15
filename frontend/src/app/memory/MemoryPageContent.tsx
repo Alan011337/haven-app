@@ -239,11 +239,12 @@ export default function MemoryPageContent() {
   const calendarJournalDays = calendar?.days.filter((day) => day.journal_count > 0).length ?? 0;
   const calendarCardDays = calendar?.days.filter((day) => day.card_count > 0).length ?? 0;
   const calendarPhotoDays = calendar?.days.filter((day) => day.has_photo).length ?? 0;
-  const timeCapsuleAvailable = Boolean(timeCapsule?.available && timeCapsule.memory);
+  const timeCapsuleMemory = timeCapsule?.available ? timeCapsule.memory : null;
+  const timeCapsuleAvailable = Boolean(timeCapsuleMemory);
   const featuredFeedModel = featuredTimelineItem ? buildTimelineModel(featuredTimelineItem) : null;
   const featuredMemoryChamber =
-    timeCapsuleAvailable && timeCapsule.memory
-      ? buildTimeCapsuleModel(timeCapsule.memory)
+    timeCapsuleMemory
+      ? buildTimeCapsuleModel(timeCapsuleMemory)
       : featuredTimelineItem
         ? buildTimelineModel(featuredTimelineItem)
         : buildEmptyFeaturedModel();
@@ -311,7 +312,7 @@ export default function MemoryPageContent() {
                 <div className="space-y-1">
                   <p className="type-micro uppercase text-primary/80">Time Capsule</p>
                   <p className="text-xl font-semibold text-card-foreground">
-                    {timeCapsuleAvailable && timeCapsule.memory ? timeCapsule.memory.date : '等待回來'}
+                    {timeCapsuleMemory ? timeCapsuleMemory.date : '等待回來'}
                   </p>
                   <p className="type-caption text-muted-foreground">
                     一年前的今天，會在對的時間重新回來。
@@ -542,7 +543,9 @@ export default function MemoryPageContent() {
                   <GlassCard
                     key={index}
                     className="h-44 rounded-[2rem] border-white/52 bg-white/76 shadow-soft"
-                  />
+                  >
+                    <div className="h-44" aria-hidden />
+                  </GlassCard>
                 ))}
               </div>
             </div>
