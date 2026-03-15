@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Target, Loader2 } from "lucide-react";
-import { GlassCard } from "@/components/haven/GlassCard";
+import { Loader2 } from "lucide-react";
 import {
   fetchBaseline,
   upsertBaseline,
@@ -89,21 +88,14 @@ export default function RelationshipRadarCard() {
 
   if (loading) {
     return (
-      <GlassCard className="max-w-4xl mx-auto w-full mb-6 p-6 flex items-center justify-center min-h-[120px]">
+      <div className="flex min-h-[120px] items-center justify-center rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft">
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
-      </GlassCard>
+      </div>
     );
   }
 
   return (
-    <GlassCard className="max-w-4xl mx-auto w-full mb-6 p-6 md:p-8 relative overflow-hidden">
-      <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
-      <h2 className="text-title font-art font-semibold text-foreground mb-2 flex items-center gap-2">
-        <span className="icon-badge">
-          <Target className="w-5 h-5 text-primary" aria-hidden />
-        </span>
-        關係雷達與北極星目標
-      </h2>
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft md:p-8">
       <p className="text-caption text-muted-foreground mb-4">
         用 1 分鐘填寫 5 個維度（1–5 分），並共同選擇一個核心目標。
       </p>
@@ -173,6 +165,6 @@ export default function RelationshipRadarCard() {
           </p>
         )}
       </section>
-    </GlassCard>
+    </section>
   );
 }

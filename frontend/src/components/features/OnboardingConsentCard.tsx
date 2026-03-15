@@ -12,7 +12,6 @@ import {
   Shield,
   SlidersHorizontal,
 } from "lucide-react";
-import { GlassCard } from "@/components/haven/GlassCard";
 import Button from "@/components/ui/Button";
 import {
   fetchOnboardingConsent,
@@ -106,17 +105,15 @@ export default function OnboardingConsentCard({
 
   if (loading) {
     return (
-      <GlassCard className="max-w-4xl mx-auto w-full mb-6 p-6 flex items-center justify-center min-h-[120px]">
+      <div className="flex min-h-[120px] items-center justify-center rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft">
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
-      </GlassCard>
+      </div>
     );
   }
 
   return (
-    <GlassCard id="onboarding-consent-card" className="max-w-4xl mx-auto w-full mb-6 p-6 relative overflow-hidden">
-      <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
-      <h2 className="mb-2 stack-inline type-h3 text-foreground">
-        <span className="icon-badge" aria-hidden><Shield className="w-4 h-4" /></span>
+    <section id="onboarding-consent-card" className="relative overflow-hidden rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft md:p-8">
+      <h2 className="mb-2 type-h3 text-foreground">
         {mode === "onboarding" ? "隱私、通知與 AI 偏好" : "安全感與通知"}
       </h2>
       <p className="mb-4 type-body-muted text-muted-foreground">
@@ -253,6 +250,6 @@ export default function OnboardingConsentCard({
           {saving ? "儲存中..." : "儲存設定"}
         </Button>
       </div>
-    </GlassCard>
+    </section>
   );
 }

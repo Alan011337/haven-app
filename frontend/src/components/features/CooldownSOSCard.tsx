@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Timer, Loader2, Pause, Wind } from "lucide-react";
-import { GlassCard } from "@/components/haven/GlassCard";
+import { Timer, Loader2, Wind } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useCooldownStatus } from "@/hooks/queries";
 import { queryKeys } from "@/lib/query-keys";
@@ -80,20 +79,14 @@ export default function CooldownSOSCard() {
 
   if (loading || !status) {
     return (
-      <GlassCard className="mb-6 p-6 flex items-center justify-center min-h-[120px]">
+      <div className="flex min-h-[120px] items-center justify-center rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft">
         <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden />
-      </GlassCard>
+      </div>
     );
   }
 
   return (
-    <GlassCard className="mb-6 p-6 md:p-8">
-      <h3 className="font-art text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
-        <span className="icon-badge">
-          <Pause className="w-5 h-5 text-primary" aria-hidden />
-        </span>
-        冷卻模式（SOS）
-      </h3>
+    <section className="rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft md:p-8">
       <p className="text-caption text-muted-foreground mb-4">
         需要暫停一下時，可啟動冷卻時間，伴侶會收到通知。建議 20–60 分鐘後再好好聊聊。
       </p>
@@ -179,6 +172,6 @@ export default function CooldownSOSCard() {
           ))}
         </div>
       )}
-    </GlassCard>
+    </section>
   );
 }

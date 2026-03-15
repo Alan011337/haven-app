@@ -11,7 +11,6 @@ import { createReferralCoupleInviteEventId, buildReferralInviteUrl } from '@/lib
 import { trackReferralCoupleInvite } from '@/services/api-client';
 import { fetchUserMe, generateInviteCode, pairWithPartner } from '@/services/user';
 import { useToast } from '@/hooks/useToast';
-import { GlassCard } from '@/components/haven/GlassCard';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -120,23 +119,12 @@ export default function PartnerSettings() {
   if (loading) return <div className="p-12 flex justify-center"><div className="relative"><div className="absolute inset-0 bg-primary/10 rounded-full blur-xl animate-breathe" aria-hidden /><Loader2 className="animate-spin text-primary w-8 h-8 relative z-10" aria-hidden /></div></div>;
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-8">
-      
-      {/* Panel-enter / reveal: long duration (700ms/500ms/1000ms) intentional for onboarding/reveal; excluded from Haven micro-motion tokens by design. */}
-      <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
-        <h2 className="text-4xl font-art font-extrabold text-primary inline-flex items-center gap-3 tracking-tight">
-          <Heart className="fill-primary text-primary animate-pulse drop-shadow-soft" size={32} aria-hidden /> 
-          伴侶連結
-        </h2>
-        <p className="text-muted-foreground mt-4 text-base font-medium max-w-md mx-auto">
-          連結彼此的帳號，讓 AI 成為你們關係的橋樑，<br/>在專屬於你們的雲端日記中相遇。
-        </p>
-      </div>
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/50 bg-white/70 p-6 shadow-soft md:p-8">
+      <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+        連結彼此的帳號，讓 AI 成為你們關係的橋樑，在專屬於你們的雲端日記中相遇。
+      </p>
 
-      <div className="relative group">
-        {/* Ambient glow: token-based; duration-1000 intentional for ritual. */}
-        <div className="absolute -inset-1 bg-primary/20 rounded-card blur opacity-20 group-hover:opacity-30 transition-opacity duration-1000 ease-out" aria-hidden />
-        <GlassCard className="relative p-10 overflow-hidden">
+      <div className="relative">
           
           {user?.partner_id ? (
             // ==========================
@@ -273,8 +261,7 @@ export default function PartnerSettings() {
                </div>
             </div>
           )}
-        </GlassCard>
       </div>
-    </div>
+    </section>
   );
 }
