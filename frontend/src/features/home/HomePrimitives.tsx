@@ -157,10 +157,9 @@ export function HomeSectionFrame({
   contentClassName,
 }: HomeSectionFrameProps) {
   return (
-    <section className={cn('relative space-y-[var(--space-section)]', className)}>
-      <div className="stack-section">
-        <div className="divider-fade" aria-hidden />
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <GlassCard className={cn('home-surface-mist overflow-hidden rounded-[2.35rem] p-6 md:p-8', className)}>
+      <div className="relative flex flex-col gap-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-2xl stack-block">
             {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
             <div className="stack-block">
@@ -168,11 +167,11 @@ export function HomeSectionFrame({
               {description ? <p className="max-w-2xl type-body-muted text-muted-foreground/84">{description}</p> : null}
             </div>
           </div>
-          {aside ? <div className="shrink-0 md:pb-1">{aside}</div> : null}
+          {aside ? <div className="shrink-0">{aside}</div> : null}
         </div>
+        <div className={cn('space-y-4', contentClassName)}>{children}</div>
       </div>
-      <div className={cn('space-y-4', contentClassName)}>{children}</div>
-    </section>
+    </GlassCard>
   );
 }
 
@@ -188,13 +187,13 @@ export function HomeHeroStage({
   return (
     <section
       className={cn(
-        'home-surface-cover rounded-[2.8rem] p-6 md:p-8 xl:p-10',
+        'home-surface-cover rounded-[2.4rem] p-6 md:p-8 xl:p-10',
         className,
       )}
     >
       <div className="absolute -right-16 top-0 h-72 w-72 rounded-full bg-primary/10 blur-hero-orb" aria-hidden />
       <div className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-accent/10 blur-hero-orb-sm" aria-hidden />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.62),transparent_42%)]" aria-hidden />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.58),transparent_42%)]" aria-hidden />
 
       <div className="relative z-10 grid gap-8 xl:grid-cols-[minmax(0,1.18fr)_320px] xl:items-start">
         <div className={cn('stack-section', contentClassName)}>
@@ -225,7 +224,7 @@ export function HomeCoverStage({
   return (
     <section
       className={cn(
-        'home-surface-cover rounded-[3.2rem] p-6 md:p-8 xl:p-11',
+        'home-surface-cover rounded-[3rem] p-6 md:p-8 xl:p-10',
         className,
       )}
     >
@@ -234,7 +233,7 @@ export function HomeCoverStage({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_38%),radial-gradient(circle_at_88%_12%,rgba(255,255,255,0.28),transparent_28%)]" aria-hidden />
 
       <div className="relative z-10 stack-section">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-10">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-9">
           <div className={cn('stack-section', contentClassName)}>
             {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
             <div className="stack-block">
@@ -242,7 +241,7 @@ export function HomeCoverStage({
               {description ? <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p> : null}
             </div>
             {pulse ? (
-              <div className="inline-flex max-w-2xl items-start gap-3 rounded-[1.75rem] border border-white/52 bg-white/68 px-4 py-3.5 shadow-soft backdrop-blur-md">
+              <div className="inline-flex max-w-2xl items-start gap-3 rounded-[1.6rem] border border-white/52 bg-white/68 px-4 py-3.5 shadow-soft backdrop-blur-md">
                 <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/75 shadow-[0_0_0_8px_rgba(201,163,100,0.11)] animate-breathe" aria-hidden />
                 <div className="type-body-muted text-card-foreground">{pulse}</div>
               </div>
@@ -295,7 +294,7 @@ export function HomeComposerStage({
   return (
     <GlassCard
       className={cn(
-        'home-surface-paper overflow-hidden rounded-[2.55rem] p-0',
+        'home-surface-paper overflow-hidden rounded-[2.35rem] p-0',
         className,
       )}
     >
@@ -327,7 +326,7 @@ export function EditorialPaperCard({
   return (
     <GlassCard
       className={cn(
-        'overflow-hidden rounded-[2.15rem] p-0',
+        'overflow-hidden rounded-[2rem] p-0',
         paperToneClassName[tone],
         className,
       )}
@@ -350,7 +349,7 @@ export function HomeMosaicRail({ children, className }: HomeMosaicRailProps) {
   return (
     <div
       className={cn(
-        'grid auto-rows-auto gap-5 lg:grid-cols-2',
+        'grid auto-rows-auto gap-4 lg:grid-cols-2',
         className,
       )}
     >
@@ -363,7 +362,7 @@ export function HomeRailNav({ children, className }: HomeRailNavProps) {
   return (
     <div
       className={cn(
-        'home-surface-mist rounded-[2.1rem] border border-white/46 p-3 shadow-soft backdrop-blur-xl',
+        'home-rail-shell rounded-full p-1.5',
         className,
       )}
     >
@@ -402,11 +401,11 @@ export function EditorialTimelineColumn({
   return (
     <section
       className={cn(
-        'home-surface-ink rounded-[2.6rem] p-6 md:p-8 xl:p-9',
+        'home-surface-ink rounded-[2.2rem] p-6 md:p-8',
         className,
       )}
     >
-      <div className="relative grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-12">
+      <div className="relative grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)] xl:gap-10">
         <div className="stack-block xl:sticky xl:top-24 xl:self-start">
           {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
           <h3 className="type-h3 text-card-foreground">{title}</h3>
@@ -492,7 +491,7 @@ export function EditorialEmptyState({
   return (
     <EditorialStateCard
       icon={Icon}
-      eyebrow="Empty Page"
+      eyebrow="空白頁"
       title={title}
       description={description}
       actionLabel={actionLabel}
@@ -514,7 +513,7 @@ export function EditorialDeferredState({
   return (
     <EditorialStateCard
       icon={Icon}
-      eyebrow="Deferred"
+      eyebrow="同步中"
       title={title}
       description={description}
       actionLabel={actionLabel}

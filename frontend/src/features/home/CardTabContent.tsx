@@ -2,34 +2,19 @@
 
 import { MoonStar, Sparkles, Stars } from 'lucide-react';
 import DailyCard from '@/components/features/DailyCard';
-import Badge from '@/components/ui/Badge';
-import { EditorialPaperCard, HomeCoverStage } from '@/features/home/HomePrimitives';
+import { HomeCoverStage } from '@/features/home/HomePrimitives';
 
 export default function CardTabContent() {
   return (
     <HomeCoverStage
-      eyebrow="Daily Ritual"
-      title="把今晚最值得一起回答的問題，留在唯一的聚光區。"
-      description="這裡不該像一張卡片被塞進首頁，而應該像一個被單獨打亮的 ritual stage。抽卡、回答、等待與揭曉，都需要更安靜、更有重力的中心。"
+      eyebrow="每日儀式"
+      title="今晚，只留一個問題給彼此。"
+      description="安靜抽一張，慢慢答。"
       pulse={
         <>
           如果今晚只做一件彼此有感的事，
-          <strong className="font-medium text-card-foreground"> 讓它是一個被好好完成的 daily ritual。</strong>
+          <strong className="font-medium text-card-foreground"> 讓它是今天最安靜的一刻。</strong>
         </>
-      }
-      note={
-        <EditorialPaperCard
-          eyebrow="Stage Rule"
-          title="把 ritual 放在聚光燈下。"
-          description="首頁這一頁會刻意減少周圍噪音，只留下今晚真正需要一起完成的那張卡。"
-          tone="mist"
-          className="rounded-[2.25rem]"
-        >
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="status">Ritual Stage</Badge>
-            <Badge variant="metadata">Focus Mode</Badge>
-          </div>
-        </EditorialPaperCard>
       }
     >
       <div className="relative pt-2">

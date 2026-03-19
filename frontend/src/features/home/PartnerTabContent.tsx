@@ -2,7 +2,6 @@
 
 import { BookHeart, HeartHandshake, RefreshCw } from 'lucide-react';
 import PartnerJournalCard from '@/components/features/PartnerJournalCard';
-import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import PartnerSafetyBanner from '@/components/features/PartnerSafetyBanner';
 import {
@@ -59,48 +58,29 @@ export default function PartnerTabContent({
   return (
     <div className="space-y-[var(--space-section)]">
       <HomeCoverStage
-        eyebrow="Partner Letters"
-        title="把對方今天留下的內容，讀成一封被好好展開的來信。"
-        description="這一頁刻意減少通知感與效率感。你不需要立刻做什麼，只需要進入一個足夠平穩的閱讀節奏，讓理解先於反應。"
+        eyebrow="伴侶來信"
+        title="慢慢讀，不急著回。"
+        description="這裡不是通知中心，是閱讀室。"
         pulse={
           <>
             今天共收進 <strong className="font-medium text-card-foreground">{partnerJournals.length} 則來信</strong>。
-            首頁會先給它閱讀空氣，而不是叫你立刻把 badge 清掉。
+            不急，慢慢讀。
           </>
         }
         note={
-          <EditorialPaperCard
-            eyebrow="Reading Rule"
-            title="先理解，再回應；先慢下來，再靠近。"
-            description="伴侶來信被放進閱讀室，而不是通知中心。首頁會把它變成一種閱讀經驗，而不是待處理事項。"
-            tone="paper"
-            className="rounded-[2.25rem]"
-          >
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="metadata">Reading Room</Badge>
-              <Badge variant="status">{partnerJournals.length} 則來信</Badge>
-              {partnerSafetyBanner ? <Badge variant="warning">安全提示已啟用</Badge> : null}
-            </div>
-            {partnerSafetyBanner ? (
-              <PartnerSafetyBanner
-                severeCount={partnerSafetyBanner.severeCount}
-                onDismiss={onDismissSafetyBanner}
-                className="mt-4 rounded-[1.6rem] border-destructive/15 bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))]"
-              />
-            ) : (
-              <div className="mt-4 flex items-center gap-2 text-sm text-card-foreground">
-                <HeartHandshake className="h-4 w-4 text-primary" aria-hidden />
-                <span>把它讀成稿頁，而不是待處理的訊息。</span>
-              </div>
-            )}
-          </EditorialPaperCard>
+          partnerSafetyBanner ? (
+            <PartnerSafetyBanner
+              severeCount={partnerSafetyBanner.severeCount}
+              onDismiss={onDismissSafetyBanner}
+              className="rounded-[2.25rem] border-destructive/15 bg-[linear-gradient(180deg,rgba(255,246,246,0.96),rgba(255,250,249,0.92))]"
+            />
+          ) : null
         }
       />
 
       <EditorialTimelineColumn
-        eyebrow="Letter Shelf"
+        eyebrow="來信書架"
         title="每一則來信，都值得有一段安靜的閱讀距離。"
-        description="這裡不是訊息串，而是一條慢慢展開的 letter shelf。首頁會把每一篇內容留在足夠有空氣的版面上，而不是把它們擠成待清單。"
         aside={
           <button
             type="button"
@@ -131,7 +111,7 @@ export default function PartnerTabContent({
             <EditorialDeferredState
               icon={HeartHandshake}
               title="伴侶來信還在路上"
-              description="這通常是 upstream 回應偏慢。首頁其他部分不受影響，你可以先回到自己的頁面，稍後再回來讀。"
+              description="伴侶端的回應還在路上，你可以先回到自己的頁面。"
               actionLabel="重新整理"
               onAction={onRefresh}
             />
@@ -141,7 +121,7 @@ export default function PartnerTabContent({
             <EditorialEmptyState
               icon={BookHeart}
               title="今天還沒有新的來信。"
-              description="當伴侶寫下日記，這裡會出現經過隱私保護與溫柔整理後的內容。首頁會先替它留下安靜的空位。"
+              description="伴侶寫下日記後，這裡會安靜地亮起來。"
             />
           </div>
         ) : (
@@ -155,15 +135,15 @@ export default function PartnerTabContent({
                   aria-hidden
                 />
                 <TimelineDateRail
-                  eyebrow={`Letter ${String(idx + 1).padStart(2, '0')}`}
+                  eyebrow={`第 ${String(idx + 1).padStart(2, '0')} 封`}
                   title={letterDate.label}
                   meta={letterDate.meta}
                   lead={idx === 0}
                 />
                 <div className={idx < 5 ? `animate-slide-up-fade${idx > 0 ? `-${idx}` : ''}` : ''}>
                   {idx === 0 ? (
-                    <p className="mb-3 text-[0.68rem] uppercase tracking-[0.28em] text-primary/75">
-                      Reading Desk
+                    <p className="mb-3 type-micro uppercase text-primary/75">
+                      最新來信
                     </p>
                   ) : null}
                   <PartnerJournalCard journal={journal} variant="reading-room" />

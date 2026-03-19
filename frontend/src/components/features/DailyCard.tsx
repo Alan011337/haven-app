@@ -351,7 +351,7 @@ const DailyCard = () => {
              <span className="icon-badge !rounded-2xl animate-breathe" aria-hidden>
                 <Sparkles className="w-4 h-4" />
              </span>
-             <span className="text-[10px] font-art font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Daily Ritual</span>
+             <span className="text-[10px] font-art font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">每日儀式</span>
           </div>
           <div className="mx-auto w-28 h-28 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mb-8 border border-border/50 shadow-soft shadow-glass-inset group-hover:shadow-lift transition-all duration-haven ease-haven">
             <span className="text-5xl transform group-hover:rotate-12 group-hover:scale-110 transition-transform duration-500 ease-out" aria-hidden>🃏</span>
@@ -393,7 +393,7 @@ const DailyCard = () => {
         <div className="p-8">
           <div className="mb-8 text-center">
             <span className={`inline-block px-3 py-1 text-[10px] font-bold tracking-widest rounded-full mb-4 uppercase ${depthStyle.badgeClass}`}>
-              {getDeckDisplayName(status.card.category)} · Depth {depthLevel} · {depthStyle.label}
+              {getDeckDisplayName(status.card.category)} · 深度 {depthLevel} · {depthStyle.label}
             </span>
             <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{depthStyle.guidance}</p>
             <h2 className="text-2xl font-art font-bold text-foreground mb-4 leading-tight">{status.card.title}</h2>
@@ -475,15 +475,15 @@ const DailyCard = () => {
         </p>
         <div className="bg-muted/30 p-5 rounded-2xl border border-dashed border-border/50 text-left relative overflow-hidden group shadow-glass-inset">
            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] text-primary font-bold">ME</div>
-              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">Time Capsule</span>
+              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] text-primary font-bold">我</div>
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">時間膠囊</span>
            </div>
            <p className="text-foreground font-medium blur-[6px] select-none opacity-40 transition-all duration-haven ease-haven">
              {status.my_content || "這是一段你看不到的文字..."}
            </p>
            <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[11px] bg-card/90 backdrop-blur-sm px-4 py-1.5 rounded-full text-primary font-medium shadow-soft border border-border/50 flex items-center gap-1.5">
-                <Lock size={10} aria-hidden /> Secret
+                <Lock size={10} aria-hidden /> 密封中
               </span>
            </div>
         </div>
@@ -498,7 +498,7 @@ const DailyCard = () => {
           <div className="absolute top-5 right-5">
              <CheckCircle2 className="text-accent w-5 h-5" aria-hidden />
           </div>
-          <span className="text-[10px] font-art font-bold tracking-[0.2em] text-accent uppercase mb-2 block">Daily Completed</span>
+          <span className="text-[10px] font-art font-bold tracking-[0.2em] text-accent uppercase mb-2 block">今日完成</span>
           <h3 className="text-lg font-art font-bold text-foreground line-clamp-1">{status.card?.title}</h3>
           <p className="text-sm text-muted-foreground mt-1.5 font-art italic px-4 leading-relaxed">&quot;{status.card?.question}&quot;</p>
         </div>
