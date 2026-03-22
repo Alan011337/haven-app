@@ -3,6 +3,8 @@ import { Journal } from '@/types';
 import ActionCard from './ActionCard';
 import { getJournalSafetyBand } from '@/lib/safety';
 import SafetyTierGate from './SafetyTierGate';
+import { JournalRichMarkdown } from '@/lib/journal-markdown';
+import { findInsertedAttachmentIds } from '@/features/journal/editor/journal-attachment-markdown';
 
 interface Props {
   journal: Journal;
@@ -24,6 +26,21 @@ export default function PartnerJournalCard({
   const isElevated = safetyBand === 'elevated';
   const isSevere = safetyBand === 'severe';
   const isSafetyConcern = isElevated || isSevere;
+  const sharedBody =
+    journal.visibility === 'PARTNER_ORIGINAL'
+      ? journal.content
+      : journal.partner_translated_content?.trim() || '';
+  const sharingLabel =
+    journal.visibility === 'PARTNER_ORIGINAL'
+      ? '原文共享'
+      : journal.partner_translation_status === 'READY'
+        ? 'AI 譯文'
+        : '譯文整理中';
+  const title = journal.title?.trim() || '未命名來信';
+  const inlineAttachmentIds = new Set(findInsertedAttachmentIds(sharedBody));
+  const shelfAttachments = (journal.attachments ?? []).filter(
+    (attachment) => !inlineAttachmentIds.has(attachment.id),
+  );
 
   return (
     <SafetyTierGate tier={journal.safety_tier ?? 0}>
@@ -44,7 +61,7 @@ export default function PartnerJournalCard({
         <div className="relative space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Partner Letter</p>
+              <p className="text-sm leading-7 text-muted-foreground">Partner letter</p>
               <div className="space-y-1">
                 <p className="font-art text-[1.55rem] leading-tight text-card-foreground">
                   心情：{journal.mood_label || '平靜'}
@@ -66,19 +83,71 @@ export default function PartnerJournalCard({
               ) : null}
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-soft">
                 <Lock className="h-3 w-3" aria-hidden />
-                原文已隱私保護
+                {sharingLabel}
               </span>
             </div>
           </div>
 
-          <div className={`rounded-[1.7rem] border p-6 shadow-glass-inset ${variant === 'reading-room' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.4)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,248,243,0.72))]'}`}>
-            <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">
-              {variant === 'reading-room' ? 'Letter Excerpt' : 'Inner Need'}
-            </p>
-            <p className="mt-3 font-art text-[1.55rem] leading-[1.65] text-card-foreground italic">
-              &quot;{journal.emotional_needs || '希望能被理解與支持'}&quot;
-            </p>
+          <div className="space-y-2">
+            <h3 className="font-art text-[1.45rem] leading-tight text-card-foreground">{title}</h3>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span>{journal.attachments?.length ?? 0} 張圖片</span>
+              {journal.partner_translation_status === 'FAILED' ? <span>譯文暫未完成</span> : null}
+            </div>
           </div>
+
+            <div className={`rounded-[1.7rem] border p-6 shadow-glass-inset ${variant === 'reading-room' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.34)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,248,243,0.72))]'}`}>
+            <p className="text-sm leading-7 text-muted-foreground">
+              {sharedBody ? (variant === 'reading-room' ? '這封來信的正文' : '共享內容') : '這封來信先留下核心情緒'}
+            </p>
+            {sharedBody ? (
+              <div className="mt-4">
+                <JournalRichMarkdown
+                  attachments={journal.attachments ?? []}
+                  content={sharedBody}
+                  variant="partner"
+                />
+              </div>
+            ) : (
+              <p className="mt-3 font-art text-[1.55rem] leading-[1.65] text-card-foreground italic">
+                &quot;{journal.partner_translation_status === 'PENDING'
+                  ? 'Haven 正在安靜整理這封來信的譯文。'
+                  : journal.partner_translation_status === 'FAILED'
+                    ? '這封來信先留下情緒摘要，譯文稍後再補上。'
+                    : journal.emotional_needs || '希望能被理解與支持'}&quot;
+              </p>
+            )}
+          </div>
+
+          {shelfAttachments.length ? (
+            <div className="space-y-3">
+              <p className="text-sm leading-7 text-muted-foreground">另外附上的圖片</p>
+              <div className="grid gap-3 md:grid-cols-2">
+              {shelfAttachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="overflow-hidden rounded-[1.4rem] border border-white/55 bg-white/78 shadow-soft"
+                >
+                  {attachment.url ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and not suitable for Next image optimization. */}
+                      <img
+                        src={attachment.url}
+                        alt={attachment.file_name}
+                        className="h-44 w-full object-cover"
+                      />
+                    </>
+                  ) : (
+                    <div className="flex h-44 items-center justify-center text-muted-foreground">
+                      <Sparkles className="h-6 w-6" aria-hidden />
+                    </div>
+                  )}
+                  <div className="p-3 text-xs text-muted-foreground">{attachment.file_name}</div>
+                </div>
+              ))}
+              </div>
+            </div>
+          ) : null}
 
           {isSevere ? (
             <div className="rounded-[1.5rem] border border-destructive/22 bg-destructive/8 p-5">

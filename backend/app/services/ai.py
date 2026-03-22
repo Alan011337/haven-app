@@ -861,6 +861,152 @@ def _get_fallback_response(
     }
 
 
+JOURNAL_TRANSLATION_SYSTEM = """You are a careful relationship writing translator.
+
+Translate the user's journal entry into natural Traditional Chinese for their partner.
+Rules:
+- Preserve the emotional meaning and warmth.
+- Do not add advice, summaries, or interpretation.
+- Keep Markdown structure when present.
+- Output only the translated journal body, with no surrounding explanation.
+"""
+
+
+_JOURNAL_TRANSLATION_MAX_CHARS = 3200
+
+
+def _split_journal_translation_chunks(
+    content: str,
+    *,
+    max_chars: int = _JOURNAL_TRANSLATION_MAX_CHARS,
+) -> list[str]:
+    normalized = (content or "").strip().replace("\r\n", "\n")
+    if not normalized:
+        return []
+    if len(normalized) <= max_chars:
+        return [normalized]
+
+    chunks: list[str] = []
+    pending_blocks: list[str] = []
+    pending_length = 0
+
+    def flush_pending() -> None:
+        nonlocal pending_blocks, pending_length
+        if not pending_blocks:
+            return
+        joined = "\n\n".join(pending_blocks).strip()
+        if joined:
+            chunks.append(joined)
+        pending_blocks = []
+        pending_length = 0
+
+    def append_or_split_block(block: str) -> None:
+        nonlocal pending_length
+        cleaned_block = block.strip()
+        if not cleaned_block:
+            return
+
+        additional_length = len(cleaned_block) if not pending_blocks else len(cleaned_block) + 2
+        if len(cleaned_block) <= max_chars and pending_length + additional_length <= max_chars:
+            pending_blocks.append(cleaned_block)
+            pending_length += additional_length
+            return
+
+        flush_pending()
+        if len(cleaned_block) <= max_chars:
+            pending_blocks.append(cleaned_block)
+            pending_length = len(cleaned_block)
+            return
+
+        line_buffer: list[str] = []
+        line_length = 0
+        for raw_line in cleaned_block.split("\n"):
+            line = raw_line.rstrip()
+            if not line:
+                if line_buffer and line_length + 1 <= max_chars:
+                    line_buffer.append("")
+                    line_length += 1
+                continue
+
+            delta = len(line) if not line_buffer else len(line) + 1
+            if len(line) <= max_chars and line_length + delta <= max_chars:
+                line_buffer.append(line)
+                line_length += delta
+                continue
+
+            if line_buffer:
+                chunks.append("\n".join(line_buffer).strip())
+                line_buffer = []
+                line_length = 0
+
+            if len(line) <= max_chars:
+                line_buffer.append(line)
+                line_length = len(line)
+                continue
+
+            for start in range(0, len(line), max_chars):
+                chunks.append(line[start : start + max_chars].strip())
+
+        if line_buffer:
+            chunks.append("\n".join(line_buffer).strip())
+
+    for block in normalized.split("\n\n"):
+        append_or_split_block(block)
+
+    flush_pending()
+    return [chunk for chunk in chunks if chunk]
+
+
+async def translate_journal_for_partner(content: str) -> str:
+    if not content or not content.strip():
+        return ""
+    normalized_content = content.strip()
+    chunks = _split_journal_translation_chunks(normalized_content)
+    if len(chunks) > 1:
+        logger.info(
+            "journal_translation_chunked chunk_count=%s content_chars=%s",
+            len(chunks),
+            len(normalized_content),
+        )
+    client = _get_openai_client()
+    if client is None:
+        raise RuntimeError(_openai_import_reason or "openai_import_unavailable")
+    translated_chunks: list[str] = []
+    for chunk in chunks:
+        try:
+            with trace_span("ai.translate_journal_for_partner"):
+                completion = await client.chat.completions.create(
+                    model=ANALYSIS_MODEL,
+                    messages=[
+                        {"role": "system", "content": JOURNAL_TRANSLATION_SYSTEM},
+                        {"role": "user", "content": chunk},
+                    ],
+                    temperature=0.35,
+                    max_tokens=1800,
+                )
+        except Exception as exc:
+            if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc) or _is_openai_status_error(exc):
+                raise HavenAITimeoutError(
+                    reason="journal_translation_timeout",
+                    retryable=True,
+                    provider="openai",
+                ) from exc
+            raise HavenAIProviderError(
+                reason="journal_translation_failed",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        translated = str(completion.choices[0].message.content or "").strip()
+        if not translated:
+            raise HavenAISchemaError(
+                reason="journal_translation_empty",
+                retryable=True,
+                provider="openai",
+            )
+        translated_chunks.append(translated)
+    return "\n\n".join(translated_chunks).strip()
+
+
 # Cooldown rewriter: aggressive → "I feel" / "I need" style. See docs/ai-safety/ai-guardrails.md
 COOLDOWN_REWRITER_SYSTEM = """You are a relationship communication helper. Your ONLY job is to rephrase the user's message into a calmer "I feel..." / "I need..." style. Rules (from Haven AI Guardrails):
 - DO: Rephrase attacking or harsh language into I-statements. Keep the same meaning and concerns.

@@ -7,6 +7,18 @@ import { getAdaptiveIntervalMs } from '@/lib/polling-policy';
 
 const POLL_INTERVAL_MS = 60_000;
 const INITIAL_POLL_DELAY_MS = 1_500;
+const LOCAL_LOOPBACK_INITIAL_POLL_DELAY_MS = 12_000;
+
+function getInitialPollDelayMs(): number {
+  if (typeof window === 'undefined') {
+    return INITIAL_POLL_DELAY_MS;
+  }
+  const hostname = window.location.hostname;
+  if (hostname === '127.0.0.1' || hostname === 'localhost') {
+    return LOCAL_LOOPBACK_INITIAL_POLL_DELAY_MS;
+  }
+  return INITIAL_POLL_DELAY_MS;
+}
 
 export default function DegradationBanner() {
   const [state, setState] = useState<DegradationStatus | null>(null);
@@ -24,7 +36,7 @@ export default function DegradationBanner() {
       const nextInterval = getAdaptiveIntervalMs(POLL_INTERVAL_MS, { hiddenMultiplier: 3 });
       schedulePoll(nextInterval === false ? 10_000 : nextInterval);
     };
-    schedulePoll(INITIAL_POLL_DELAY_MS);
+    schedulePoll(getInitialPollDelayMs());
     return () => {
       mounted = false;
       if (timer) clearTimeout(timer);

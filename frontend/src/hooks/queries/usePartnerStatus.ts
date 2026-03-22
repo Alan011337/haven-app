@@ -8,7 +8,7 @@ import { HOME_STATUS_TIMEOUT_MS } from '@/lib/home-performance';
 import { queryKeys } from '@/lib/query-keys';
 import { DEFAULT_PARTNER_STATUS, fetchPartnerStatus } from '@/services/api-client';
 
-export function usePartnerStatus() {
+export function usePartnerStatus(enabled = true) {
   const { user, isLoading } = useAuth();
   const userId = user?.id ? String(user.id) : null;
   const placeholderData = useMemo(() => {
@@ -19,7 +19,7 @@ export function usePartnerStatus() {
   const query = useQuery({
     queryKey: queryKeys.partnerStatus(),
     queryFn: () => fetchPartnerStatus({ timeout: HOME_STATUS_TIMEOUT_MS }),
-    enabled: !isLoading && !!user,
+    enabled: !isLoading && !!user && enabled,
     staleTime: 30_000,
     placeholderData,
     retry: false,

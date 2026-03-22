@@ -46,13 +46,16 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
   const { logout } = useAuth();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
-  const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus();
-  const unreadNotificationCount = Number(partnerStatus?.unread_notification_count ?? 0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const isHomeVariant = variant === 'home';
+  const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus(!isHomeVariant);
+  const unreadNotificationCount = Number(partnerStatus?.unread_notification_count ?? 0);
 
   useEffect(() => {
+    if (isHomeVariant) {
+      return;
+    }
     let timer: ReturnType<typeof setTimeout> | null = null;
     let active = true;
     const scheduleNextPoll = () => {
@@ -72,7 +75,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
       active = false;
       if (timer) clearTimeout(timer);
     };
-  }, [refetchPartnerStatus]);
+  }, [isHomeVariant, refetchPartnerStatus]);
 
   const handleLogout = async () => {
     const shouldLogout = await confirm({

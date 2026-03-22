@@ -1,5 +1,46 @@
 # 後端啟動說明 (Backend Run Guide)
 
+## Localhost 單一正確啟動方式（Source of Truth）
+
+一般本機開發現在不要再直接把 `backend/.env` 的遠端 `DATABASE_URL` 當作
+localhost DB 來源。
+
+Canonical localhost runtime：
+
+```bash
+# 專案根目錄
+bash scripts/local-runtime-stop.sh
+bash scripts/local-dev-db.sh start
+bash scripts/local-dev-db.sh migrate
+bash scripts/local-runtime-backend.sh
+```
+
+搭配前端：
+
+```bash
+# 專案根目錄，另一個 terminal
+bash scripts/local-runtime-frontend.sh
+```
+
+驗證：
+
+```bash
+bash scripts/local-runtime-verify.sh
+```
+
+說明：
+
+- `backend/.env` 仍保留 production / staging 相容的 secrets 與遠端設定
+- localhost runtime 會由 `/Users/alanzeng/projects/Haven-local/config/local-dev-runtime.env`
+  明確覆寫 `DATABASE_URL` 成本機 Postgres `127.0.0.1:55432`
+- `frontend/.env.local` 仍提供 Supabase storage 所需 keys，但 API / WS URL 也會被
+  localhost runtime script 覆寫為 `127.0.0.1`
+- brand-new 空白 local Postgres 會先 bootstrap current schema 並 stamp Alembic head，之後仍走正常 upgrade path
+- 詳細 runbook 見：
+  `/Users/alanzeng/projects/Haven-local/docs/local-dev-runtime.md`
+- canonical localhost DB 現在只接受 local Postgres；sqlite 不再是正式 localhost runtime
+- canonical localhost DB 需要 Docker Compose（見 `config/local-dev-postgres.compose.yml`）
+
 ## 若 uvicorn 完全沒輸出、卡在 import FastAPI
 
 診斷若卡在「2. importing fastapi...」：是 FastAPI 依賴的 `annotated_doc` 在你環境會卡住。專案在 `backend/annotated_doc.py` 有本機替代，需讓 Python **先**載到它：
@@ -51,8 +92,8 @@ export PYTHONUTF8=1
 
 3. **`check_env.py` 失敗（missing_required / invalid_values）**  
    請在 `backend/.env` 設定必填變數：`DATABASE_URL`、`OPENAI_API_KEY`、`SECRET_KEY`。  
-   範例（本地開發）：  
-   `DATABASE_URL=sqlite:///./dev.db`  
+   範例（production-like defaults / 非 localhost canonical runtime）：  
+   `DATABASE_URL=postgresql://...`  
    `OPENAI_API_KEY=sk-...`  
    `SECRET_KEY=至少 32 字元的密鑰`
 
@@ -178,7 +219,10 @@ BACKEND_PYTHON_BIN=.venv-gate/bin/python ./scripts/run_pytest_stable.sh
 # 既有資料庫（預設）
 ./scripts/run-alembic.sh --mode legacy-upgrade upgrade head
 
-# 全新 sqlite（自動 bootstrap + upgrade）
+# Canonical localhost Postgres
+DATABASE_URL=postgresql://haven:haven_local_dev@127.0.0.1:55432/haven_local ./scripts/run-alembic.sh upgrade head
+
+# sqlite 僅保留給測試 / rehearsal
 DATABASE_URL=sqlite:///./test.db ./scripts/run-alembic.sh --mode fresh-bootstrap
 
 # 只做 preflight 驗證，不執行 migration

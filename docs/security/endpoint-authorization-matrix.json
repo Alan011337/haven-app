@@ -241,6 +241,30 @@
     },
     {
       "auth_mode": "authenticated",
+      "method": "PATCH",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "POST",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}/attachments",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "DELETE",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}/attachments/{attachment_id}",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
       "method": "POST",
       "owner_team": "backend-core",
       "path": "/api/journals/",

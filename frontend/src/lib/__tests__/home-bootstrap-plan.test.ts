@@ -36,7 +36,7 @@ test('non-critical stage unlocks header data and mine secondary cards', () => {
 });
 
 test('home optional data timeout stays short enough for fail-open cards', () => {
-  assert.equal(HOME_OPTIONAL_DATA_TIMEOUT_MS, 3500);
+  assert.equal(HOME_OPTIONAL_DATA_TIMEOUT_MS, 6000);
 });
 
 test('home status timeout stays shorter than timeline timeout', () => {

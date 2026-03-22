@@ -6,6 +6,7 @@
 export const queryKeys = {
   partnerStatus: () => ['partnerStatus'] as const,
   journals: () => ['journals'] as const,
+  journalDetail: (journalId: string) => ['journalDetail', journalId] as const,
   partnerJournals: () => ['partnerJournals'] as const,
   gamificationSummary: () => ['gamificationSummary'] as const,
   onboardingQuest: () => ['onboardingQuest'] as const,

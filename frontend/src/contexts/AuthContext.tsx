@@ -2,9 +2,19 @@
 
 'use client';
 
-import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  ReactNode,
+} from 'react';
+import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import type { ApiRequestConfig } from '@/lib/api';
 import { logClientError } from '@/lib/safe-error-log';
 import {
   capturePosthogEvent,
@@ -34,34 +44,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const authEpochRef = useRef(0);
+  const userRef = useRef<User | null>(null);
+  const loadingRef = useRef(true);
+  const authCriticalRequest = useMemo<ApiRequestConfig>(
+    () => ({ authCritical: true }),
+    [],
+  );
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    loadingRef.current = isLoading;
+  }, [isLoading]);
 
   // 1. 初始化檢查：驗證 httpOnly Cookie 中的令牌是否有效
   useEffect(() => {
     const initAuth = async () => {
+      const authEpoch = authEpochRef.current + 1;
+      authEpochRef.current = authEpoch;
       try {
         // 由於使用 httpOnly Cookie 和 withCredentials: true，
         // 浏览器會自動發送 Cookie。只需驗證當前用戶
-        const response = await api.get<User>('/users/me'); 
+        const response = await api.get<User>('/users/me', authCriticalRequest);
+        if (authEpochRef.current !== authEpoch) return;
         setUser(response.data);
         identifyPosthogUser(String(response.data.id || ''));
       } catch (error) {
         // 如果 401 或其他錯誤，表示沒有有效的 Cookie
+        if (authEpochRef.current !== authEpoch) return;
         logClientError('auth-init-verify-failed', error);
         setUser(null);
       } finally {
+        if (authEpochRef.current !== authEpoch) return;
         setIsLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [authCriticalRequest]);
 
   // 2. 登入邏輯（在前端只用於 UI 更新，實際令牌由後端 httpOnly Cookie 管理）
   const login = useCallback(
     (token: string, userData: User, redirectTo: AuthLoginRedirectPath = '/') => {
+      authEpochRef.current += 1;
       // 註：password 將由後端通過 httpOnly Cookie 自動設置
       // 前端這裡只是更新 React 狀態以反映 UI
-      setUser(userData);
+      flushSync(() => {
+        setUser(userData);
+        setIsLoading(false);
+      });
       identifyPosthogUser(String(userData.id || ''));
       capturePosthogEvent('login_succeeded', { auth_stage: 'login' });
       router.push(redirectTo);
@@ -71,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 3. 登出邏輯
   const logout = useCallback(async () => {
+    authEpochRef.current += 1;
     capturePosthogEvent('logout_clicked', { auth_stage: 'logout' });
     try {
       // 調用後端登出端點以清除 httpOnly Cookie
@@ -80,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       // 無論後端請求是否成功，都清除前端狀態
       setUser(null);
+      setIsLoading(false);
       resetPosthogUser();
       router.push('/login');
     }
@@ -88,6 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 3b. 監聽認證過期事件（由 api.ts interceptor 觸發）
   useEffect(() => {
     const handleExpired = () => {
+      if (loadingRef.current || !userRef.current) {
+        return;
+      }
       capturePosthogEvent('token_refresh_failed', { reason: 'auth_expired' });
       void logout();
     };
@@ -97,16 +136,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 4. 資料刷新邏輯
   const refreshUser = useCallback(async () => {
+    const authEpoch = authEpochRef.current + 1;
+    authEpochRef.current = authEpoch;
     try {
-      const response = await api.get<User>('/users/me');
+      const response = await api.get<User>('/users/me', authCriticalRequest);
+      if (authEpochRef.current !== authEpoch) return;
       setUser(response.data);
       identifyPosthogUser(String(response.data.id || ''));
       capturePosthogEvent('token_refresh_succeeded', { auth_stage: 'refresh_user' });
     } catch (error) {
+      if (authEpochRef.current !== authEpoch) return;
       logClientError('auth-refresh-user-failed', error);
       capturePosthogEvent('token_refresh_failed', { reason: 'refresh_user_failed' });
     }
-  }, []);
+  }, [authCriticalRequest]);
 
   const value = useMemo(
     () => ({ user, isLoading, login, logout, refreshUser }),

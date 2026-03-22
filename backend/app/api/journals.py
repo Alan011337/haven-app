@@ -1,8 +1,8 @@
 # backend/app/api/journals.py
 
 from datetime import timedelta
-from typing import List, Dict, Any
-from fastapi import APIRouter, HTTPException, Request, Response, status, Query
+from typing import List, Any
+from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy import and_, or_
 from sqlmodel import col, select
@@ -10,12 +10,20 @@ import uuid
 import logging
 
 from app.models.journal import Journal
+from app.models.journal_attachment import JournalAttachment
 from app.models.analysis import Analysis 
-from app.schemas.journal import JournalCreate
+from app.schemas.journal import (
+    JournalAttachmentPublic,
+    JournalCreate,
+    JournalCreateResponse,
+    JournalPartnerRead,
+    JournalRead,
+    JournalUpdate,
+)
 from app.api.deps import CurrentUser, ReadSessionDep, SessionDep, verify_active_partner_id
 from app.api.error_handling import commit_with_error_handling, flush_with_error_handling
 from app.core.config import settings
-from app.services.ai import analyze_journal 
+from app.services.ai import analyze_journal, translate_journal_for_partner
 from app.services.ai_persona import infer_relationship_weather
 from app.services.notification import queue_partner_notification
 from app.services.notification_payloads import build_partner_notification_payload
@@ -55,12 +63,252 @@ from app.services.pagination import (
     enforce_timeline_query_budget,
     estimate_timeline_query_budget,
 )
+from app.services.journal_storage import (
+    ALLOWED_JOURNAL_IMAGE_TYPES,
+    MAX_JOURNAL_IMAGE_BYTES,
+    JournalStorageConfigError,
+    create_signed_journal_attachment_url,
+    delete_journal_attachment_object,
+    journal_storage_enabled,
+    upload_journal_attachment_bytes,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _DYNAMIC_CONTEXT_LOOKBACK_HOURS = 48
 _DYNAMIC_CONTEXT_MAX_SAMPLES = 6
+_DEFAULT_VISIBILITY = "PARTNER_TRANSLATED_ONLY"
+_CONTENT_FORMAT_MARKDOWN = "markdown"
+_TRANSLATION_STATUS_FAILED = "FAILED"
+_TRANSLATION_STATUS_NOT_REQUESTED = "NOT_REQUESTED"
+_TRANSLATION_STATUS_PENDING = "PENDING"
+_TRANSLATION_STATUS_READY = "READY"
+
+
+def _is_draft_journal(journal: Journal | JournalCreate | JournalUpdate) -> bool:
+    return bool(getattr(journal, "is_draft", False))
+
+
+def _build_blank_content_validation_error() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=[
+            {
+                "type": "value_error",
+                "loc": ["body", "content"],
+                "msg": "Value error, content must not be blank",
+            }
+        ],
+    )
+
+
+def _is_partner_shared_visibility(visibility: str | None) -> bool:
+    return str(visibility or "").strip().upper() in {
+        "PARTNER_ORIGINAL",
+        "PARTNER_TRANSLATED_ONLY",
+    }
+
+
+def _requires_partner_translation(visibility: str | None) -> bool:
+    return str(visibility or "").strip().upper() == "PARTNER_TRANSLATED_ONLY"
+
+
+def _initial_translation_status(visibility: str | None) -> str:
+    if _requires_partner_translation(visibility):
+        return _TRANSLATION_STATUS_PENDING
+    return _TRANSLATION_STATUS_NOT_REQUESTED
+
+
+def _upsert_analysis(
+    *,
+    session: SessionDep,
+    journal_id: uuid.UUID,
+    ai_result: dict[str, Any],
+) -> Analysis:
+    analysis = session.exec(
+        select(Analysis).where(Analysis.journal_id == journal_id)
+    ).first()
+    if analysis is None:
+        analysis = Analysis(journal_id=journal_id)
+        session.add(analysis)
+
+    analysis.mood_label = ai_result.get("mood_label")
+    analysis.emotional_needs = ai_result.get("emotional_needs")
+    analysis.advice_for_user = ai_result.get("advice_for_user")
+    analysis.action_for_user = ai_result.get("action_for_user")
+    analysis.advice_for_partner = ai_result.get("advice_for_partner")
+    analysis.action_for_partner = ai_result.get("action_for_partner")
+    analysis.card_recommendation = ai_result.get("card_recommendation")
+    analysis.safety_tier = ai_result.get("safety_tier", 0)
+    analysis.prompt_version = ai_result.get("prompt_version", "unknown")
+    analysis.model_version = ai_result.get("model_version")
+    analysis.parse_success = bool(ai_result.get("parse_success", False))
+    return analysis
+
+
+async def _refresh_partner_translation(
+    *,
+    journal: Journal,
+) -> None:
+    if not _requires_partner_translation(journal.visibility):
+        journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
+        journal.partner_translated_content = None
+        return
+    try:
+        translated = await translate_journal_for_partner(journal.content or "")
+    except Exception as exc:
+        logger.warning(
+            "journal-translation-failed journal_id=%s reason=%s",
+            journal.id,
+            type(exc).__name__,
+        )
+        journal.partner_translation_status = _TRANSLATION_STATUS_FAILED
+        journal.partner_translated_content = None
+        return
+    if translated:
+        journal.partner_translation_status = _TRANSLATION_STATUS_READY
+        journal.partner_translated_content = translated
+    else:
+        journal.partner_translation_status = _TRANSLATION_STATUS_FAILED
+        journal.partner_translated_content = None
+
+
+def _analysis_payload(analysis: Analysis | None) -> dict[str, Any]:
+    if analysis is None:
+        return {}
+    return analysis.model_dump(exclude={"id", "created_at", "journal_id"})
+
+
+async def _serialize_attachments(
+    attachments: list[JournalAttachment],
+) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for attachment in attachments:
+        signed_url: str | None = None
+        if attachment.deleted_at is None and journal_storage_enabled():
+            try:
+                signed_url = await create_signed_journal_attachment_url(
+                    attachment.storage_path,
+                    expires_in=settings.JOURNAL_ATTACHMENT_SIGNED_URL_TTL_SECONDS,
+                )
+            except JournalStorageConfigError:
+                signed_url = None
+            except Exception as exc:
+                logger.warning(
+                    "journal-attachment-sign-failed attachment_id=%s reason=%s",
+                    attachment.id,
+                    type(exc).__name__,
+                )
+        serialized.append(
+            JournalAttachmentPublic(
+                id=attachment.id,
+                file_name=attachment.file_name,
+                mime_type=attachment.mime_type,
+                size_bytes=attachment.size_bytes,
+                created_at=attachment.created_at,
+                caption=attachment.caption,
+                url=signed_url,
+            ).model_dump()
+        )
+    return serialized
+
+
+async def _build_owner_journal_payload(
+    *,
+    journal: Journal,
+    analysis: Analysis | None,
+    attachments: list[JournalAttachment],
+) -> dict[str, Any]:
+    payload = journal.model_dump(
+        exclude={
+            "analysis",
+            "attachments",
+            "card",
+            "mood",
+            "tags",
+            "partner_translated_content",
+        }
+    )
+    payload.update(_analysis_payload(analysis))
+    payload["attachments"] = await _serialize_attachments(attachments)
+    return payload
+
+
+async def _build_partner_journal_payload(
+    *,
+    journal: Journal,
+    analysis: Analysis | None,
+    attachments: list[JournalAttachment],
+) -> dict[str, Any] | None:
+    if _is_draft_journal(journal):
+        return None
+
+    normalized_visibility = str(journal.visibility or "").strip().upper()
+    if normalized_visibility == "PRIVATE":
+        return None
+
+    translated_content = None
+    content = ""
+    if normalized_visibility == "PARTNER_ORIGINAL":
+        content = journal.content
+    elif journal.partner_translation_status == _TRANSLATION_STATUS_READY:
+        translated_content = journal.partner_translated_content
+
+    payload = {
+        "id": journal.id,
+        "title": journal.title,
+        "user_id": journal.user_id,
+        "created_at": journal.created_at,
+        "updated_at": journal.updated_at,
+        "visibility": normalized_visibility or _DEFAULT_VISIBILITY,
+        "content": content,
+        "partner_translation_status": journal.partner_translation_status or _TRANSLATION_STATUS_NOT_REQUESTED,
+        "partner_translated_content": translated_content,
+        "attachments": await _serialize_attachments(attachments),
+    }
+    payload.update(_analysis_payload(analysis))
+    return payload
+
+
+def _attachments_by_journal(
+    *,
+    session: ReadSessionDep | SessionDep,
+    journal_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, list[JournalAttachment]]:
+    if not journal_ids:
+        return {}
+    attachment_rows = session.exec(
+        select(JournalAttachment)
+        .where(col(JournalAttachment.journal_id).in_(journal_ids))
+        .where(JournalAttachment.deleted_at.is_(None))
+        .order_by(JournalAttachment.created_at.asc())
+    ).all()
+    grouped: dict[uuid.UUID, list[JournalAttachment]] = {journal_id: [] for journal_id in journal_ids}
+    for attachment in attachment_rows:
+        grouped.setdefault(attachment.journal_id, []).append(attachment)
+    return grouped
+
+
+def _parse_journal_uuid(journal_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(journal_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="無效的 ID 格式") from exc
+
+
+def _get_owned_journal_or_error(
+    *,
+    session: ReadSessionDep | SessionDep,
+    journal_id: uuid.UUID,
+    current_user: CurrentUser,
+) -> Journal:
+    journal = session.get(Journal, journal_id)
+    if not journal or journal.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這篇日記")
+    if journal.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="你沒有權限查看這篇日記")
+    return journal
 
 
 def _resolve_relationship_weather_hint(
@@ -124,13 +372,16 @@ def _queue_partner_journal_notification(
     )
 
 # 1. 寫日記 (Create) - 含計分與通知
-@router.post("/", response_model=Dict[str, Any]) # 修正回傳型別以容納分數
+@router.post("/", response_model=JournalCreateResponse) # 修正回傳型別以容納分數
 async def create_journal( 
     journal_data: JournalCreate, 
     session: SessionDep,
     current_user: CurrentUser,
     request: Request,
 ):
+    is_draft_create = _is_draft_journal(journal_data)
+    if not is_draft_create and not str(journal_data.content or "").strip():
+        raise _build_blank_content_validation_error()
     # P2-F: idempotency for offline replay (RFC-004)
     idem_key = normalize_idempotency_key(
         request.headers.get("Idempotency-Key"),
@@ -146,7 +397,7 @@ async def create_journal(
 
     # P2-F P1: LWW conflict — same user + same UTC day journal
     client_ts_ms = parse_client_timestamp(request.headers.get(HEADER_CLIENT_TS))
-    if client_ts_ms is not None:
+    if client_ts_ms is not None and not is_draft_create:
         from datetime import timezone
         from datetime import datetime as dt_class
         ref_date = dt_class.fromtimestamp(client_ts_ms / 1000.0, tz=timezone.utc).date()
@@ -163,7 +414,15 @@ async def create_journal(
         ).first()
         if existing_same_day is not None:
             if lww_newer_is_client(client_ts_ms, existing_same_day.updated_at):
+                existing_same_day.title = journal_data.title
                 existing_same_day.content = journal_data.content
+                existing_same_day.visibility = journal_data.visibility
+                existing_same_day.content_format = journal_data.content_format
+                existing_same_day.is_draft = False
+                existing_same_day.partner_translation_status = _initial_translation_status(
+                    journal_data.visibility
+                )
+                existing_same_day.partner_translated_content = None
                 existing_same_day.updated_at = utcnow()
                 session.add(existing_same_day)
                 flush_with_error_handling(
@@ -222,51 +481,54 @@ async def create_journal(
                     headers={"X-Conflict-Code": "CONFLICT_LWW"},
                 )
 
-    journal_quota_limit = resolve_quota_limit(
-        session=session,
-        user_id=current_user.id,
-        feature="journals_per_day",
-    )
-    journal_allowed, _ = consume_daily_quota(
-        session=session,
-        user_id=current_user.id,
-        feature_key="journals_per_day",
-        quota_limit=journal_quota_limit,
-    )
-    if not journal_allowed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Current plan journal quota reached. Upgrade plan to continue.",
+    if not is_draft_create:
+        journal_quota_limit = resolve_quota_limit(
+            session=session,
+            user_id=current_user.id,
+            feature="journals_per_day",
         )
+        journal_allowed, _ = consume_daily_quota(
+            session=session,
+            user_id=current_user.id,
+            feature_key="journals_per_day",
+            quota_limit=journal_quota_limit,
+        )
+        if not journal_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Current plan journal quota reached. Upgrade plan to continue.",
+            )
 
-    client_ip = resolve_client_ip(request)
-    device_id = resolve_device_id(
-        request,
-        header_name=settings.RATE_LIMIT_DEVICE_HEADER,
-    )
-    enforce_journal_create_rate_limit(
-        session=session,
-        user_id=current_user.id,
-        limit_count=settings.JOURNAL_RATE_LIMIT_COUNT,
-        window_seconds=settings.JOURNAL_RATE_LIMIT_WINDOW_SECONDS,
-        partner_id=current_user.partner_id,
-        client_ip=client_ip,
-        device_id=device_id,
-        ip_limit_count=settings.JOURNAL_RATE_LIMIT_IP_COUNT,
-        device_limit_count=settings.JOURNAL_RATE_LIMIT_DEVICE_COUNT,
-        partner_pair_limit_count=settings.JOURNAL_RATE_LIMIT_PARTNER_PAIR_COUNT,
-        endpoint="/api/journals/",
-    )
+    if not is_draft_create:
+        client_ip = resolve_client_ip(request)
+        device_id = resolve_device_id(
+            request,
+            header_name=settings.RATE_LIMIT_DEVICE_HEADER,
+        )
+        enforce_journal_create_rate_limit(
+            session=session,
+            user_id=current_user.id,
+            limit_count=settings.JOURNAL_RATE_LIMIT_COUNT,
+            window_seconds=settings.JOURNAL_RATE_LIMIT_WINDOW_SECONDS,
+            partner_id=current_user.partner_id,
+            client_ip=client_ip,
+            device_id=device_id,
+            ip_limit_count=settings.JOURNAL_RATE_LIMIT_IP_COUNT,
+            device_limit_count=settings.JOURNAL_RATE_LIMIT_DEVICE_COUNT,
+            partner_pair_limit_count=settings.JOURNAL_RATE_LIMIT_PARTNER_PAIR_COUNT,
+            endpoint="/api/journals/",
+        )
 
     # CUJ SLI: track journal submit intent (same request_id for full journal stage timeline; use X-Request-Id when client sends it)
     journal_request_id = (request_id_var.get() or "").strip() or str(uuid.uuid4())
-    emit_cuj_event(
-        session=session,
-        user_id=current_user.id,
-        event_name=EVENT_JOURNAL_SUBMIT,
-        source="server",
-        request_id=journal_request_id,
-    )
+    if not is_draft_create:
+        emit_cuj_event(
+            session=session,
+            user_id=current_user.id,
+            event_name=EVENT_JOURNAL_SUBMIT,
+            source="server",
+            request_id=journal_request_id,
+        )
 
     verified_partner_id = verify_active_partner_id(session=session, current_user=current_user)
     relationship_mode = "paired" if verified_partner_id else "solo"
@@ -275,6 +537,83 @@ async def create_journal(
         current_user_id=current_user.id,
         partner_user_id=verified_partner_id,
     )
+
+    if is_draft_create:
+        try:
+            new_journal = Journal(
+                title=journal_data.title,
+                content=journal_data.content,
+                is_draft=True,
+                user_id=current_user.id,
+                visibility=journal_data.visibility,
+                content_format=journal_data.content_format,
+                partner_translation_status=_TRANSLATION_STATUS_NOT_REQUESTED,
+                partner_translated_content=None,
+            )
+            session.add(new_journal)
+            flush_with_error_handling(
+                session,
+                logger=logger,
+                action="Create draft journal",
+                conflict_detail="日記資料衝突，請重試。",
+                failure_detail="建立草稿失敗，請稍後再試。",
+            )
+            record_audit_event(
+                session=session,
+                actor_user_id=current_user.id,
+                action="JOURNAL_CREATE",
+                resource_type="journal",
+                resource_id=new_journal.id,
+                metadata={"is_draft": True, "has_analysis": False, "score_gained": 0},
+            )
+            commit_with_error_handling(
+                session,
+                logger=logger,
+                action="Finalize draft journal",
+                conflict_detail="日記資料衝突，請重試。",
+                failure_detail="寫入草稿失敗，請稍後再試。",
+            )
+            session.refresh(new_journal)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Unexpected error when writing draft journal: reason=%s", type(exc).__name__)
+            session.rollback()
+            record_audit_event_best_effort(
+                session=session,
+                actor_user_id=current_user.id,
+                action="JOURNAL_CREATE_ERROR",
+                resource_type="journal",
+                outcome=AuditEventOutcome.ERROR,
+                reason=exc.__class__.__name__,
+                commit=True,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="寫入日記時發生錯誤，請稍後再試。"
+            )
+
+        response_data = new_journal.model_dump()
+        response_data["attachments"] = []
+        response_data["new_savings_score"] = current_user.savings_score
+        response_data["score_gained"] = 0
+        if idem_key:
+            save_idempotency_response(
+                session,
+                current_user.id,
+                idem_key,
+                "journal_create",
+                str(new_journal.id),
+                response_data,
+            )
+            commit_with_error_handling(
+                session,
+                logger=logger,
+                action="Save idempotency log",
+                conflict_detail="日記資料衝突，請重試。",
+                failure_detail="寫入日記失敗，請稍後再試。",
+            )
+        return response_data
 
     # P2-B QUEUE-01: Async path — write journal only, enqueue analysis/notify; return immediately
     if is_async_journal_analysis_enabled():
@@ -287,8 +626,13 @@ async def create_journal(
         )
         try:
             new_journal = Journal(
+                title=journal_data.title,
                 content=journal_data.content,
+                is_draft=False,
                 user_id=current_user.id,
+                visibility=journal_data.visibility,
+                content_format=journal_data.content_format,
+                partner_translation_status=_initial_translation_status(journal_data.visibility),
             )
             session.add(new_journal)
             flush_with_error_handling(
@@ -408,8 +752,13 @@ async def create_journal(
     try:
         # A. 準備日記物件
         new_journal = Journal(
+            title=journal_data.title,
             content=journal_data.content,
+            is_draft=False,
             user_id=current_user.id,
+            visibility=journal_data.visibility,
+            content_format=journal_data.content_format,
+            partner_translation_status=_initial_translation_status(journal_data.visibility),
         )
         session.add(new_journal)
         flush_with_error_handling(
@@ -427,21 +776,11 @@ async def create_journal(
         score_replay_blocked = False
 
         if ai_result:
-            new_analysis = Analysis(
+            new_analysis = _upsert_analysis(
+                session=session,
                 journal_id=new_journal.id,
-                mood_label=ai_result.get("mood_label"),
-                emotional_needs=ai_result.get("emotional_needs"),
-                advice_for_user=ai_result.get("advice_for_user"),
-                action_for_user=ai_result.get("action_for_user"),
-                advice_for_partner=ai_result.get("advice_for_partner"),
-                action_for_partner=ai_result.get("action_for_partner"),
-                card_recommendation=ai_result.get("card_recommendation"),
-                safety_tier=ai_result.get("safety_tier", 0),
-                prompt_version=ai_result.get("prompt_version", "unknown"),
-                model_version=ai_result.get("model_version"),
-                parse_success=bool(ai_result.get("parse_success", False)),
+                ai_result=ai_result,
             )
-            session.add(new_analysis)
             score_candidate = compute_journal_score_delta(ai_result)
         else:
             # AI exception: do NOT grant free points (data integrity).
@@ -482,7 +821,9 @@ async def create_journal(
                 "has_analysis": bool(new_analysis),
                 "ai_failed": ai_failed,
             },
-        )
+            )
+
+        await _refresh_partner_translation(journal=new_journal)
 
         # C. 提交變更
         with trace_span("api.journals.create.db_commit", user_id=str(current_user.id)):
@@ -529,7 +870,7 @@ async def create_journal(
         session.refresh(new_analysis)
 
     # 步驟 3: 發送通知 (Notification Loop)
-    if current_user.partner_id:
+    if current_user.partner_id and _is_partner_shared_visibility(new_journal.visibility):
         try:
             _queue_partner_journal_notification(
                 session=session,
@@ -542,8 +883,9 @@ async def create_journal(
     # 步驟 4: 建構回傳資料
     response_data = new_journal.model_dump()
     if new_analysis:
-        analysis_data = new_analysis.model_dump(exclude={"id", "created_at", "journal_id"})
+        analysis_data = _analysis_payload(new_analysis)
         response_data.update(analysis_data)
+    response_data["attachments"] = []
     
     # 加入分數資訊供前端動畫使用
     response_data["new_savings_score"] = current_user.savings_score
@@ -645,9 +987,9 @@ def _apply_journal_cursor_or_offset(statement, *, page_cursor: PageCursor, offse
     return statement.offset(offset)
 
 # 2. 讀取「自己」的日記 (支援 limit/offset 分頁) — P2-B: uses read replica when configured
-@router.get("", response_model=List[Dict[str, Any]], include_in_schema=False)
-@router.get("/", response_model=List[Dict[str, Any]])
-def read_my_journals(
+@router.get("", response_model=List[JournalRead], include_in_schema=False)
+@router.get("/", response_model=List[JournalRead])
+async def read_my_journals(
     session: ReadSessionDep,
     current_user: CurrentUser,
     limit: int = Query(_JOURNAL_LIST_LIMIT_DEFAULT, ge=1, le=_JOURNAL_LIST_LIMIT_MAX),
@@ -700,18 +1042,25 @@ def read_my_journals(
             requested_limit=safe_limit,
         )
 
+    attachment_map = _attachments_by_journal(
+        session=session,
+        journal_ids=[journal.id for journal, _ in results],
+    )
     journals_list = []
     for journal, analysis in results:
-        j_dict = journal.model_dump()
-        if analysis:
-            j_dict.update(analysis.model_dump(exclude={"id", "created_at", "journal_id"}))
-        journals_list.append(j_dict)
+        journals_list.append(
+            await _build_owner_journal_payload(
+                journal=journal,
+                analysis=analysis,
+                attachments=attachment_map.get(journal.id, []),
+            )
+        )
         
     return journals_list
 
 # 3. 讀取「伴侶」的日記 — 🚀 已優化：避免 full model_dump，直接存取 ORM 屬性
-@router.get("/partner", response_model=List[Dict[str, Any]])
-def read_partner_journals(
+@router.get("/partner", response_model=List[JournalPartnerRead])
+async def read_partner_journals(
     session: ReadSessionDep,
     current_user: CurrentUser,
     limit: int = Query(_JOURNAL_LIST_LIMIT_DEFAULT, ge=1, le=_JOURNAL_LIST_LIMIT_MAX),
@@ -771,25 +1120,344 @@ def read_partner_journals(
             requested_limit=safe_limit,
         )
 
+    attachment_map = _attachments_by_journal(
+        session=session,
+        journal_ids=[journal.id for journal, _ in results],
+    )
     partner_journals = []
 
     for journal, analysis in results:
-        # 🚀 直接存取 ORM 屬性，避免 full model_dump() 開銷
-        item: Dict[str, Any] = {
-            "id": str(journal.id),
-            "user_id": str(journal.user_id),
-            "created_at": journal.created_at,
-            "content": "🔒 (內容已加密保護)",  # 隱私保護：不傳送原文
-            "mood_label": (analysis.mood_label if analysis and analysis.mood_label else "等待分析..."),
-            "emotional_needs": (analysis.emotional_needs if analysis and analysis.emotional_needs else ""),
-            "advice_for_partner": (analysis.advice_for_partner if analysis and analysis.advice_for_partner else ""),
-            "action_for_partner": (analysis.action_for_partner if analysis and analysis.action_for_partner else ""),
-            "card_recommendation": (analysis.card_recommendation if analysis and analysis.card_recommendation else ""),
-            "safety_tier": (analysis.safety_tier if analysis and analysis.safety_tier is not None else 0),
-        }
-        partner_journals.append(item)
+        item = await _build_partner_journal_payload(
+            journal=journal,
+            analysis=analysis,
+            attachments=attachment_map.get(journal.id, []),
+        )
+        if item is not None:
+            partner_journals.append(item)
 
     return partner_journals
+
+
+@router.get("/{journal_id}", response_model=JournalRead)
+async def read_journal_detail(
+    journal_id: str,
+    session: ReadSessionDep,
+    current_user: CurrentUser,
+):
+    journal_uuid = _parse_journal_uuid(journal_id)
+    journal = _get_owned_journal_or_error(
+        session=session,
+        journal_id=journal_uuid,
+        current_user=current_user,
+    )
+    analysis = session.exec(
+        select(Analysis).where(Analysis.journal_id == journal.id)
+    ).first()
+    attachments = session.exec(
+        select(JournalAttachment)
+        .where(JournalAttachment.journal_id == journal.id)
+        .where(JournalAttachment.deleted_at.is_(None))
+        .order_by(JournalAttachment.created_at.asc())
+    ).all()
+    return await _build_owner_journal_payload(
+        journal=journal,
+        analysis=analysis,
+        attachments=attachments,
+    )
+
+
+@router.patch("/{journal_id}", response_model=JournalRead)
+async def update_journal(
+    journal_id: str,
+    journal_data: JournalUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    journal_uuid = _parse_journal_uuid(journal_id)
+    journal = _get_owned_journal_or_error(
+        session=session,
+        journal_id=journal_uuid,
+        current_user=current_user,
+    )
+
+    content_changed = False
+    visibility_changed = False
+    was_draft = journal.is_draft
+    if journal_data.title is not None:
+        journal.title = journal_data.title
+    if journal_data.content is not None and journal_data.content != journal.content:
+        journal.content = journal_data.content
+        content_changed = True
+    if journal_data.visibility is not None and journal_data.visibility != journal.visibility:
+        visibility_changed = True
+    if journal_data.visibility is not None:
+        journal.visibility = journal_data.visibility
+    if journal_data.is_draft is not None:
+        journal.is_draft = journal_data.is_draft
+
+    draft_state_changed = journal.is_draft != was_draft
+
+    if (
+        not content_changed
+        and journal_data.visibility is None
+        and journal_data.title is None
+        and journal_data.is_draft is None
+    ):
+        analysis = session.exec(
+            select(Analysis).where(Analysis.journal_id == journal.id)
+        ).first()
+        attachments = session.exec(
+            select(JournalAttachment)
+            .where(JournalAttachment.journal_id == journal.id)
+            .where(JournalAttachment.deleted_at.is_(None))
+            .order_by(JournalAttachment.created_at.asc())
+        ).all()
+        return await _build_owner_journal_payload(
+            journal=journal,
+            analysis=analysis,
+            attachments=attachments,
+        )
+
+    if not journal.is_draft and not str(journal.content or "").strip():
+        raise _build_blank_content_validation_error()
+
+    if was_draft and not journal.is_draft:
+        journal_quota_limit = resolve_quota_limit(
+            session=session,
+            user_id=current_user.id,
+            feature="journals_per_day",
+        )
+        journal_allowed, _ = consume_daily_quota(
+            session=session,
+            user_id=current_user.id,
+            feature_key="journals_per_day",
+            quota_limit=journal_quota_limit,
+        )
+        if not journal_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Current plan journal quota reached. Upgrade plan to continue.",
+            )
+
+    verified_partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    relationship_mode = "paired" if verified_partner_id else "solo"
+    relationship_weather_hint = _resolve_relationship_weather_hint(
+        session=session,
+        current_user_id=current_user.id,
+        partner_user_id=verified_partner_id,
+    )
+
+    analysis: Analysis | None = session.exec(
+        select(Analysis).where(Analysis.journal_id == journal.id)
+    ).first()
+    if journal.is_draft:
+        journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
+        journal.partner_translated_content = None
+    elif content_changed or was_draft:
+        ai_result = await analyze_journal(
+            journal.content,
+            relationship_weather_hint=relationship_weather_hint,
+            relationship_mode=relationship_mode,
+        )
+        if ai_result:
+            analysis = _upsert_analysis(
+                session=session,
+                journal_id=journal.id,
+                ai_result=ai_result,
+            )
+            session.add(analysis)
+
+            if was_draft:
+                score_candidate = compute_journal_score_delta(ai_result)
+                if score_candidate > 0:
+                    apply_journal_score_once(
+                        session=session,
+                        current_user=current_user,
+                        journal_id=journal.id,
+                        journal_content=journal.content,
+                        event_at=journal.created_at,
+                        candidate_delta=score_candidate,
+                    )
+
+    if journal.is_draft:
+        journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
+        journal.partner_translated_content = None
+    else:
+        await _refresh_partner_translation(journal=journal)
+    journal.updated_at = utcnow()
+    session.add(journal)
+    flush_with_error_handling(
+        session,
+        logger=logger,
+        action="Update journal",
+        conflict_detail="日記資料衝突，請重試。",
+        failure_detail="更新日記失敗，請稍後再試。",
+    )
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Commit journal update",
+        conflict_detail="日記資料衝突，請重試。",
+        failure_detail="更新日記失敗，請稍後再試。",
+    )
+    session.refresh(journal)
+    if analysis:
+        session.refresh(analysis)
+    attachments = session.exec(
+        select(JournalAttachment)
+        .where(JournalAttachment.journal_id == journal.id)
+        .where(JournalAttachment.deleted_at.is_(None))
+        .order_by(JournalAttachment.created_at.asc())
+    ).all()
+    if (
+        not journal.is_draft
+        and current_user.partner_id
+        and _is_partner_shared_visibility(journal.visibility)
+        and (was_draft or content_changed or visibility_changed or draft_state_changed)
+    ):
+        try:
+            _queue_partner_journal_notification(
+                session=session,
+                current_user=current_user,
+                journal_id=journal.id,
+            )
+        except Exception as n_err:
+            logger.error("通知發送流程出錯: %s", type(n_err).__name__)
+    return await _build_owner_journal_payload(
+        journal=journal,
+        analysis=analysis,
+        attachments=attachments,
+    )
+
+
+@router.post("/{journal_id}/attachments", response_model=JournalAttachmentPublic)
+async def upload_journal_attachment(
+    journal_id: str,
+    session: SessionDep,
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+):
+    if not journal_storage_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Journal media storage is not configured.",
+        )
+    journal_uuid = _parse_journal_uuid(journal_id)
+    journal = _get_owned_journal_or_error(
+        session=session,
+        journal_id=journal_uuid,
+        current_user=current_user,
+    )
+    content_type = str(file.content_type or "").strip().lower()
+    if content_type not in ALLOWED_JOURNAL_IMAGE_TYPES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="僅支援上傳圖片檔案")
+    payload = await file.read()
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="上傳內容不能為空")
+    if len(payload) > MAX_JOURNAL_IMAGE_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="圖片不可超過 5 MB")
+
+    attachment = JournalAttachment(
+        journal_id=journal.id,
+        user_id=current_user.id,
+        file_name=str(file.filename or "image"),
+        mime_type=content_type,
+        size_bytes=len(payload),
+        storage_path="",
+    )
+    session.add(attachment)
+    flush_with_error_handling(
+        session,
+        logger=logger,
+        action="Create journal attachment row",
+        conflict_detail="附件資料衝突，請重試。",
+        failure_detail="建立附件失敗，請稍後再試。",
+    )
+
+    try:
+        storage_path = await upload_journal_attachment_bytes(
+            attachment_id=attachment.id,
+            journal_id=journal.id,
+            user_id=current_user.id,
+            file_name=file.filename,
+            content_type=content_type,
+            payload=payload,
+        )
+    except JournalStorageConfigError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Journal media storage is not configured.",
+        ) from exc
+    except Exception as exc:
+        session.rollback()
+        logger.error(
+            "journal-attachment-upload-failed journal_id=%s reason=%s",
+            journal.id,
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="附件上傳失敗，請稍後再試。",
+        ) from exc
+
+    attachment.storage_path = storage_path
+    attachment.updated_at = utcnow()
+    session.add(attachment)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Commit journal attachment",
+        conflict_detail="附件資料衝突，請重試。",
+        failure_detail="儲存附件失敗，請稍後再試。",
+    )
+    session.refresh(attachment)
+    attachment_payload = await _serialize_attachments([attachment])
+    return attachment_payload[0]
+
+
+@router.delete("/{journal_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_journal_attachment(
+    journal_id: str,
+    attachment_id: str,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    journal_uuid = _parse_journal_uuid(journal_id)
+    attachment_uuid = _parse_journal_uuid(attachment_id)
+    journal = _get_owned_journal_or_error(
+        session=session,
+        journal_id=journal_uuid,
+        current_user=current_user,
+    )
+    attachment = session.get(JournalAttachment, attachment_uuid)
+    if not attachment or attachment.deleted_at is not None or attachment.journal_id != journal.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這個附件")
+    if attachment.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="你沒有權限刪除這個附件")
+
+    try:
+        await delete_journal_attachment_object(attachment.storage_path)
+    except JournalStorageConfigError:
+        logger.warning("journal-attachment-delete-storage-missing attachment_id=%s", attachment.id)
+    except Exception as exc:
+        logger.warning(
+            "journal-attachment-delete-storage-failed attachment_id=%s reason=%s",
+            attachment.id,
+            type(exc).__name__,
+        )
+
+    attachment.deleted_at = utcnow()
+    attachment.updated_at = utcnow()
+    session.add(attachment)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Delete journal attachment",
+        conflict_detail="刪除附件時發生衝突，請重試。",
+        failure_detail="刪除附件失敗，請稍後再試。",
+    )
+    return None
 
 # 4. 刪除日記 — 🚀 改用 soft-delete，與系統 DATA_SOFT_DELETE lifecycle 一致
 @router.delete("/{journal_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -62,6 +62,10 @@ if (wsUrl) {
 
 console.log('[frontend env check]');
 console.log(`  loaded_from: ${fs.existsSync(ENV_FILE) ? ENV_FILE : 'process env'}`);
+if (process.env.HAVEN_LOCAL_DEV_MODE === '1') {
+  console.log('  runtime_override: HAVEN_LOCAL_DEV_MODE=1');
+  console.log(`  effective_api_url: ${process.env.NEXT_PUBLIC_API_URL}`);
+}
 
 if (missing.length) {
   console.log('  missing_required:');

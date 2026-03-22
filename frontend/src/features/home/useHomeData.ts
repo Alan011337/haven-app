@@ -8,19 +8,19 @@ import {
   useJournals,
   usePartnerJournals,
   useGamificationSummary,
-  useHomeAppreciationHistory,
   useOnboardingQuest,
   useSyncNudges,
   useFirstDelight,
-  useDailySyncStatus,
 } from '@/hooks/queries';
 import { queryKeys } from '@/lib/query-keys';
+import { getAdaptiveIntervalMs } from '@/lib/polling-policy';
 import { getJournalSafetyBand } from '@/lib/safety';
 import { logClientError } from '@/lib/safe-error-log';
 import {
   invalidateHomeHeaderQueries,
   sortJournalsDesc,
 } from '@/features/home/home-data-utils';
+import { useHomeAdaptiveRefresh } from '@/features/home/useHomeAdaptiveRefresh';
 import { buildHomeBootstrapPlan, type HomeTab } from '@/lib/home-bootstrap-plan';
 import {
   acknowledgeFirstDelight,
@@ -95,23 +95,22 @@ export function useHomeData() {
   const activeTab: HomeTab = tabFromSearchParams(searchParams);
   const initialHomeBootstrapPlan = buildHomeBootstrapPlan(activeTab, false);
 
-  const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus();
   const journalsQuery = useJournals(initialHomeBootstrapPlan.loadMineJournals);
   const partnerJournalsQuery = usePartnerJournals(initialHomeBootstrapPlan.loadPartnerJournals);
-  useDailySyncStatus(activeTab === 'mine');
-  useHomeAppreciationHistory(activeTab === 'mine');
   const criticalTabDataReady =
     activeTab === 'mine'
       ? journalsQuery.isFetched
       : activeTab === 'partner'
         ? partnerJournalsQuery.isFetched
         : true;
+  const partnerStatusEnabled = activeTab !== 'mine' || criticalTabDataReady;
+  const { data: partnerStatus, refetch: refetchPartnerStatus } = usePartnerStatus(partnerStatusEnabled);
   const homeBootstrapPlan = buildHomeBootstrapPlan(
     activeTab,
     criticalTabDataReady,
   );
-  const gamificationQuery = useGamificationSummary(true);
-  const onboardingQuery = useOnboardingQuest(true);
+  const gamificationQuery = useGamificationSummary(homeBootstrapPlan.loadHeaderEnhancements);
+  const onboardingQuery = useOnboardingQuest(homeBootstrapPlan.loadHeaderEnhancements);
   const syncNudgesQuery = useSyncNudges(homeBootstrapPlan.loadHeaderEnhancements);
   const firstDelightQuery = useFirstDelight(homeBootstrapPlan.loadHeaderEnhancements);
 
@@ -193,7 +192,10 @@ export function useHomeData() {
     };
   }, [firstDelightQuery.data]);
 
-  const myJournals = useMemo(() => sortJournalsDesc(journalsQuery.data), [journalsQuery.data]);
+  const myJournals = useMemo(
+    () => sortJournalsDesc(journalsQuery.data).filter((journal) => !journal.is_draft),
+    [journalsQuery.data],
+  );
 
   const partnerJournals = useMemo(
     () => sortJournalsDesc(partnerJournalsQuery.data),
@@ -304,6 +306,8 @@ export function useHomeData() {
     queryClient,
     refetchPartnerStatus,
   ]);
+
+  useHomeAdaptiveRefresh(loadData, getAdaptiveIntervalMs);
 
   const nextOnboardingStep = onboardingQuest.steps.find((step) => !step.completed);
   const primarySyncNudge = syncNudges.nudges.find((item: SyncNudgeItem) => item.eligible);

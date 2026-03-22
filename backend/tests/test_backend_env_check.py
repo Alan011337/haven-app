@@ -52,6 +52,42 @@ class BackendEnvCheckTests(unittest.TestCase):
         )
         self.assertEqual(exit_code, 0)
 
+    def test_env_check_accepts_local_postgres_when_local_dev_mode_enabled(self) -> None:
+        exit_code = self._run_main(
+            {
+                "HAVEN_LOCAL_DEV_MODE": "1",
+                "DATABASE_URL": "postgresql://haven:secret@127.0.0.1:55432/haven_local",
+            }
+        )
+        self.assertEqual(exit_code, 0)
+
+    def test_env_check_rejects_remote_postgres_when_local_dev_mode_enabled(self) -> None:
+        exit_code = self._run_main(
+            {
+                "HAVEN_LOCAL_DEV_MODE": "1",
+                "DATABASE_URL": "postgresql://svc:secret@db.internal:5432/haven",
+            }
+        )
+        self.assertEqual(exit_code, 1)
+
+    def test_env_check_rejects_sqlite_when_local_dev_mode_enabled(self) -> None:
+        exit_code = self._run_main(
+            {
+                "HAVEN_LOCAL_DEV_MODE": "1",
+                "DATABASE_URL": "sqlite:///./dev.db",
+            }
+        )
+        self.assertEqual(exit_code, 1)
+
+    def test_env_check_rejects_read_replica_when_local_dev_mode_enabled(self) -> None:
+        exit_code = self._run_main(
+            {
+                "HAVEN_LOCAL_DEV_MODE": "1",
+                "DATABASE_READ_REPLICA_URL": "postgresql://replica.internal:5432/haven",
+            }
+        )
+        self.assertEqual(exit_code, 1)
+
     def test_env_check_rejects_ws_success_target_out_of_range(self) -> None:
         exit_code = self._run_main(
             {

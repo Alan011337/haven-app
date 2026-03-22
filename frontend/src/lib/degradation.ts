@@ -2,11 +2,11 @@
  * DEG-01/DEG-02: Consume backend /health/degradation for UX banners and retry copy.
  * Backend root is API base without /api (e.g. http://localhost:8000).
  */
+import { resolveLoopbackFriendlyApiUrl } from '@/lib/loopback-origin';
 
 function getHealthBaseUrl(): string {
   if (typeof window === 'undefined') return '';
-  const raw = process.env.NEXT_PUBLIC_API_URL?.trim() || 'http://localhost:8000/api';
-  const url = raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  const url = resolveLoopbackFriendlyApiUrl(process.env.NEXT_PUBLIC_API_URL, window.location.origin);
   return url.replace(/\/api\/?$/, '') || 'http://localhost:8000';
 }
 

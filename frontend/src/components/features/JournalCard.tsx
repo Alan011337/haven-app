@@ -1,6 +1,7 @@
 // frontend/src/components/features/JournalCard.tsx
 "use client";
 
+import Link from 'next/link';
 import { Journal } from '@/types';
 import TarotCard from '@/components/ui/TarotCard';
 import { GlassCard } from '@/components/haven/GlassCard';
@@ -9,6 +10,7 @@ import { useDeleteJournal } from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { getJournalSafetyBand } from '@/lib/safety';
+import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
 
 interface JournalCardProps {
   journal: Journal;
@@ -43,6 +45,14 @@ export default function JournalCard({
   const isElevated = safetyBand === 'elevated';
   const isCrisis = safetyBand === 'severe';
   const isSevere = isCrisis;
+  const visibilityLabel =
+    journal.visibility === 'PRIVATE'
+      ? '只留給自己'
+      : journal.visibility === 'PARTNER_ORIGINAL'
+        ? '伴侶看原文'
+        : '伴侶看 AI 譯文';
+  const title = deriveJournalTitle(journal);
+  const excerpt = buildJournalExcerpt(journal.content);
 
   // --- 3. 刪除邏輯 ---
   const handleDelete = async () => {
@@ -117,22 +127,45 @@ export default function JournalCard({
                </div>
              </div>
 
-             <span className={`inline-flex items-center self-start rounded-full px-3.5 py-1.5 text-[11px] font-bold shadow-soft sm:self-auto
-                ${isCrisis
-                  ? 'bg-destructive/10 text-destructive border border-destructive/20'
-                  : isElevated
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-primary/8 text-primary/90 border border-primary/15'
-                }`}>
-                {isCrisis ? '🚨 高風險警示' : isElevated ? '⚠️ 情緒高張' : (journal.mood_label || '隨手記')}
-             </span>
+             <div className="flex flex-wrap items-center gap-2">
+               <span className={`inline-flex items-center self-start rounded-full px-3.5 py-1.5 text-[11px] font-bold shadow-soft sm:self-auto
+                  ${isCrisis
+                    ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                    : isElevated
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'bg-primary/8 text-primary/90 border border-primary/15'
+                  }`}>
+                  {isCrisis ? '🚨 高風險警示' : isElevated ? '⚠️ 情緒高張' : (journal.mood_label || '隨手記')}
+               </span>
+               <span className="inline-flex items-center rounded-full border border-border/75 bg-white/78 px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-soft">
+                 {visibilityLabel}
+               </span>
+             </div>
+         </div>
+
+         <div className="mb-5 space-y-2">
+           <h3 className="font-art text-[1.55rem] leading-tight text-card-foreground">{title}</h3>
+           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+             <span>{journal.attachments?.length ?? 0} 張圖片</span>
+             {journal.partner_translation_status === 'PENDING' ? <span>譯文處理中</span> : null}
+             {journal.partner_translation_status === 'FAILED' ? <span>譯文暫未完成</span> : null}
+           </div>
          </div>
 
          {/* Journal content */}
          <div className={`mb-8 rounded-[1.7rem] border px-5 py-6 ${variant === 'timeline' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.4)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(252,248,243,0.7))]'} shadow-glass-inset`}>
-           <p className="whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
-             {journal.content}
-           </p>
+            <p className="line-clamp-6 whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
+              {excerpt}
+            </p>
+         </div>
+
+         <div className="mb-6 flex justify-end">
+           <Link
+             href={`/journal/${journal.id}`}
+             className="inline-flex items-center gap-2 rounded-full border border-white/56 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+           >
+             打開 Journal Studio
+           </Link>
          </div>
 
          {/* --- AI Analysis --- */}

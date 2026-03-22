@@ -1,5 +1,5 @@
 // frontend/src/services/auth.ts
-import api from '@/lib/api';
+import api, { type ApiRequestConfig } from '@/lib/api';
 import type { User } from '@/types';
 
 export interface LoginResponse {
@@ -47,9 +47,7 @@ export const register = async (
 };
 
 // 3. 取得目前使用者
-export const getCurrentUser = async (token?: string): Promise<User> => {
-  const response = await api.get<User>('/users/me', {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
+export const getCurrentUser = async (config?: ApiRequestConfig): Promise<User> => {
+  const response = await api.get<User>('/users/me', config);
   return response.data;
 };

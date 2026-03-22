@@ -44,6 +44,7 @@ function HomeContent() {
     nextOnboardingStep,
     primarySyncNudge,
     showFirstDelightCard,
+    secondaryContentReady,
     loadData,
     handleTabChange,
     handleActivateOnboardingStep,
@@ -102,12 +103,12 @@ function HomeContent() {
                 myJournals={myJournals}
                 loading={loading}
                 timelineUnavailable={mineTimelineUnavailable}
+                secondaryContentReady={secondaryContentReady}
                 relationshipPulse={{
                   score: savingsScore,
                   streakDays: gamificationSummary.streak_days,
                   hasNewPartnerContent,
                 }}
-                onJournalCreated={loadData}
                 onJournalDeleted={loadData}
                 onRetryTimeline={loadData}
               />

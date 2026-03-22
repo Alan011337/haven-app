@@ -29,12 +29,12 @@ interface MineTabContentProps {
   myJournals: Journal[];
   loading: boolean;
   timelineUnavailable: boolean;
+  secondaryContentReady: boolean;
   relationshipPulse: {
     score: number;
     streakDays: number;
     hasNewPartnerContent: boolean;
   };
-  onJournalCreated: () => void;
   onJournalDeleted?: () => void;
   onRetryTimeline: () => void;
 }
@@ -57,17 +57,36 @@ export default function MineTabContent({
   myJournals,
   loading,
   timelineUnavailable,
+  secondaryContentReady,
   relationshipPulse,
-  onJournalCreated,
   onJournalDeleted,
   onRetryTimeline,
 }: MineTabContentProps) {
   const [mounted, setMounted] = useState(false);
+  const [dateSuggestionReady, setDateSuggestionReady] = useState(false);
+  const [appreciationReady, setAppreciationReady] = useState(false);
+  const [weeklyTaskReady, setWeeklyTaskReady] = useState(false);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  useEffect(() => {
+    if (!secondaryContentReady) {
+      return;
+    }
+
+    const dateSuggestionTimer = window.setTimeout(() => setDateSuggestionReady(true), 1_000);
+    const appreciationTimer = window.setTimeout(() => setAppreciationReady(true), 2_250);
+    const weeklyTaskTimer = window.setTimeout(() => setWeeklyTaskReady(true), 3_500);
+
+    return () => {
+      window.clearTimeout(dateSuggestionTimer);
+      window.clearTimeout(appreciationTimer);
+      window.clearTimeout(weeklyTaskTimer);
+    };
+  }, [secondaryContentReady]);
 
   const timelineStage = resolveHomeTimelineStage({
     mounted,
@@ -86,17 +105,30 @@ export default function MineTabContent({
     }
     return <>關係脈搏 {score} 分。先寫自己，再靠近彼此。</>;
   }, [myJournals.length, relationshipPulse.hasNewPartnerContent, relationshipPulse.score]);
+  const showDateSuggestionCard = secondaryContentReady && dateSuggestionReady;
+  const showAppreciationCard = secondaryContentReady && appreciationReady;
+  const showWeeklyTaskCard = secondaryContentReady && weeklyTaskReady;
+
+  const renderOptionalCardPlaceholder = (title: string) => (
+    <EditorialPaperCard tone="paper" className="rounded-[2rem] p-5">
+      <div className="space-y-3">
+        <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/70">{title}</p>
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-16 w-full rounded-[1.4rem]" />
+        <Skeleton className="h-10 w-32 rounded-full" />
+      </div>
+    </EditorialPaperCard>
+  );
 
   return (
     <div className="flex flex-col gap-[var(--space-section)]">
       <HomeCoverStage
         eyebrow="私人手記"
         title="今天這一頁，先只留給你自己。"
-        description="先把今天的心情寫下來，其他的慢慢展開。"
+        description="先把今天帶進 Journal Studio，標題、圖片、分享邊界都在同一個書房裡慢慢完成。"
         pulse={pulseLine}
       >
         <JournalInput
-          onJournalCreated={onJournalCreated}
           variant="cover"
           className="border-white/55 bg-transparent shadow-none"
         />
@@ -104,21 +136,82 @@ export default function MineTabContent({
 
       <HomeSectionFrame
         eyebrow="陪伴小卡"
-        title="寫完了，其他內容慢慢展開。"
+        title="先進書房，其他內容再慢慢展開。"
       >
-        <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
-          <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
-            <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
-          </div>
-          <div className="md:row-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
-            <DailySyncCard className="h-full border-[rgba(212,185,130,0.35)] bg-[linear-gradient(180deg,rgba(255,249,235,0.98),rgba(252,243,220,0.94))]" />
-          </div>
-          <DateSuggestionCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-[rgba(150,185,150,0.30)] bg-[linear-gradient(180deg,rgba(240,250,240,0.94),rgba(228,244,228,0.88))]" />
-          <AppreciationCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-[rgba(200,170,195,0.32)] bg-[linear-gradient(180deg,rgba(252,245,250,0.95),rgba(247,238,248,0.90))]" />
-          <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
-            <LoveLanguageWeeklyCard className="h-full border-[rgba(170,195,220,0.30)] bg-[linear-gradient(180deg,rgba(243,248,255,0.94),rgba(234,243,255,0.88))]" />
-          </div>
-        </HomeMosaicRail>
+        {secondaryContentReady ? (
+          <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
+            <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
+              <MediationEntryBanner className="h-full border-white/45 bg-[linear-gradient(135deg,rgba(255,251,247,0.94),rgba(247,243,236,0.88))]" />
+            </div>
+            <div className="md:row-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
+              <DailySyncCard className="h-full border-[rgba(212,185,130,0.35)] bg-[linear-gradient(180deg,rgba(255,249,235,0.98),rgba(252,243,220,0.94))]" />
+            </div>
+            {showDateSuggestionCard ? (
+              <DateSuggestionCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-[rgba(150,185,150,0.30)] bg-[linear-gradient(180deg,rgba(240,250,240,0.94),rgba(228,244,228,0.88))]" />
+            ) : (
+              renderOptionalCardPlaceholder('Date Suggestions')
+            )}
+            {showAppreciationCard ? (
+              <AppreciationCard className="transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift border-[rgba(200,170,195,0.32)] bg-[linear-gradient(180deg,rgba(252,245,250,0.95),rgba(247,238,248,0.90))]" />
+            ) : (
+              renderOptionalCardPlaceholder('Appreciation History')
+            )}
+            <div className="md:col-span-2 transition-all duration-[220ms] ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-lift">
+              {showWeeklyTaskCard ? (
+                <LoveLanguageWeeklyCard className="h-full border-[rgba(170,195,220,0.30)] bg-[linear-gradient(180deg,rgba(243,248,255,0.94),rgba(234,243,255,0.88))]" />
+              ) : (
+                <EditorialPaperCard tone="paper" className="rounded-[2rem] p-5">
+                  <div className="space-y-3">
+                    <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/70">Weekly Task</p>
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-20 w-full rounded-[1.5rem]" />
+                    <Skeleton className="h-10 w-36 rounded-full" />
+                  </div>
+                </EditorialPaperCard>
+              )}
+            </div>
+          </HomeMosaicRail>
+        ) : (
+          <HomeMosaicRail className="md:grid-cols-[1.18fr_0.82fr]">
+            <EditorialPaperCard tone="paper" className="md:col-span-2 rounded-[2rem] p-6">
+              <div className="space-y-3">
+                <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/78">Secondary Surfaces</p>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  首頁先把你的時間線與 Journal 入口穩定載入，陪伴小卡會在主資料同步完成後再展開。
+                </p>
+                <div className="space-y-2 pt-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-10 w-full rounded-[1.3rem]" />
+                </div>
+              </div>
+            </EditorialPaperCard>
+            <EditorialPaperCard tone="paper" className="md:row-span-2 rounded-[2rem] p-5">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-24 w-full rounded-[1.6rem]" />
+                <Skeleton className="h-24 w-full rounded-[1.6rem]" />
+              </div>
+            </EditorialPaperCard>
+            <EditorialPaperCard tone="paper" className="rounded-[2rem] p-5">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-16 w-full rounded-[1.4rem]" />
+              </div>
+            </EditorialPaperCard>
+            <EditorialPaperCard tone="paper" className="rounded-[2rem] p-5">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-16 w-full rounded-[1.4rem]" />
+              </div>
+            </EditorialPaperCard>
+            <EditorialPaperCard tone="paper" className="md:col-span-2 rounded-[2rem] p-5">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-20 w-full rounded-[1.5rem]" />
+              </div>
+            </EditorialPaperCard>
+          </HomeMosaicRail>
+        )}
       </HomeSectionFrame>
 
       <EditorialTimelineColumn

@@ -10,6 +10,7 @@ from .card_response import CardResponse
 
 # 3. Journal (參照了 User 和 CardDeck)
 from .journal import Journal, JournalRead
+from .journal_attachment import JournalAttachment
 
 # 4. Analysis (參照了 Journal)
 from .analysis import Analysis, AnalysisRead
@@ -85,6 +86,7 @@ __all__ = [
     "GrowthReferralEvent",
     "GrowthReferralEventType",
     "Journal",
+    "JournalAttachment",
     "JournalRead",
     "LoveLanguagePreference",
     "LoveLanguageTaskAssignment",

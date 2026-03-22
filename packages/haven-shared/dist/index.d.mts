@@ -2,11 +2,31 @@
  * Haven shared domain types (backend-aligned).
  * Used by both Next.js frontend and future React Native/Expo app.
  */
+type JournalVisibility = 'PRIVATE' | 'PARTNER_ORIGINAL' | 'PARTNER_TRANSLATED_ONLY';
+type JournalContentFormat = 'markdown';
+type JournalTranslationStatus = 'FAILED' | 'NOT_REQUESTED' | 'PENDING' | 'READY';
+interface JournalAttachmentPublic {
+    id: string;
+    file_name: string;
+    mime_type: string;
+    size_bytes: number;
+    created_at: string;
+    caption?: string | null;
+    url?: string | null;
+}
 interface Journal {
     id: string;
     user_id?: string;
+    title?: string | null;
     content: string;
+    is_draft?: boolean;
     created_at: string;
+    updated_at?: string;
+    visibility?: JournalVisibility;
+    content_format?: JournalContentFormat;
+    partner_translation_status?: JournalTranslationStatus;
+    partner_translated_content?: string | null;
+    attachments?: JournalAttachmentPublic[];
     mood_label?: string;
     mood_score?: number;
     emotional_needs?: string;
@@ -54,7 +74,7 @@ interface Card {
  * Shared so web and native use the same shapes.
  */
 
-declare const MAX_JOURNAL_CONTENT_LENGTH = 4000;
+declare const MAX_JOURNAL_CONTENT_LENGTH = 12000;
 interface PartnerStatus {
     has_partner: boolean;
     latest_journal_at: string | null;
@@ -68,6 +88,9 @@ interface CreateJournalOptions {
 interface CreateJournalResponse extends Journal {
     new_savings_score: number;
     score_gained: number;
+}
+interface JournalDraftPayload {
+    is_draft?: boolean;
 }
 interface CardResponsePayload {
     card_id: string;
@@ -129,6 +152,7 @@ interface DeckHistorySummary {
 declare const queryKeys: {
     readonly partnerStatus: () => readonly ["partnerStatus"];
     readonly journals: () => readonly ["journals"];
+    readonly journalDetail: (journalId: string) => readonly ["journalDetail", string];
     readonly partnerJournals: () => readonly ["partnerJournals"];
     readonly gamificationSummary: () => readonly ["gamificationSummary"];
     readonly onboardingQuest: () => readonly ["onboardingQuest"];
@@ -262,4 +286,4 @@ interface HavenApiClient {
     }): Promise<DeckHistorySummary>;
 }
 
-export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type HavenEditorialTokens, type Journal, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, havenEditorialTokens, queryKeys };
+export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type HavenEditorialTokens, type Journal, type JournalAttachmentPublic, type JournalContentFormat, type JournalDraftPayload, type JournalTranslationStatus, type JournalVisibility, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, havenEditorialTokens, queryKeys };

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { logClientError } from '@/lib/safe-error-log';
 import { capturePosthogEvent } from '@/lib/posthog';
 import { emitRealtimeFallback } from '@/lib/realtime-policy';
+import { resolveLoopbackFriendlyApiUrl, resolveLoopbackFriendlyUrl } from '@/lib/loopback-origin';
 import {
   classifyDisconnectReason,
   computeReconnectDelayMs,
@@ -60,13 +61,15 @@ const resolveWsEndpointForLog = (wsBaseUrl: string): string => {
 const resolveWebSocketBaseUrl = (): string => {
   const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
   if (rawWsUrl) {
-    return normalizeWebSocketBaseUrl(rawWsUrl);
+    return normalizeWebSocketBaseUrl(
+      resolveLoopbackFriendlyUrl(rawWsUrl, typeof window !== 'undefined' ? window.location.origin : undefined),
+    );
   }
 
   const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (rawApiUrl && typeof window !== 'undefined') {
     try {
-      const apiUrl = new URL(rawApiUrl, window.location.origin);
+      const apiUrl = new URL(resolveLoopbackFriendlyApiUrl(rawApiUrl, window.location.origin));
       const wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
       return `${wsProtocol}//${apiUrl.host}`;
     } catch {

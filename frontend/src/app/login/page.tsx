@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { isAxiosError } from 'axios';
 import {
@@ -32,6 +32,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -44,7 +49,7 @@ export default function LoginPage() {
       try {
         // ✅ 令牌由後端通過 httpOnly Cookie 設置
         // 前端只需驗證用戶信息
-        const userData = await getCurrentUser(data.access_token);
+        const userData = await getCurrentUser({ authCritical: true });
         const referralInviteCode = readReferralInviteCode();
         const postLoginRedirect = referralInviteCode ? '/settings' : '/';
         if (referralInviteCode) {
@@ -223,7 +228,7 @@ export default function LoginPage() {
             size="lg"
             className="w-full"
             loading={loading}
-            disabled={loading}
+            disabled={loading || !isReady}
             rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
           >
             登入並回到 Haven

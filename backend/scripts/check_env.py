@@ -162,6 +162,15 @@ def _validate_database_url(value: str) -> str | None:
     return "DATABASE_URL must start with postgres://, postgresql://, or sqlite://"
 
 
+def _is_local_postgres_url(value: str) -> bool:
+    parsed = urlparse(value.strip())
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        return False
+    if not parsed.hostname:
+        return False
+    return parsed.hostname in {"127.0.0.1", "localhost"}
+
+
 def _validate_secret_key(value: str) -> str | None:
     if len(value.strip()) < 32:
         return "SECRET_KEY should be at least 32 characters"
@@ -334,6 +343,18 @@ def main() -> int:
         issue = _validate_database_url(database_url)
         if issue:
             invalid.append(issue)
+
+    if os.getenv("HAVEN_LOCAL_DEV_MODE", "").strip() == "1":
+        if "DATABASE_URL" not in missing and not _is_local_postgres_url(database_url):
+            invalid.append(
+                "HAVEN_LOCAL_DEV_MODE=1 requires a localhost Postgres DATABASE_URL (for example postgresql://user:pass@127.0.0.1:55432/haven_local)"
+            )
+
+        database_read_replica_url = os.getenv("DATABASE_READ_REPLICA_URL", "").strip()
+        if database_read_replica_url:
+            invalid.append(
+                "HAVEN_LOCAL_DEV_MODE=1 requires DATABASE_READ_REPLICA_URL to be unset"
+            )
 
     secret_key = os.getenv("SECRET_KEY", "")
     if secret_key and "SECRET_KEY" not in missing:
@@ -862,6 +883,9 @@ def main() -> int:
 
     print("[backend env check]")
     print(f"  loaded_from: {ENV_FILE if ENV_FILE.exists() else 'process env'}")
+    if os.getenv("HAVEN_LOCAL_DEV_MODE", "").strip() == "1":
+        print("  runtime_override: HAVEN_LOCAL_DEV_MODE=1")
+        print(f"  effective_database_url: {os.getenv('DATABASE_URL', '').strip()}")
 
     if missing:
         print("  missing_required:")

@@ -35,7 +35,8 @@ function apiError(
 }
 
 test.describe('Smoke / CUJ', () => {
-  test('login syncs auth context and redirects to home', async ({ page }) => {
+  test('login succeeds on the first try even when bootstrap me returns 401 first', async ({ page }) => {
+    let meCalls = 0;
     await page.route('**/api/auth/token', async (route) => {
       await route.fulfill({
         status: 200,
@@ -48,6 +49,15 @@ test.describe('Smoke / CUJ', () => {
     });
 
     await page.route('**/api/users/me**', async (route) => {
+      meCalls += 1;
+      if (meCalls === 1) {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify(apiError('unauthorized', 'not authenticated')),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -67,14 +77,9 @@ test.describe('Smoke / CUJ', () => {
 
     await page.route('**/api/users/partner-status', async (route) => {
       await route.fulfill({
-        status: 200,
+        status: 401,
         contentType: 'application/json',
-        body: JSON.stringify(apiSuccess({
-          has_partner: false,
-          latest_journal_at: null,
-          current_score: 0,
-          unread_notification_count: 0,
-        })),
+        body: JSON.stringify(apiError('unauthorized', 'session missing for widget')),
       });
     });
 
@@ -106,11 +111,12 @@ test.describe('Smoke / CUJ', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('user@example.com').fill('user@example.com');
+    await page.getByPlaceholder('name@example.com').fill('user@example.com');
     await page.locator('input[type="password"]').fill('password123');
-    await page.getByRole('button', { name: '登入' }).click();
+    await page.getByRole('button', { name: '登入並回到 Haven' }).click();
 
     await expect(page).toHaveURL(/\/$/);
+    await expect.poll(() => meCalls).toBeGreaterThan(1);
     // ✅ 檢查 httpOnly Cookie 是否被設置（應該不在 localStorage 中）
     await expect
       .poll(async () => page.evaluate(() => localStorage.getItem('token')))
@@ -140,9 +146,9 @@ test.describe('Smoke / CUJ', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('user@example.com').fill('user@example.com');
+    await page.getByPlaceholder('name@example.com').fill('user@example.com');
     await page.locator('input[type="password"]').fill('password123');
-    await page.getByRole('button', { name: '登入' }).click();
+    await page.getByRole('button', { name: '登入並回到 Haven' }).click();
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByText('登入成功，但讀取使用者資料失敗，請再試一次')).toBeVisible();
@@ -335,9 +341,9 @@ test.describe('Smoke / CUJ', () => {
 
     await page.goto('/login');
     await expect.poll(() => meCalls).toBeGreaterThan(0);
-    const emailInput = page.getByPlaceholder('user@example.com');
+    const emailInput = page.getByPlaceholder('name@example.com');
     const passwordInput = page.locator('input[type="password"]');
-    const loginButton = page.getByRole('button', { name: '登入' });
+    const loginButton = page.getByRole('button', { name: '登入並回到 Haven' });
 
     for (let attempt = 0; attempt < 3 && tokenCalls === 0; attempt += 1) {
       await emailInput.fill('invitee@example.com');
@@ -768,9 +774,9 @@ test.describe('Smoke / CUJ', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('user@example.com').fill('loop@example.com');
+    await page.getByPlaceholder('name@example.com').fill('loop@example.com');
     await page.locator('input[type="password"]').fill('password123');
-    await page.getByRole('button', { name: '登入' }).click();
+    await page.getByRole('button', { name: '登入並回到 Haven' }).click();
     await expect(page).toHaveURL(/\/$/);
 
     await page.getByLabel('今天情緒 1–5 分').selectOption('4');

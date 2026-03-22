@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, Index
 
@@ -16,13 +16,22 @@ from app.models.analysis import AnalysisRead, Analysis
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.card import Card
+    from app.models.journal_attachment import JournalAttachment
 
 # 1. 基礎模型
 class JournalBase(SQLModel):
     title: Optional[str] = None
     content: str = Field(sa_column=Column(EncryptedText(), nullable=False))
+    is_draft: bool = Field(default=False)
     mood: Optional[str] = None # 這是使用者自己選的心情 (User Input)
     tags: Optional[str] = None
+    visibility: str = Field(default="PARTNER_TRANSLATED_ONLY", index=True)
+    content_format: str = Field(default="markdown")
+    partner_translation_status: str = Field(default="NOT_REQUESTED")
+    partner_translated_content: Optional[str] = Field(
+        default=None,
+        sa_column=Column(EncryptedText(), nullable=True),
+    )
 
 # 2. 資料庫模型 (Table)
 class Journal(JournalBase, table=True):
@@ -48,6 +57,13 @@ class Journal(JournalBase, table=True):
     # Relationships
     user: "User" = Relationship(back_populates="journals")
     card: Optional["Card"] = Relationship(back_populates="journals")
+    attachments: List["JournalAttachment"] = Relationship(
+        back_populates="journal",
+        sa_relationship_kwargs={
+            "cascade": "all, delete-orphan",
+            "order_by": "JournalAttachment.created_at.asc()",
+        },
+    )
     
     # 🔥 關鍵：透過關聯連結到 Analysis 表，並設定串聯刪除 (日記刪除，分析也刪除)
     analysis: Optional["Analysis"] = Relationship(
@@ -59,6 +75,7 @@ class Journal(JournalBase, table=True):
 class JournalRead(JournalBase):
     id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
     user_id: uuid.UUID
     deck_id: Optional[int]
     card_id: Optional[uuid.UUID]

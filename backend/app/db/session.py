@@ -4,6 +4,7 @@ from threading import Lock
 from typing import Any
 
 from sqlalchemy import event, text
+from sqlalchemy.pool import NullPool
 from sqlmodel import create_engine, SQLModel, Session
 from app.core.config import settings
 from app.db.slow_query_labels import classify_slow_query_kind, query_fingerprint
@@ -51,6 +52,54 @@ def _database_slow_query_ms() -> int:
 def _is_postgres_url(url: str | None) -> bool:
     raw = (url or "").strip().lower()
     return raw.startswith("postgresql://") or raw.startswith("postgres://")
+
+
+def _uses_supabase_session_pooler(url: str | None) -> bool:
+    raw = (url or "").strip().lower()
+    return "pooler.supabase.com" in raw
+
+
+def _database_pool_size(url: str | None, *, configured: int) -> int:
+    normalized = max(1, int(configured))
+    if _uses_supabase_session_pooler(url):
+        # Session-mode poolers expose a small max-client budget, but localhost
+        # still needs enough parallel capacity for request handling plus the
+        # degradation/health probes that run alongside interactive traffic.
+        return min(normalized, 2)
+    return normalized
+
+
+def _database_max_overflow(url: str | None, *, pool_size: int) -> int:
+    configured = getattr(settings, "DATABASE_MAX_OVERFLOW", None)
+    if configured is None:
+        if _uses_supabase_session_pooler(url):
+            return 0
+        return max(2, int(pool_size))
+
+    normalized = max(0, int(configured))
+    if _uses_supabase_session_pooler(url):
+        return min(normalized, 0)
+    return normalized
+
+
+def _create_engine_kwargs(url: str | None, *, configured_pool_size: int) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "echo": settings.SQL_ECHO,
+        "pool_pre_ping": True,
+    }
+    if _uses_supabase_session_pooler(url):
+        # Supabase pooler already owns connection multiplexing. Adding a local
+        # QueuePool on top causes dual-pooling pathologies: either we saturate
+        # the upstream client budget or we deadlock locally on our own queue.
+        kwargs["poolclass"] = NullPool
+        return kwargs
+
+    pool_size = _database_pool_size(url, configured=configured_pool_size)
+    kwargs["pool_size"] = pool_size
+    kwargs["max_overflow"] = _database_max_overflow(url, pool_size=pool_size)
+    kwargs["pool_recycle"] = settings.DATABASE_POOL_RECYCLE_SECONDS
+    kwargs["pool_timeout"] = _database_pool_timeout_seconds()
+    return kwargs
 
 
 def _attach_engine_runtime_hooks(db_engine, *, apply_statement_timeout: bool) -> None:
@@ -159,16 +208,12 @@ def get_db_query_runtime_snapshot() -> dict[str, Any]:
     }
 
 
-# 🚀 Added max_overflow for connection pool headroom under burst traffic.
-# pool_pre_ping ensures stale connections are recycled before use.
 engine = create_engine(
     settings.DATABASE_URL,
-    echo=settings.SQL_ECHO,
-    pool_pre_ping=True,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=max(2, settings.DATABASE_POOL_SIZE),
-    pool_recycle=settings.DATABASE_POOL_RECYCLE_SECONDS,
-    pool_timeout=_database_pool_timeout_seconds(),
+    **_create_engine_kwargs(
+        settings.DATABASE_URL,
+        configured_pool_size=settings.DATABASE_POOL_SIZE,
+    ),
 )
 _attach_engine_runtime_hooks(
     engine,
@@ -180,12 +225,10 @@ _read_replica_url = (settings.DATABASE_READ_REPLICA_URL or "").strip()
 engine_read = (
     create_engine(
         _read_replica_url,
-        echo=settings.SQL_ECHO,
-        pool_pre_ping=True,
-        pool_size=max(2, settings.DATABASE_POOL_SIZE - 1),
-        max_overflow=max(2, settings.DATABASE_POOL_SIZE - 1),
-        pool_recycle=settings.DATABASE_POOL_RECYCLE_SECONDS,
-        pool_timeout=_database_pool_timeout_seconds(),
+        **_create_engine_kwargs(
+            _read_replica_url,
+            configured_pool_size=max(1, settings.DATABASE_POOL_SIZE - 1),
+        ),
     )
     if _read_replica_url
     else engine

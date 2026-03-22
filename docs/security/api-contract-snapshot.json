@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 101,
-  "route_digest": "064fe4dea962c35c4229ecd4881010fa99bc4257f5826bb901460098e914994b",
+  "route_count": 106,
+  "route_digest": "7f8b06564bdb77a53e392007c36136a9187c768c5735ca75ea031ef2f5368f4f",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -231,6 +231,11 @@
     {
       "idempotency_policy": "n/a",
       "method": "GET",
+      "path": "/api/journals"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
       "path": "/api/journals/"
     },
     {
@@ -247,6 +252,26 @@
       "idempotency_policy": "required",
       "method": "DELETE",
       "path": "/api/journals/{journal_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/journals/{journal_id}"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PATCH",
+      "path": "/api/journals/{journal_id}"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/journals/{journal_id}/attachments"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "DELETE",
+      "path": "/api/journals/{journal_id}/attachments/{attachment_id}"
     },
     {
       "idempotency_policy": "n/a",

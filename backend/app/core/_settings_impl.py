@@ -38,7 +38,13 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DATABASE_READ_REPLICA_URL: str | None = None
     DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int | None = None
     DATABASE_POOL_RECYCLE_SECONDS: int = 1800
+    SUPABASE_URL: str | None = None
+    NEXT_PUBLIC_SUPABASE_URL: str | None = None
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None
+    SUPABASE_STORAGE_JOURNAL_BUCKET: str = "journal-media"
+    JOURNAL_ATTACHMENT_SIGNED_URL_TTL_SECONDS: int = 3600
     OPENAI_API_KEY: str
     GEMINI_API_KEY: str | None = None
     SECRET_KEY: str

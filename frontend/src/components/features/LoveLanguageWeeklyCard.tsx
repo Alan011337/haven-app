@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Sparkles, Loader2, Check, RefreshCw } from "lucide-react";
 import { GlassCard } from "@/components/haven/GlassCard";
-import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
+import { HOME_OPTIONAL_AUTO_RETRY_DELAY_MS, HOME_OPTIONAL_DATA_TIMEOUT_MS } from "@/lib/home-performance";
 import {
   fetchWeeklyTask,
   completeWeeklyTask,
@@ -18,6 +18,7 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const autoRetriedRef = useRef(false);
   const { showToast } = useToast();
 
   const load = useCallback(async () => {
@@ -38,6 +39,15 @@ export default function LoveLanguageWeeklyCard({ className }: { className?: stri
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!loadFailed || autoRetriedRef.current) return;
+    autoRetriedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void load();
+    }, HOME_OPTIONAL_AUTO_RETRY_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [load, loadFailed]);
 
   const handleComplete = async () => {
     setCompleting(true);

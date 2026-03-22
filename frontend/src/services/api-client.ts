@@ -8,18 +8,24 @@ export * from '@/services/daily-sync-api';
 export * from '@/services/appreciations-api';
 export {
   createJournal,
+  deleteJournalAttachment,
   deleteJournal,
+  fetchJournalById,
   fetchJournals,
   fetchJournalsPage,
   fetchPartnerJournals,
   fetchPartnerJournalsPage,
   JOURNALS_INITIAL_LIMIT,
   MAX_JOURNAL_CONTENT_LENGTH,
+  updateJournal,
+  uploadJournalAttachment,
 } from '@/services/journals-api';
 export type {
   CreateJournalOptions,
   CreateJournalResponse,
   CursorListResult,
+  JournalUpsertPayload,
+  UpdateJournalPayload,
 } from '@/services/journals-api';
 // idempotency contract marker: `createJournal` keeps `idempotencyKey` -> `Idempotency-Key` mapping in journals-api.
 export type {

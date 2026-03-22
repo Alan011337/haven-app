@@ -41,12 +41,13 @@ var CardCategory = /* @__PURE__ */ ((CardCategory2) => {
 })(CardCategory || {});
 
 // src/api-types.ts
-var MAX_JOURNAL_CONTENT_LENGTH = 4e3;
+var MAX_JOURNAL_CONTENT_LENGTH = 12e3;
 
 // src/query-keys.ts
 var queryKeys = {
   partnerStatus: () => ["partnerStatus"],
   journals: () => ["journals"],
+  journalDetail: (journalId) => ["journalDetail", journalId],
   partnerJournals: () => ["partnerJournals"],
   gamificationSummary: () => ["gamificationSummary"],
   onboardingQuest: () => ["onboardingQuest"],

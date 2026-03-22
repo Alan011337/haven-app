@@ -71,41 +71,47 @@ resolve_target_database_url() {
   ' alembic.ini
 }
 
-classify_sqlite_database_state() {
+classify_target_database_state() {
   local target_url
   target_url="$(resolve_target_database_url)"
 
   if ! RUN_ALEMBIC_TARGET_URL="${target_url}" RUN_ALEMBIC_BACKEND_DIR="${BACKEND_DIR}" "${PYTHON_BIN}" - <<'PY'
 import os
-import sqlite3
-import sys
 from pathlib import Path
+
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine.url import make_url
 
 url = os.environ.get("RUN_ALEMBIC_TARGET_URL", "").strip()
 backend_dir = Path(os.environ.get("RUN_ALEMBIC_BACKEND_DIR", ".")).resolve()
 
-if not url.startswith("sqlite:///"):
-    print("non_sqlite")
+parsed = make_url(url)
+backend_name = parsed.get_backend_name()
+
+if backend_name not in {"sqlite", "postgresql", "postgres"}:
+    print("unsupported")
     raise SystemExit(0)
 
-raw_path = url[len("sqlite:///") :]
-if raw_path in {"", ":memory:"}:
-    print("missing_or_empty")
-    raise SystemExit(0)
+if backend_name == "sqlite":
+    raw_path = parsed.database or ""
+    if raw_path in {"", ":memory:"}:
+        print("missing_or_empty")
+        raise SystemExit(0)
 
-db_path = Path(raw_path)
-if not db_path.is_absolute():
-    db_path = (backend_dir / db_path).resolve()
+    db_path = Path(raw_path)
+    if not db_path.is_absolute():
+        db_path = (backend_dir / db_path).resolve()
 
-if not db_path.exists():
-    print("missing_or_empty")
-    raise SystemExit(0)
+    if not db_path.exists():
+        print("missing_or_empty")
+        raise SystemExit(0)
 
-conn = sqlite3.connect(str(db_path))
+engine = create_engine(url, pool_pre_ping=True)
 try:
-    rows = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    inspector = inspect(engine)
+    rows = inspector.get_table_names()
 finally:
-    conn.close()
+    engine.dispose()
 
 if not rows:
     print("missing_or_empty")
@@ -205,7 +211,7 @@ PY
   return 0
 }
 
-bootstrap_fresh_sqlite_for_upgrade_head() {
+bootstrap_fresh_database_for_upgrade_head() {
   local command="${1:-}"
   local target="${2:-}"
 
@@ -216,24 +222,21 @@ bootstrap_fresh_sqlite_for_upgrade_head() {
   fi
 
   local db_state
-  db_state="$(classify_sqlite_database_state)"
+  db_state="$(classify_target_database_state)"
   case "${db_state}" in
-    non_sqlite)
-      echo "[run-alembic] fail: fresh-bootstrap mode only supports sqlite DATABASE_URL."
-      echo "[run-alembic] hint: use --mode legacy-upgrade for postgres/managed DB upgrades."
+    unsupported)
+      echo "[run-alembic] fail: fresh-bootstrap mode only supports postgres/postgresql and sqlite DATABASE_URL."
       return 1
       ;;
     missing_or_empty)
-      echo "[run-alembic] fresh-bootstrap: initializing sqlite schema baseline."
-      "${PYTHON_BIN}" scripts/bootstrap-sqlite-schema.py
+      echo "[run-alembic] fresh-bootstrap: initializing current schema baseline for empty database."
+      "${PYTHON_BIN}" scripts/bootstrap-db-schema.py
       ;;
     non_empty)
-      echo "[run-alembic] fail: target sqlite database is not empty."
-      echo "[run-alembic] hint: use --mode legacy-upgrade for existing databases."
-      return 1
+      echo "[run-alembic] fresh-bootstrap: existing database detected; continuing with legacy upgrade path."
       ;;
     *)
-      echo "[run-alembic] fail: unable to classify sqlite database state."
+      echo "[run-alembic] fail: unable to classify target database state."
       return 1
       ;;
   esac
@@ -298,7 +301,7 @@ if [[ "${ALEMBIC_MODE}" == "fresh-bootstrap" ]] && [[ $# -eq 0 ]]; then
 fi
 
 if [[ "${ALEMBIC_MODE}" == "fresh-bootstrap" ]]; then
-  bootstrap_fresh_sqlite_for_upgrade_head "${1:-}" "${2:-}"
+  bootstrap_fresh_database_for_upgrade_head "${1:-}" "${2:-}"
 fi
 
 if [[ "${ALEMBIC_MODE}" == "legacy-upgrade" ]]; then

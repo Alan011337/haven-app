@@ -1,6 +1,12 @@
 export { usePartnerStatus } from './usePartnerStatus';
-export { useJournals } from './useJournals';
-export { useCreateJournal, useDeleteJournal } from './useJournalMutations';
+export { useJournalDetail, useJournals } from './useJournals';
+export {
+  useCreateJournal,
+  useDeleteJournal,
+  useDeleteJournalAttachment,
+  useUpdateJournal,
+  useUploadJournalAttachment,
+} from './useJournalMutations';
 export {
   useFeatureFlags,
   useGamificationSummary,

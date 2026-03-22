@@ -16,7 +16,7 @@ from app.models.analysis import Analysis
 from app.models.user import User
 from app.core.datetime_utils import utcnow
 from app.services.retry_backoff import compute_exponential_backoff_seconds
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ async def run_analysis_job(payload_str: str) -> None:
         logger.warning("Invalid analysis job payload: %s", type(e).__name__)
         return
 
-    from app.services.ai import analyze_journal
+    from app.services.ai import analyze_journal, translate_journal_for_partner
     from app.services.gamification import apply_journal_score_once, compute_journal_score_delta
     from app.services.audit_log import record_audit_event
     from app.services.conflict_detection import detect_conflict_risk
@@ -181,22 +181,25 @@ async def run_analysis_job(payload_str: str) -> None:
 
         if ai_result:
             conflict_risk = detect_conflict_risk(journal.content or "")
-            new_analysis = Analysis(
-                journal_id=journal.id,
-                mood_label=ai_result.get("mood_label"),
-                emotional_needs=ai_result.get("emotional_needs"),
-                advice_for_user=ai_result.get("advice_for_user"),
-                action_for_user=ai_result.get("action_for_user"),
-                advice_for_partner=ai_result.get("advice_for_partner"),
-                action_for_partner=ai_result.get("action_for_partner"),
-                card_recommendation=ai_result.get("card_recommendation"),
-                safety_tier=ai_result.get("safety_tier", 0),
-                conflict_risk_detected=conflict_risk,
-                prompt_version=ai_result.get("prompt_version", "unknown"),
-                model_version=ai_result.get("model_version"),
-                parse_success=bool(ai_result.get("parse_success", False)),
-            )
-            session.add(new_analysis)
+            existing_analysis = session.exec(
+                select(Analysis).where(Analysis.journal_id == journal.id)
+            ).first()
+            if existing_analysis is None:
+                existing_analysis = Analysis(journal_id=journal.id)
+                session.add(existing_analysis)
+            existing_analysis.mood_label = ai_result.get("mood_label")
+            existing_analysis.emotional_needs = ai_result.get("emotional_needs")
+            existing_analysis.advice_for_user = ai_result.get("advice_for_user")
+            existing_analysis.action_for_user = ai_result.get("action_for_user")
+            existing_analysis.advice_for_partner = ai_result.get("advice_for_partner")
+            existing_analysis.action_for_partner = ai_result.get("action_for_partner")
+            existing_analysis.card_recommendation = ai_result.get("card_recommendation")
+            existing_analysis.safety_tier = ai_result.get("safety_tier", 0)
+            existing_analysis.conflict_risk_detected = conflict_risk
+            existing_analysis.prompt_version = ai_result.get("prompt_version", "unknown")
+            existing_analysis.model_version = ai_result.get("model_version")
+            existing_analysis.parse_success = bool(ai_result.get("parse_success", False))
+            session.add(existing_analysis)
             session.flush()
             if conflict_risk and user.partner_id:
                 partner = session.get(User, user.partner_id)
@@ -235,6 +238,23 @@ async def run_analysis_job(payload_str: str) -> None:
                 resource_id=journal.id,
                 metadata={"has_analysis": False},
             )
+        if str(journal.visibility or "").strip().upper() == "PARTNER_TRANSLATED_ONLY":
+            try:
+                journal.partner_translated_content = await translate_journal_for_partner(journal.content or "")
+                journal.partner_translation_status = "READY"
+            except Exception as exc:
+                logger.warning(
+                    "Async journal translation failed: journal_id=%s reason=%s",
+                    journal.id,
+                    type(exc).__name__,
+                )
+                journal.partner_translated_content = None
+                journal.partner_translation_status = "FAILED"
+        else:
+            journal.partner_translated_content = None
+            journal.partner_translation_status = "NOT_REQUESTED"
+        journal.updated_at = utcnow()
+        session.add(journal)
         session.commit()
 
     if conflict_triggered_for_partner:
@@ -257,7 +277,8 @@ async def run_analysis_job(payload_str: str) -> None:
                     if payload:
                         queue_partner_notification(action_type="mediation_invite", event_type="mediation_invite", **payload)
 
-    enqueue_journal_notification(journal_id)
+    if str(journal.visibility or "").strip().upper() != "PRIVATE":
+        enqueue_journal_notification(journal_id)
     logger.info("Analysis job completed journal_id=%s", journal_id)
 
 
@@ -281,6 +302,8 @@ def run_notification_job(payload_str: str) -> None:
         user = session.get(User, journal.user_id)
         if not user:
             logger.warning("Notify job: user not found for journal_id=%s", journal_id)
+            return
+        if str(journal.visibility or "").strip().upper() == "PRIVATE":
             return
         payload_out = build_partner_notification_payload(
             session=session,

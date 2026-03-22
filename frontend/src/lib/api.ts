@@ -1,18 +1,25 @@
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosError,
+  AxiosResponse,
+  type AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import {
   isApiEnvelopePayload,
   normalizeApiEnvelopeError,
   unwrapApiEnvelopeData,
 } from '@/lib/api-envelope';
+import { resolveLoopbackFriendlyApiUrl } from '@/lib/loopback-origin';
 
-const DEFAULT_API_URL = 'http://localhost:8000/api';
 const IDEMPOTENCY_CACHE_WINDOW_MS = 12_000;
 const IDEMPOTENCY_CACHE_MAX_ENTRIES = 512;
 const IDEMPOTENCY_CACHE_STORAGE_KEY = 'haven_idempotency_cache_v1';
 
 function normalizeApiUrl(raw?: string): string {
-  if (!raw) return DEFAULT_API_URL;
-  return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+  return resolveLoopbackFriendlyApiUrl(
+    raw,
+    typeof window !== 'undefined' ? window.location.origin : undefined,
+  );
 }
 
 export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
@@ -21,7 +28,14 @@ const IDEMPOTENCY_EXEMPT_PATHS = new Set(['/auth/token', '/auth/refresh', '/auth
 const idempotencyKeyCache = new Map<string, { key: string; expiresAt: number }>();
 let idempotencyCacheHydrated = false;
 
+export interface ApiRequestConfig<D = unknown> extends AxiosRequestConfig<D> {
+  authCritical?: boolean;
+  authInvalidateSession?: boolean;
+}
+
 interface RetryableInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
+  authCritical?: boolean;
+  authInvalidateSession?: boolean;
   _retry?: boolean;
 }
 
@@ -227,7 +241,11 @@ api.interceptors.response.use(
     const originalConfig = error.config as RetryableInternalAxiosRequestConfig | undefined;
     
     // 如果是 401 且尚未重試過
-    if (error.response?.status === 401 && originalConfig && !originalConfig._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalConfig?.authInvalidateSession &&
+      !originalConfig._retry
+    ) {
       originalConfig._retry = true;
       
       try {

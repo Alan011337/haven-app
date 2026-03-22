@@ -5,7 +5,7 @@
 
 import type { Journal } from './types';
 
-export const MAX_JOURNAL_CONTENT_LENGTH = 4000;
+export const MAX_JOURNAL_CONTENT_LENGTH = 12000;
 
 export interface PartnerStatus {
   has_partner: boolean;
@@ -22,6 +22,10 @@ export interface CreateJournalOptions {
 export interface CreateJournalResponse extends Journal {
   new_savings_score: number;
   score_gained: number;
+}
+
+export interface JournalDraftPayload {
+  is_draft?: boolean;
 }
 
 export interface CardResponsePayload {

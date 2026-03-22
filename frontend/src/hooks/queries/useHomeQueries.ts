@@ -3,7 +3,11 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { HOME_OPTIONAL_DATA_TIMEOUT_MS, HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
+import {
+  HOME_OPTIONAL_AUTO_RETRY_DELAY_MS,
+  HOME_OPTIONAL_DATA_TIMEOUT_MS,
+  HOME_TIMELINE_TIMEOUT_MS,
+} from '@/lib/home-performance';
 import {
   buildHomeAppreciationHistoryQueryKey,
   getHomeAppreciationWeekRange,
@@ -85,13 +89,14 @@ export function useHomeAppreciationHistory(enabled = true) {
   return useQuery<HomeAppreciationHistory>({
     queryKey: buildHomeAppreciationHistoryQueryKey(weekRange.from, weekRange.to),
     queryFn: async () => {
-      const [recent, thisWeek] = await Promise.all([
-        fetchAppreciations({ limit: 20 }, { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS }),
-        fetchAppreciations(
-          { from_date: weekRange.from, to_date: weekRange.to, limit: 50 },
-          { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
-        ),
-      ]);
+      const recent = await fetchAppreciations(
+        { limit: 20 },
+        { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
+      );
+      const thisWeek = await fetchAppreciations(
+        { from_date: weekRange.from, to_date: weekRange.to, limit: 50 },
+        { timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS },
+      );
       return {
         recent,
         thisWeek,
@@ -99,7 +104,8 @@ export function useHomeAppreciationHistory(enabled = true) {
       };
     },
     enabled: !!user && enabled,
-    retry: false,
+    retry: 1,
+    retryDelay: HOME_OPTIONAL_AUTO_RETRY_DELAY_MS,
     staleTime: 60_000,
   });
 }

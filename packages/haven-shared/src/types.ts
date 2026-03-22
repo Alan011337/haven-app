@@ -3,11 +3,42 @@
  * Used by both Next.js frontend and future React Native/Expo app.
  */
 
+export type JournalVisibility =
+  | 'PRIVATE'
+  | 'PARTNER_ORIGINAL'
+  | 'PARTNER_TRANSLATED_ONLY';
+
+export type JournalContentFormat = 'markdown';
+
+export type JournalTranslationStatus =
+  | 'FAILED'
+  | 'NOT_REQUESTED'
+  | 'PENDING'
+  | 'READY';
+
+export interface JournalAttachmentPublic {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+  caption?: string | null;
+  url?: string | null;
+}
+
 export interface Journal {
   id: string;
   user_id?: string;
+  title?: string | null;
   content: string;
+  is_draft?: boolean;
   created_at: string;
+  updated_at?: string;
+  visibility?: JournalVisibility;
+  content_format?: JournalContentFormat;
+  partner_translation_status?: JournalTranslationStatus;
+  partner_translated_content?: string | null;
+  attachments?: JournalAttachmentPublic[];
   mood_label?: string;
   mood_score?: number;
   emotional_needs?: string;

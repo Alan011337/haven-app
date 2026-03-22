@@ -4,6 +4,7 @@ import uuid
 import logging
 from typing import Any, Dict, Optional
 
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import select
 
 from app.models.offline_operation_log import OfflineOperationLog
@@ -47,12 +48,15 @@ def save_idempotency_response(
     response_payload: Dict[str, Any],
 ) -> None:
     """Store successful response for future replay (same key returns this payload)."""
+    encoded_payload = jsonable_encoder(response_payload)
+    if not isinstance(encoded_payload, dict):
+        encoded_payload = {"data": encoded_payload}
     session.add(
         OfflineOperationLog(
             user_id=user_id,
             idempotency_key=idempotency_key,
             operation_type=operation_type,
             resource_id=resource_id,
-            response_payload=response_payload,
+            response_payload=encoded_payload,
         )
     )

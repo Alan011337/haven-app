@@ -2,7 +2,9 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "predev": "npm run check:env",
     "dev": "next dev --webpack -H 0.0.0.0",
@@ -41,7 +43,14 @@
     "test:a11y": "node scripts/check-playwright-browser.mjs && playwright test e2e/a11y.spec.ts"
   },
   "dependencies": {
-    "haven-shared": "file:../packages/haven-shared",
+    "@lexical/code": "^0.42.0",
+    "@lexical/history": "^0.42.0",
+    "@lexical/link": "^0.42.0",
+    "@lexical/list": "^0.42.0",
+    "@lexical/markdown": "^0.42.0",
+    "@lexical/react": "^0.42.0",
+    "@lexical/rich-text": "^0.42.0",
+    "@lexical/selection": "^0.42.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@supabase/supabase-js": "^2.95.3",
     "@tanstack/react-query": "^5.90.21",
@@ -49,11 +58,15 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.3",
+    "haven-shared": "file:../packages/haven-shared",
+    "lexical": "^0.42.0",
     "lucide-react": "^0.563.0",
     "next": "^16.1.6",
     "next-intl": "^4.8.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",

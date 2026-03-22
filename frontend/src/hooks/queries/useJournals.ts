@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { queryKeys } from '@/lib/query-keys';
 import { HOME_TIMELINE_TIMEOUT_MS } from '@/lib/home-performance';
 import {
+  fetchJournalById,
   fetchJournals,
   JOURNALS_INITIAL_LIMIT,
 } from '@/services/api-client';
@@ -24,6 +25,18 @@ export function useJournals(enabled = true) {
         { timeout: HOME_TIMELINE_TIMEOUT_MS },
       ),
     enabled: !!user && enabled,
+    staleTime: JOURNALS_STALE_TIME_MS,
+    retry: false,
+  });
+}
+
+export function useJournalDetail(journalId: string | null, enabled = true) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: journalId ? queryKeys.journalDetail(journalId) : ['journalDetail', 'missing'],
+    queryFn: () => fetchJournalById(journalId ?? ''),
+    enabled: !!user && !!journalId && enabled,
     staleTime: JOURNALS_STALE_TIME_MS,
     retry: false,
   });
