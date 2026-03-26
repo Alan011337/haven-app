@@ -233,19 +233,29 @@ export function JournalVisibilitySwitch({
     value: JournalVisibility;
   }> = [
     {
-      value: 'PRIVATE',
-      label: '只留給自己',
-      description: '完全留在你的書房裡。',
+      value: 'PARTNER_ORIGINAL',
+      label: '伴侶看原文',
+      description: '對方看到你寫下的文字，也能看到 AI 分析。',
     },
     {
       value: 'PARTNER_TRANSLATED_ONLY',
-      label: '伴侶只看 AI 譯文',
-      description: '對方只會收到譯文與同組附件。',
+      label: '伴侶看整理後的版本',
+      description: '對方看不到原文，只看到 Haven 為伴侶整理後的版本。',
     },
     {
-      value: 'PARTNER_ORIGINAL',
-      label: '伴侶看原文',
-      description: '對方看到你現在寫下的文字。',
+      value: 'PARTNER_ANALYSIS_ONLY',
+      label: '伴侶只看分析',
+      description: '對方看不到日記內容，只看到情緒分析與建議。',
+    },
+    {
+      value: 'PRIVATE',
+      label: '私密保存',
+      description: '不分享給伴侶，但 AI 仍會分析。',
+    },
+    {
+      value: 'PRIVATE_LOCAL',
+      label: '完全私密（不送 AI）',
+      description: '不分享、不送 AI 分析，只留在你的書房。',
     },
   ];
 
@@ -406,7 +416,7 @@ export function JournalAssetTray({
                   <img
                     src={attachment.url}
                     alt={attachment.file_name}
-                    className="h-36 w-full object-cover"
+                    className="max-h-36 w-full object-contain"
                   />
                 </>
               ) : (
@@ -464,10 +474,14 @@ export function JournalLibraryCard({
 }) {
   const visibilityLabel =
     journal.visibility === 'PRIVATE'
-      ? '只留給自己'
-      : journal.visibility === 'PARTNER_ORIGINAL'
-        ? '伴侶看原文'
-        : '伴侶看 AI 譯文';
+      ? '私密保存'
+      : journal.visibility === 'PRIVATE_LOCAL'
+        ? '完全私密'
+        : journal.visibility === 'PARTNER_ORIGINAL'
+          ? '伴侶看原文'
+          : journal.visibility === 'PARTNER_ANALYSIS_ONLY'
+            ? '伴侶只看分析'
+            : '整理後版本';
 
   return (
     <Link

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { getDeckDisplayName } from '@/lib/deck-meta';
-import { getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
+import { DEPTH_OPTIONS, getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
 import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
 import {
   DeckRoomStage,
@@ -40,6 +40,8 @@ export default function DeckRoomView({
   resultData,
   handleAnswerChange,
   handleSubmit,
+  selectedDepth,
+  handleDepthChange,
   handleNextCard,
   handleBackToDecks,
   quotaExceeded,
@@ -49,6 +51,40 @@ export default function DeckRoomView({
   const editorialCopy = getDeckEditorialCopy(category);
   const depthLevel = resolveDepthLevel(session?.card.depth_level);
   const depthStyles = getDepthPresentation(depthLevel);
+
+  const depthSelector = (
+    <div className="stack-block">
+      <p className="type-micro uppercase text-muted-foreground/70">下一輪深度</p>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="選擇下一輪話題深度">
+        {DEPTH_OPTIONS.map((opt) => {
+          const isSelected = selectedDepth === opt.level;
+          const style = getDepthPresentation(opt.level);
+          return (
+            <button
+              key={opt.level}
+              type="button"
+              onClick={() => handleDepthChange(isSelected ? null : opt.level)}
+              className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-haven ease-haven
+                ${isSelected
+                  ? style.badgeClass
+                  : 'bg-white/50 text-muted-foreground hover:bg-white/70 border border-transparent'
+                }
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+              aria-pressed={isSelected}
+              aria-label={`${opt.label} — ${opt.description}`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      {selectedDepth ? (
+        <p className="type-caption text-muted-foreground/70 animate-in fade-in duration-300">
+          {DEPTH_OPTIONS.find((o) => o.level === selectedDepth)?.description}
+        </p>
+      ) : null}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -236,18 +272,21 @@ export default function DeckRoomView({
           description={`這一輪對話已經在進行中。等 ${partnerDisplayName} 也完成後，雙方內容會一起揭曉。`}
           tone="mist"
           footer={
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="primary"
-                size="lg"
-                leftIcon={<RefreshCw className="h-4 w-4" />}
-                onClick={handleNextCard}
-              >
-                先抽下一張
-              </Button>
-              <Button variant="ghost" size="lg" onClick={handleBackToDecks}>
-                暫時離開，晚點再看
-              </Button>
+            <div className="stack-section">
+              {depthSelector}
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  leftIcon={<RefreshCw className="h-4 w-4" />}
+                  onClick={handleNextCard}
+                >
+                  先抽下一張
+                </Button>
+                <Button variant="ghost" size="lg" onClick={handleBackToDecks}>
+                  暫時離開，晚點再看
+                </Button>
+              </div>
             </div>
           }
         >
@@ -285,14 +324,17 @@ export default function DeckRoomView({
           description="現在先好好把彼此的版本讀完，再決定要不要進到下一張卡。"
           tone="ritual"
           footer={
-            <Button
-              variant="primary"
-              size="lg"
-              leftIcon={<Sparkles className="h-4 w-4" />}
-              onClick={handleNextCard}
-            >
-              聊聊下一個話題
-            </Button>
+            <div className="stack-section">
+              {depthSelector}
+              <Button
+                variant="primary"
+                size="lg"
+                leftIcon={<Sparkles className="h-4 w-4" />}
+                onClick={handleNextCard}
+              >
+                聊聊下一個話題
+              </Button>
+            </div>
           }
         >
           <div className="grid gap-4 md:grid-cols-2">

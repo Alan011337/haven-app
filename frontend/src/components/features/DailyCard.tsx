@@ -12,7 +12,7 @@ import {
 } from '@/lib/relationship-events';
 import { feedback } from '@/lib/feedback';
 import { getDeckDisplayName } from '@/lib/deck-meta';
-import { getDepthPresentation, resolveDepthLevel } from '@/lib/depth-level';
+import { DEPTH_OPTIONS, getDepthPresentation, resolveDepthLevel, type DepthLevel } from '@/lib/depth-level';
 import { logClientError } from '@/lib/safe-error-log';
 import { cardService, type DailyStatus } from '@/services/cardService';
 import { useToast } from '@/hooks/useToast';
@@ -42,6 +42,7 @@ const DailyCard = () => {
   const isSolo = user?.mode === 'solo' || !user?.partner_id;
   const { data: status, isLoading: loading, refetch } = useDailyStatus(!!user?.id);
   const [answer, setAnswer] = useState('');
+  const [selectedDepth, setSelectedDepth] = useState<DepthLevel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [drawing, setDrawing] = useState(false);
@@ -223,7 +224,7 @@ const DailyCard = () => {
     setDrawing(true);
     trackRitualDraw(status?.session_id ?? undefined);
     try {
-      await cardService.drawDailyCard();
+      await cardService.drawDailyCard(selectedDepth ?? undefined);
       trackDailyCardRevealed({
         session_id: status?.session_id ?? undefined,
       });
@@ -357,12 +358,46 @@ const DailyCard = () => {
             <span className="text-5xl transform group-hover:rotate-12 group-hover:scale-110 transition-transform duration-500 ease-out" aria-hidden>🃏</span>
           </div>
           <h3 className="text-2xl font-art font-bold text-foreground mb-3">今日共感卡片</h3>
-          <p className="text-muted-foreground mb-10 font-light leading-relaxed max-w-sm mx-auto">
+          <p className="text-muted-foreground mb-8 font-light leading-relaxed max-w-sm mx-auto">
             {isSolo
               ? <>抽一張卡片，<br/>開啟與自己的深度對話。</>
               : <>抽一張卡片，<br/>開啟與 <span className="font-semibold text-primary">{status?.partner_name || '伴侶'}</span> 的深度連結。</>
             }
           </p>
+          {/* Depth selector */}
+          <div className="mb-8" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <p className="text-[10px] font-art font-bold tracking-[0.15em] text-muted-foreground/60 uppercase text-center mb-3">
+              話題深度
+            </p>
+            <div className="flex items-center justify-center gap-2" role="group" aria-label="選擇話題深度">
+              {DEPTH_OPTIONS.map((opt) => {
+                const isSelected = selectedDepth === opt.level;
+                const style = getDepthPresentation(opt.level);
+                return (
+                  <button
+                    key={opt.level}
+                    type="button"
+                    onClick={() => setSelectedDepth(isSelected ? null : opt.level)}
+                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-haven ease-haven
+                      ${isSelected
+                        ? style.badgeClass
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                      }
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
+                    aria-pressed={isSelected}
+                    aria-label={`${opt.label} — ${opt.description}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDepth && (
+              <p className="text-[11px] text-muted-foreground/70 text-center mt-2.5 font-light animate-in fade-in duration-300">
+                {DEPTH_OPTIONS.find((o) => o.level === selectedDepth)?.description}
+              </p>
+            )}
+          </div>
           <button type="button" className="px-8 py-3.5 rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground font-medium border-t border-t-white/30 shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-95 transition-all duration-haven ease-haven flex items-center gap-2 mx-auto group-hover:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <Sparkles size={16} aria-hidden /> 抽取今日話題
           </button>

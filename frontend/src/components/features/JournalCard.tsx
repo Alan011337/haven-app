@@ -10,7 +10,7 @@ import { useDeleteJournal } from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { getJournalSafetyBand } from '@/lib/safety';
-import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
+import { buildJournalExcerpt, deriveJournalTitle, extractFirstJournalImage } from '@/lib/journal-format';
 
 interface JournalCardProps {
   journal: Journal;
@@ -47,12 +47,28 @@ export default function JournalCard({
   const isSevere = isCrisis;
   const visibilityLabel =
     journal.visibility === 'PRIVATE'
-      ? '只留給自己'
-      : journal.visibility === 'PARTNER_ORIGINAL'
-        ? '伴侶看原文'
-        : '伴侶看 AI 譯文';
+      ? '私密保存'
+      : journal.visibility === 'PRIVATE_LOCAL'
+        ? '完全私密'
+        : journal.visibility === 'PARTNER_ORIGINAL'
+          ? '伴侶看原文'
+          : journal.visibility === 'PARTNER_ANALYSIS_ONLY'
+            ? '伴侶只看分析'
+            : '整理後版本';
   const title = deriveJournalTitle(journal);
   const excerpt = buildJournalExcerpt(journal.content);
+  const firstImageRaw = extractFirstJournalImage(journal.content);
+  const firstImageUrl = (() => {
+    if (!firstImageRaw) return null;
+    if (firstImageRaw.startsWith('attachment:')) {
+      const attachmentId = firstImageRaw.replace('attachment:', '').trim();
+      return journal.attachments?.find((a) => a.id === attachmentId)?.url ?? null;
+    }
+    if (firstImageRaw.startsWith('http://') || firstImageRaw.startsWith('https://')) {
+      return firstImageRaw;
+    }
+    return null;
+  })();
 
   // --- 3. 刪除邏輯 ---
   const handleDelete = async () => {
@@ -146,17 +162,34 @@ export default function JournalCard({
          <div className="mb-5 space-y-2">
            <h3 className="font-art text-[1.55rem] leading-tight text-card-foreground">{title}</h3>
            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-             <span>{journal.attachments?.length ?? 0} 張圖片</span>
-             {journal.partner_translation_status === 'PENDING' ? <span>譯文處理中</span> : null}
-             {journal.partner_translation_status === 'FAILED' ? <span>譯文暫未完成</span> : null}
+             {(journal.attachments?.length ?? 0) > 0 && <span>{journal.attachments!.length} 張圖片</span>}
+             {journal.visibility === 'PARTNER_TRANSLATED_ONLY' && journal.partner_translation_status === 'PENDING' ? <span>整理中</span> : null}
+             {journal.visibility === 'PARTNER_TRANSLATED_ONLY' && journal.partner_translation_status === 'FAILED' ? <span>整理暫未完成</span> : null}
            </div>
          </div>
 
          {/* Journal content */}
          <div className={`mb-8 rounded-[1.7rem] border px-5 py-6 ${variant === 'timeline' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.4)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.68),rgba(252,248,243,0.7))]'} shadow-glass-inset`}>
-            <p className="line-clamp-6 whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
-              {excerpt}
-            </p>
+            {firstImageUrl ? (
+              <div className="mb-4 flex gap-4">
+                <div className="shrink-0 overflow-hidden rounded-[1rem]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={firstImageUrl}
+                    alt=""
+                    className="max-h-24 max-w-24 object-contain"
+                    loading="lazy"
+                  />
+                </div>
+                <p className="line-clamp-4 whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
+                  {excerpt}
+                </p>
+              </div>
+            ) : (
+              <p className="line-clamp-6 whitespace-pre-wrap font-sans text-[15px] leading-[2] text-card-foreground">
+                {excerpt}
+              </p>
+            )}
          </div>
 
          <div className="mb-6 flex justify-end">
@@ -258,41 +291,6 @@ export default function JournalCard({
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* 4. 伴侶同步指南 */}
-          {(journal.advice_for_partner || journal.action_for_partner) && !isSevere && (
-            <div className="mt-4 pt-4 animate-slide-up-fade-3">
-               <div className="section-divider mb-4" />
-               <div className="mb-3 flex items-center justify-between">
-                  <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    <span className="icon-badge !w-6 !h-6">⋯</span>
-                    <span>伴侶同步指南</span>
-                  </h4>
-                  <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-full border border-border">
-                    僅顯示給對方
-                  </span>
-               </div>
-               
-              <div className={`space-y-3 rounded-[1.4rem] border p-4 shadow-glass-inset ${variant === 'timeline' ? 'border-primary/10 bg-primary/[0.055]' : 'border-primary/14 bg-primary/8'}`}>
-                 {journal.advice_for_partner && (
-                   <div className="list-item-premium flex gap-3 items-start animate-slide-up-fade-4">
-                     <span className="shrink-0 text-[10px] font-bold bg-card text-primary px-2 py-0.5 rounded border border-border shadow-soft mt-0.5">
-                       建議
-                     </span>
-                     <p className="text-sm text-foreground leading-relaxed">{journal.advice_for_partner}</p>
-                   </div>
-                 )}
-                 {journal.action_for_partner && (
-                   <div className="list-item-premium flex gap-3 items-start animate-slide-up-fade-5">
-                     <span className="shrink-0 text-[10px] font-bold bg-card text-primary px-2 py-0.5 rounded border border-border shadow-soft mt-0.5">
-                       行動
-                     </span>
-                     <p className="text-sm text-foreground leading-relaxed">{journal.action_for_partner}</p>
-                   </div>
-                 )}
-              </div>
             </div>
           )}
 

@@ -159,7 +159,7 @@ export default function MemoryCalendarView({
         {cells.map((c) => (
           <DayCell
             key={c.date}
-            day={c.day ?? { date: c.date, mood_color: null, journal_count: 0, card_count: 0, has_photo: false }}
+            day={c.day ?? { date: c.date, mood_color: null, journal_count: 0, card_count: 0, appreciation_count: 0, has_photo: false }}
             isCurrentMonth={c.isCurrentMonth}
             isToday={c.date === today}
           />

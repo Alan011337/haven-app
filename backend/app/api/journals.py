@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFil
 from fastapi.responses import JSONResponse
 from sqlalchemy import and_, or_
 from sqlmodel import col, select
+import re
 import uuid
 import logging
 
@@ -86,6 +87,14 @@ _TRANSLATION_STATUS_PENDING = "PENDING"
 _TRANSLATION_STATUS_READY = "READY"
 
 
+_MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
+
+
+def _strip_markdown_images(content: str) -> str:
+    """Remove markdown image references so they are not sent to AI analysis."""
+    return _MARKDOWN_IMAGE_RE.sub("", content)
+
+
 def _is_draft_journal(journal: Journal | JournalCreate | JournalUpdate) -> bool:
     return bool(getattr(journal, "is_draft", False))
 
@@ -107,14 +116,38 @@ def _is_partner_shared_visibility(visibility: str | None) -> bool:
     return str(visibility or "").strip().upper() in {
         "PARTNER_ORIGINAL",
         "PARTNER_TRANSLATED_ONLY",
+        "PARTNER_ANALYSIS_ONLY",
     }
 
 
 def _requires_partner_translation(visibility: str | None) -> bool:
+    """Check if this visibility mode needs a partner-facing adapted version.
+
+    # TODO(legacy-naming): This function, and the DB columns it gates
+    # (partner_translated_content / partner_translation_status), use
+    # "translation" naming from the original design.  Semantically this
+    # is now a partner-facing *adaptation*, not a language translation.
+    # A future batch may rename these if a migration is warranted.
+    """
     return str(visibility or "").strip().upper() == "PARTNER_TRANSLATED_ONLY"
 
 
+def _is_private_local(visibility: str | None) -> bool:
+    """PRIVATE_LOCAL: content must not be sent to AI analysis."""
+    return str(visibility or "").strip().upper() == "PRIVATE_LOCAL"
+
+
+def _should_run_ai_analysis(visibility: str | None) -> bool:
+    """All modes except PRIVATE_LOCAL allow AI analysis."""
+    return not _is_private_local(visibility)
+
+
 def _initial_translation_status(visibility: str | None) -> str:
+    """Return the initial partner-adaptation status for a new journal.
+
+    # TODO(legacy-naming): "translation_status" is a legacy name; see
+    # _requires_partner_translation docstring.
+    """
     if _requires_partner_translation(visibility):
         return _TRANSLATION_STATUS_PENDING
     return _TRANSLATION_STATUS_NOT_REQUESTED
@@ -151,6 +184,11 @@ async def _refresh_partner_translation(
     *,
     journal: Journal,
 ) -> None:
+    """Generate or clear the partner-facing adapted journal content.
+
+    Despite the legacy name, this generates a partner-facing *adaptation*
+    (not a literal translation).  See ``translate_journal_for_partner`` docstring.
+    """
     if not _requires_partner_translation(journal.visibility):
         journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
         journal.partner_translated_content = None
@@ -245,15 +283,21 @@ async def _build_partner_journal_payload(
         return None
 
     normalized_visibility = str(journal.visibility or "").strip().upper()
-    if normalized_visibility == "PRIVATE":
+    # PRIVATE and PRIVATE_LOCAL: partner sees nothing
+    if normalized_visibility in {"PRIVATE", "PRIVATE_LOCAL"}:
         return None
 
     translated_content = None
     content = ""
+    include_attachments = True
     if normalized_visibility == "PARTNER_ORIGINAL":
         content = journal.content
-    elif journal.partner_translation_status == _TRANSLATION_STATUS_READY:
-        translated_content = journal.partner_translated_content
+    elif normalized_visibility == "PARTNER_TRANSLATED_ONLY":
+        if journal.partner_translation_status == _TRANSLATION_STATUS_READY:
+            translated_content = journal.partner_translated_content
+    elif normalized_visibility == "PARTNER_ANALYSIS_ONLY":
+        # No content, no translation — analysis fields only
+        include_attachments = False
 
     payload = {
         "id": journal.id,
@@ -265,7 +309,7 @@ async def _build_partner_journal_payload(
         "content": content,
         "partner_translation_status": journal.partner_translation_status or _TRANSLATION_STATUS_NOT_REQUESTED,
         "partner_translated_content": translated_content,
-        "attachments": await _serialize_attachments(attachments),
+        "attachments": await _serialize_attachments(attachments) if include_attachments else [],
     }
     payload.update(_analysis_payload(analysis))
     return payload
@@ -659,12 +703,15 @@ async def create_journal(
                 failure_detail="寫入日記失敗，請稍後再試。",
             )
             session.refresh(new_journal)
-            enqueue_journal_analysis(
-                journal_id=new_journal.id,
-                user_id=current_user.id,
-                relationship_weather_hint=relationship_weather_hint,
-                relationship_mode=relationship_mode,
-            )
+            if _should_run_ai_analysis(journal_data.visibility):
+                enqueue_journal_analysis(
+                    journal_id=new_journal.id,
+                    user_id=current_user.id,
+                    relationship_weather_hint=relationship_weather_hint,
+                    relationship_mode=relationship_mode,
+                )
+            else:
+                logger.info("PRIVATE_LOCAL mode: skipping async AI analysis")
             emit_cuj_event(
                 session=session,
                 user_id=current_user.id,
@@ -713,40 +760,45 @@ async def create_journal(
         return response_data
 
     # 步驟 1: 先執行 AI 分析 (sync path when queue not enabled)
+    # PRIVATE_LOCAL: skip all AI analysis — content stays local-only
     ai_failed = False
-    logger.info(
-        "開始 AI 分析日記內容 preview=%s",
-        redact_content(journal_data.content, max_visible=10),
-    )
-    emit_cuj_event(
-        session=session,
-        user_id=current_user.id,
-        event_name=EVENT_JOURNAL_ANALYSIS_QUEUED,
-        source="server",
-        request_id=journal_request_id,
-    )
+    ai_result: dict[str, Any] = {}
     analysis_start_ms = int(utcnow().timestamp() * 1000)
-    try:
-        with trace_span("api.journals.create.ai_analyze", user_id=str(current_user.id)):
-            ai_result = await analyze_journal(
-                journal_data.content,
-                relationship_weather_hint=relationship_weather_hint,
-                relationship_mode=relationship_mode,
-            )
-        analysis_lag_ms = int(utcnow().timestamp() * 1000) - analysis_start_ms
+    if not _should_run_ai_analysis(journal_data.visibility):
+        logger.info("PRIVATE_LOCAL mode: skipping AI analysis entirely")
+    else:
+        logger.info(
+            "開始 AI 分析日記內容 preview=%s",
+            redact_content(journal_data.content, max_visible=10),
+        )
         emit_cuj_event(
             session=session,
             user_id=current_user.id,
-            event_name=EVENT_JOURNAL_ANALYSIS_DELIVERED,
+            event_name=EVENT_JOURNAL_ANALYSIS_QUEUED,
             source="server",
             request_id=journal_request_id,
-            metadata={"analysis_async_lag_ms": analysis_lag_ms},
         )
-        logger.info("AI 分析完成")
-    except Exception as e:
-        logger.error("AI Service Error: %s", type(e).__name__)
-        ai_result = {}
-        ai_failed = True
+        try:
+            with trace_span("api.journals.create.ai_analyze", user_id=str(current_user.id)):
+                ai_result = await analyze_journal(
+                    _strip_markdown_images(journal_data.content),
+                    relationship_weather_hint=relationship_weather_hint,
+                    relationship_mode=relationship_mode,
+                )
+            analysis_lag_ms = int(utcnow().timestamp() * 1000) - analysis_start_ms
+            emit_cuj_event(
+                session=session,
+                user_id=current_user.id,
+                event_name=EVENT_JOURNAL_ANALYSIS_DELIVERED,
+                source="server",
+                request_id=journal_request_id,
+                metadata={"analysis_async_lag_ms": analysis_lag_ms},
+            )
+            logger.info("AI 分析完成")
+        except Exception as e:
+            logger.error("AI Service Error: %s", type(e).__name__)
+            ai_result = {}
+            ai_failed = True
 
     # 步驟 2: 資料庫寫入
     try:
@@ -1253,9 +1305,9 @@ async def update_journal(
     if journal.is_draft:
         journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
         journal.partner_translated_content = None
-    elif content_changed or was_draft:
+    elif journal_data.request_analysis and (content_changed or was_draft) and _should_run_ai_analysis(journal.visibility):
         ai_result = await analyze_journal(
-            journal.content,
+            _strip_markdown_images(journal.content),
             relationship_weather_hint=relationship_weather_hint,
             relationship_mode=relationship_mode,
         )

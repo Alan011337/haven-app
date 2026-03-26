@@ -5,6 +5,7 @@ export interface AppreciationPublic {
   id: number;
   body_text: string;
   created_at: string;
+  is_mine: boolean;
 }
 
 export const fetchAppreciations = async (params?: {

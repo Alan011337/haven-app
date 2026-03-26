@@ -10,6 +10,7 @@ import { createAppreciation } from "@/services/api-client";
 import { logClientError } from "@/lib/safe-error-log";
 import { trackAppreciationSent } from "@/lib/relationship-events";
 import { capturePosthogEvent } from "@/lib/posthog";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,9 @@ const APPRECIATION_EMOJIS = ['💛', '🌸', '✨', '🤝', '☕', '🌿', '💕
 
 export default function AppreciationCard({ className }: { className?: string }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data, isLoading, isError, refetch } = useHomeAppreciationHistory();
+  const partnerLabel = user?.partner_nickname || user?.partner_name || "對方";
   const [submitting, setSubmitting] = useState(false);
   const [loopCompletedToday, setLoopCompletedToday] = useState(false);
   const [text, setText] = useState("");
@@ -139,8 +142,18 @@ export default function AppreciationCard({ className }: { className?: string }) 
                   {APPRECIATION_EMOJIS[idx % APPRECIATION_EMOJIS.length]}
                 </span>
                 <span className="text-body text-foreground/90">{item.body_text}</span>
-                <span className="ml-auto shrink-0 pl-2 text-caption tabular-nums text-muted-foreground">
-                  {new Date(item.created_at).toLocaleDateString("zh-TW")}
+                <span className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    item.is_mine
+                      ? "bg-primary/10 text-primary"
+                      : "bg-accent/10 text-accent"
+                  )}>
+                    {item.is_mine ? `你寫給 ${partnerLabel}` : `${partnerLabel} 寫給你`}
+                  </span>
+                  <span className="text-caption tabular-nums text-muted-foreground">
+                    {new Date(item.created_at).toLocaleDateString("zh-TW")}
+                  </span>
                 </span>
               </li>
             ))}

@@ -18,7 +18,7 @@ from app.models.card_response import CardResponse, CardResponseCreate, CardRespo
 from app.models.card_session import CardSession, CardSessionMode, CardSessionStatus 
 from app.models.user import User
 from app.core.socket_manager import manager
-from app.services.depth_policy import iter_depth_caps, resolve_depth_cap
+from app.services.depth_policy import iter_depth_caps, resolve_effective_depth_cap
 from app.services.notification import queue_partner_notification
 from app.services.notification_payloads import build_partner_notification_payload
 from app.services.request_identity import resolve_client_ip, resolve_device_id
@@ -361,6 +361,7 @@ def draw_card(
     current_user: CurrentUser,
     category: Optional[str] = None,
     source: DrawSource = Query(DrawSource.LIBRARY),
+    preferred_depth: Optional[int] = Query(None, ge=1, le=3),
 ):
     """
     抽卡邏輯：支援 daily_ritual (使用 Session) 與 library (一般抽卡)。
@@ -427,7 +428,7 @@ def draw_card(
             user_id=current_user.id,
             category_filter=cat_filter,
         )
-        start_depth_cap = resolve_depth_cap(answered_count)
+        start_depth_cap = resolve_effective_depth_cap(answered_count, preferred_depth)
 
         new_card = None
         for depth_cap in iter_depth_caps(start_depth_cap):
@@ -529,7 +530,7 @@ def draw_card(
             user_id=current_user.id,
             normalized_category=normalized_category,
         )
-        start_depth_cap = resolve_depth_cap(answered_count)
+        start_depth_cap = resolve_effective_depth_cap(answered_count, preferred_depth)
 
         result = None
         for depth_cap in iter_depth_caps(start_depth_cap):

@@ -61,7 +61,7 @@ export function importJournalMarkdown(
       if (root.getChildrenSize() === 0) {
         root.append($createParagraphNode());
       }
-    }, { discrete: true });
+    });
     return { failed: false, warning: null };
   } catch {
     editor.update(() => {
@@ -70,7 +70,7 @@ export function importJournalMarkdown(
       const paragraph = $createParagraphNode();
       paragraph.append($createTextNode(normalized));
       root.append(paragraph);
-    }, { discrete: true });
+    });
     return {
       failed: true,
       warning: '這篇原稿的 Markdown 沒有完整轉進編輯器，Haven 先用純文字把內容帶回來。',

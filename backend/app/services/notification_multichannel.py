@@ -26,7 +26,7 @@ from app.services.notification_trigger_matrix import (
 
 logger = logging.getLogger(__name__)
 
-NotificationAction = Literal["journal", "card", "partner_bound"]
+NotificationAction = Literal["journal", "card", "partner_bound", "time_capsule", "active_care", "mediation_invite", "cooldown_started"]
 TriggerEventType = str  # e.g. journal_created, card_waiting, card_revealed, partner_bound
 
 FAILURE_PROVIDER_UNAVAILABLE = "provider_unavailable"
@@ -136,6 +136,30 @@ def _build_in_app_ws_payload(sender_name: str, action_type: NotificationAction) 
             "type": "partner_bound",
             "message": f"{sender_name} 與你配對成功了",
         }
+    if action_type == "time_capsule":
+        return {
+            "event": "NEW_NOTIFICATION",
+            "type": "time_capsule",
+            "message": "時光膠囊到了，一起回顧過去的回憶吧",
+        }
+    if action_type == "active_care":
+        return {
+            "event": "NEW_NOTIFICATION",
+            "type": "active_care",
+            "message": "好久沒一起互動了，來聊聊吧",
+        }
+    if action_type == "mediation_invite":
+        return {
+            "event": "NEW_NOTIFICATION",
+            "type": "mediation_invite",
+            "message": "Haven 邀請你們換位思考，一起回答幾個問題",
+        }
+    if action_type == "cooldown_started":
+        return {
+            "event": "NEW_NOTIFICATION",
+            "type": "cooldown_started",
+            "message": "冷卻模式已啟動，先休息一下吧",
+        }
     return {"event": "NEW_NOTIFICATION", "type": str(action_type), "message": "新通知"}
 
 
@@ -207,12 +231,27 @@ async def dispatch_push(
         if action_type == "journal":
             title = f"✨ {sender_name} 寫了新的日記"
             body = "快去看看並給予回應吧！"
+        elif action_type == "card":
+            title = f"🃏 {sender_name} 回覆了卡片"
+            body = "你們有一張卡片已經可以解鎖了！"
         elif action_type == "partner_bound":
             title = f"💕 {sender_name} 與你配對成功了"
             body = "快去看看對方的動態吧！"
+        elif action_type == "time_capsule":
+            title = "🕰 時光膠囊：回憶回來找你們了"
+            body = "一起回顧過去寫下的心情吧"
+        elif action_type == "active_care":
+            title = "💬 Haven 想邀請你們"
+            body = "好久沒一起互動了，抽一張牌或寫一句話給對方吧～"
+        elif action_type == "mediation_invite":
+            title = "🤝 調解模式：換位思考"
+            body = "Haven 邀請你們各自回答幾個引導式問題"
+        elif action_type == "cooldown_started":
+            title = "⏸ 冷卻模式已啟動"
+            body = "建議先休息一下，等時間過後再好好聊聊"
         else:
-            title = f"🃏 {sender_name} 回覆了卡片"
-            body = "你們有一張卡片已經可以解鎖了！"
+            title = "Haven"
+            body = "你有一則新通知"
 
         from app.core.config import settings as runtime_settings
 

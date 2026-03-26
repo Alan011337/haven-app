@@ -170,8 +170,12 @@ async def run_analysis_job(payload_str: str) -> None:
             return
 
         try:
+            # Strip markdown image references before sending to AI.
+            import re
+            _img_re = re.compile(r"!\[[^\]]*\]\([^)]+\)")
+            text_only = _img_re.sub("", journal.content or "")
             ai_result = await analyze_journal(
-                journal.content or "",
+                text_only,
                 relationship_weather_hint=relationship_weather_hint,
                 relationship_mode=relationship_mode,
             )
@@ -238,13 +242,14 @@ async def run_analysis_job(payload_str: str) -> None:
                 resource_id=journal.id,
                 metadata={"has_analysis": False},
             )
+        # Generate partner-facing adapted version (legacy field: partner_translated_content)
         if str(journal.visibility or "").strip().upper() == "PARTNER_TRANSLATED_ONLY":
             try:
                 journal.partner_translated_content = await translate_journal_for_partner(journal.content or "")
                 journal.partner_translation_status = "READY"
             except Exception as exc:
                 logger.warning(
-                    "Async journal translation failed: journal_id=%s reason=%s",
+                    "Async partner adaptation failed: journal_id=%s reason=%s",
                     journal.id,
                     type(exc).__name__,
                 )

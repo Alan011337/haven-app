@@ -27,6 +27,8 @@ class JournalBase(SQLModel):
     tags: Optional[str] = None
     visibility: str = Field(default="PARTNER_TRANSLATED_ONLY", index=True)
     content_format: str = Field(default="markdown")
+    # TODO(legacy-naming): These "translation" fields now store the partner-facing
+    # *adaptation* (not a literal translation).  Renaming requires a DB migration.
     partner_translation_status: str = Field(default="NOT_REQUESTED")
     partner_translated_content: Optional[str] = Field(
         default=None,

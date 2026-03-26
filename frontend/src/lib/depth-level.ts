@@ -21,6 +21,12 @@ export const resolveDepthLevel = (...candidates: Array<number | null | undefined
   return 1;
 };
 
+export const DEPTH_OPTIONS: readonly { level: DepthLevel; label: string; description: string }[] = [
+  { level: 1, label: '暖身話題', description: '輕鬆開場，先建立安全感' },
+  { level: 2, label: '深入交流', description: '從事件走到彼此的需求' },
+  { level: 3, label: '靈魂深潛', description: '說出真正害怕或在意的事' },
+];
+
 export const getDepthPresentation = (level: DepthLevel): DepthPresentation => {
   if (level === 3) {
     return {

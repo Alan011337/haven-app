@@ -12,11 +12,13 @@ from sqlmodel import Session, select, col, and_, or_, desc
 
 from app.core.datetime_utils import utcnow
 from app.core.settings_domains import get_timeline_cursor_settings
+from app.models.appreciation import Appreciation
 from app.models.journal import Journal
+from app.models.journal_attachment import JournalAttachment
 from app.models.analysis import Analysis
 from app.models.card import Card
 from app.models.card_response import CardResponse
-from app.models.card_session import CardSession, CardSessionMode, CardSessionStatus
+from app.models.card_session import CardSession, CardSessionStatus
 from app.services.pagination import (
     PageCursor,
     enforce_timeline_query_budget,
@@ -76,14 +78,22 @@ def _date_range_bounds(
     *,
     from_date: Optional[date],
     to_date: Optional[date],
+    tz_offset_minutes: int = 0,
 ) -> tuple[Optional[datetime], Optional[datetime]]:
-    """Convert inclusive date range into index-friendly datetime predicates."""
+    """Convert inclusive *local*-date range into UTC datetime predicates.
+
+    ``tz_offset_minutes`` follows the JavaScript ``Date.getTimezoneOffset()``
+    convention: minutes that UTC is *ahead* of local time.  For UTC+8 the
+    value is **-480**.  Adding it to a local-midnight datetime yields the
+    corresponding UTC instant.
+    """
     start_at: Optional[datetime] = None
     end_exclusive: Optional[datetime] = None
+    tz_adjust = timedelta(minutes=tz_offset_minutes)
     if from_date is not None:
-        start_at = datetime.combine(from_date, time.min)
+        start_at = datetime.combine(from_date, time.min) + tz_adjust
     if to_date is not None:
-        end_exclusive = datetime.combine(to_date + timedelta(days=1), time.min)
+        end_exclusive = datetime.combine(to_date + timedelta(days=1), time.min) + tz_adjust
     return start_at, end_exclusive
 
 
@@ -99,6 +109,7 @@ def get_unified_timeline(
     cursor: Optional[str] = None,
     detail_level: str = "full",
     include_answers: Optional[bool] = None,
+    tz_offset_minutes: int = 0,
 ) -> tuple[list[dict[str, Any]], bool, Optional[str]]:
     """
     Return merged timeline items (journals + deck history) for the user (and partner if paired).
@@ -122,8 +133,8 @@ def get_unified_timeline(
     fetch_n = enforce_timeline_query_budget(
         fetch_limit=fetch_n,
         budget_units=timeline_settings.query_budget,
-        query_fanout=2,
-        detail_query_count=2,
+        query_fanout=3,
+        detail_query_count=3,
     )
     timeline_runtime_metrics.record_query_budget(
         requested_fetch_limit=requested_fetch_n,
@@ -141,7 +152,7 @@ def get_unified_timeline(
     # Query planning:
     # 1) Build a DB-level UNION ALL across journals + card_sessions for timestamp-ordered cursor scanning.
     # 2) Fetch concrete records in batched detail queries by id to avoid per-row round-trips.
-    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date)
+    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date, tz_offset_minutes=tz_offset_minutes)
 
     journal_base = (
         select(
@@ -173,7 +184,6 @@ def get_unified_timeline(
         journal_base = journal_base.where(Journal.created_at < end_exclusive)
 
     card_clauses = [
-        CardSession.mode == CardSessionMode.DECK,
         CardSession.status == CardSessionStatus.COMPLETED,
         CardSession.deleted_at.is_(None),
         or_(
@@ -214,7 +224,23 @@ def get_unified_timeline(
     if end_exclusive is not None:
         card_base = card_base.where(CardSession.created_at < end_exclusive)
 
-    timeline_meta = union_all(journal_base, card_base).subquery("timeline_meta")
+    # Appreciation leg (int PK — no cursor_last_id tiebreak, only timestamp filter)
+    appreciation_base = (
+        select(
+            Appreciation.created_at.label("ts"),
+            cast(Appreciation.id, String).label("item_id"),
+            literal("appreciation").label("kind"),
+        )
+        .where(Appreciation.user_id.in_(user_ids))
+    )
+    if before is not None:
+        appreciation_base = appreciation_base.where(Appreciation.created_at < before)
+    if start_at is not None:
+        appreciation_base = appreciation_base.where(Appreciation.created_at >= start_at)
+    if end_exclusive is not None:
+        appreciation_base = appreciation_base.where(Appreciation.created_at < end_exclusive)
+
+    timeline_meta = union_all(journal_base, card_base, appreciation_base).subquery("timeline_meta")
     ordered_meta_rows = list(
         session.exec(
             select(
@@ -236,17 +262,25 @@ def get_unified_timeline(
 
     journal_ids: list[UUID] = []
     session_ids: list[UUID] = []
+    appreciation_ids: list[int] = []
     for _, raw_item_id, kind in page_rows:
-        try:
-            parsed_id = UUID(str(raw_item_id))
-        except (TypeError, ValueError):
-            continue
-        if kind == "journal":
-            journal_ids.append(parsed_id)
-        elif kind == "card":
-            session_ids.append(parsed_id)
+        if kind == "appreciation":
+            try:
+                appreciation_ids.append(int(raw_item_id))
+            except (TypeError, ValueError):
+                continue
+        else:
+            try:
+                parsed_id = UUID(str(raw_item_id))
+            except (TypeError, ValueError):
+                continue
+            if kind == "journal":
+                journal_ids.append(parsed_id)
+            elif kind == "card":
+                session_ids.append(parsed_id)
 
     journal_map: dict[str, tuple[Journal, Optional[str]]] = {}
+    attachment_by_journal: dict[str, list[JournalAttachment]] = {}
     if journal_ids:
         journal_rows = session.exec(
             select(Journal, Analysis.mood_label)
@@ -257,6 +291,17 @@ def get_unified_timeline(
             )
         ).all()
         journal_map = {str(journal.id): (journal, mood_label) for journal, mood_label in journal_rows}
+        att_objs = session.exec(
+            select(JournalAttachment)
+            .where(
+                col(JournalAttachment.journal_id).in_(journal_ids),
+                JournalAttachment.deleted_at.is_(None),
+            )
+            .order_by(JournalAttachment.created_at)
+        ).all()
+        for att in att_objs:
+            jid = str(att.journal_id)
+            attachment_by_journal.setdefault(jid, []).append(att)
 
     session_map: dict[str, CardSession] = {}
     card_map: dict[UUID, Card] = {}
@@ -282,6 +327,15 @@ def get_unified_timeline(
         ).all()
         response_map = {(resp.session_id, resp.user_id): resp for resp in response_rows}
 
+    appreciation_map: dict[str, Appreciation] = {}
+    if appreciation_ids:
+        appreciations = session.exec(
+            select(Appreciation).where(
+                col(Appreciation.id).in_(appreciation_ids),
+            )
+        ).all()
+        appreciation_map = {str(a.id): a for a in appreciations}
+
     normalized_detail_level = (detail_level or "full").strip().lower()
     summary_mode = normalized_detail_level == "summary"
     include_answers_resolved = (not summary_mode) if include_answers is None else bool(include_answers)
@@ -292,6 +346,25 @@ def get_unified_timeline(
     out: list[dict[str, Any]] = []
     for ts_value, raw_item_id, kind in page_rows:
         raw_item_id_str = str(raw_item_id)
+
+        # Appreciation uses int PK — handle before UUID normalization
+        if kind == "appreciation":
+            appr = appreciation_map.get(raw_item_id_str)
+            if not appr:
+                continue
+            out.append(
+                {
+                    "type": "appreciation",
+                    "id": raw_item_id_str,
+                    "created_at": appr.created_at,
+                    "user_id": str(appr.user_id),
+                    "partner_id": str(appr.partner_id),
+                    "body_text": _truncate_text(appr.body_text, max_length=content_preview_limit) or appr.body_text,
+                    "is_mine": appr.user_id == user_id,
+                }
+            )
+            continue
+
         try:
             item_id = str(UUID(raw_item_id_str))
         except (TypeError, ValueError):
@@ -306,6 +379,7 @@ def get_unified_timeline(
                 content_preview = _truncate_text(journal.content, max_length=content_preview_limit)
             else:
                 content_preview = "伴侶的日記"
+            journal_atts = attachment_by_journal.get(str(journal.id), [])
             out.append(
                 {
                     "type": "journal",
@@ -315,6 +389,17 @@ def get_unified_timeline(
                     "mood_label": mood_label,
                     "content_preview": content_preview,
                     "is_own": is_own,
+                    "attachment_count": len(journal_atts),
+                    "attachments": [
+                        {
+                            "id": str(att.id),
+                            "file_name": att.file_name,
+                            "caption": att.caption,
+                            "mime_type": att.mime_type,
+                            "storage_path": att.storage_path,
+                        }
+                        for att in journal_atts
+                    ],
                 }
             )
             continue
@@ -383,8 +468,9 @@ def _build_journal_timeline_stmt(
     from_date: Optional[date],
     to_date: Optional[date],
     fetch_n: int,
+    tz_offset_minutes: int = 0,
 ):
-    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date)
+    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date, tz_offset_minutes=tz_offset_minutes)
     stmt = (
         select(Journal, Analysis.mood_label)
         .join(Analysis, Journal.id == Analysis.journal_id, isouter=True)
@@ -421,8 +507,9 @@ def _build_card_session_timeline_stmt(
     from_date: Optional[date],
     to_date: Optional[date],
     fetch_n: int,
+    tz_offset_minutes: int = 0,
 ):
-    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date)
+    start_at, end_exclusive = _date_range_bounds(from_date=from_date, to_date=to_date, tz_offset_minutes=tz_offset_minutes)
     stmt = select(CardSession).where(and_(*clauses))
     if before is not None:
         if cursor_last_id is None:
@@ -451,8 +538,13 @@ def get_calendar_days(
     partner_id: Optional[UUID],
     year: int,
     month: int,
+    tz_offset_minutes: int = 0,
 ) -> list[dict[str, Any]]:
-    """Return list of { date, mood_color, journal_count, card_count, has_photo } for days with content."""
+    """Return list of { date, mood_color, journal_count, card_count, has_photo } for days with content.
+
+    ``tz_offset_minutes`` (JS ``getTimezoneOffset()``) adjusts the date
+    extraction so that calendar dots align with the user's local day.
+    """
     user_ids = [user_id] if not partner_id else [user_id, partner_id]
     start = date(year, month, 1)
     if month == 12:
@@ -460,17 +552,25 @@ def get_calendar_days(
     else:
         end = date(year, month + 1, 1) - timedelta(days=1)
 
+    # To convert a stored UTC timestamp to the user's local time before
+    # extracting the date, we add (-tz_offset_minutes) minutes.
+    # E.g. UTC+8 → tz_offset_minutes=-480 → add +480 min.
+    tz_adjust = timedelta(minutes=-tz_offset_minutes)
+    local_journal_ts = Journal.created_at + tz_adjust
+    local_card_ts = CardSession.created_at + tz_adjust
+    local_appr_ts = Appreciation.created_at + tz_adjust
+
     # Journals per day with mood
     j_stmt = (
-        select(func.date(Journal.created_at).label("d"), Analysis.mood_label, func.count(Journal.id))
+        select(func.date(local_journal_ts).label("d"), Analysis.mood_label, func.count(Journal.id))
         .join(Analysis, Journal.id == Analysis.journal_id, isouter=True)
         .where(
             Journal.user_id.in_(user_ids),
             Journal.deleted_at.is_(None),
-            func.date(Journal.created_at) >= start,
-            func.date(Journal.created_at) <= end,
+            func.date(local_journal_ts) >= start,
+            func.date(local_journal_ts) <= end,
         )
-        .group_by(func.date(Journal.created_at), Analysis.mood_label)
+        .group_by(func.date(local_journal_ts), Analysis.mood_label)
     )
     day_journal: dict[date, tuple[int, Optional[str]]] = {}
     for row in session.exec(j_stmt):
@@ -481,7 +581,6 @@ def get_calendar_days(
 
     # Card sessions per day
     clauses = [
-        CardSession.mode == CardSessionMode.DECK,
         CardSession.status == CardSessionStatus.COMPLETED,
         CardSession.deleted_at.is_(None),
         or_(CardSession.creator_id == user_id, CardSession.partner_id == user_id),
@@ -489,19 +588,49 @@ def get_calendar_days(
     if partner_id:
         clauses.append(or_(CardSession.creator_id == partner_id, CardSession.partner_id == partner_id))
     cs_stmt = (
-        select(func.date(CardSession.created_at).label("d"), func.count(CardSession.id))
+        select(func.date(local_card_ts).label("d"), func.count(CardSession.id))
         .where(and_(*clauses))
         .where(
-            func.date(CardSession.created_at) >= start,
-            func.date(CardSession.created_at) <= end,
+            func.date(local_card_ts) >= start,
+            func.date(local_card_ts) <= end,
         )
-        .group_by(func.date(CardSession.created_at))
+        .group_by(func.date(local_card_ts))
     )
     day_card: dict[date, int] = {}
     for row in session.exec(cs_stmt):
         day_card[row.d] = row[1] or 0
 
-    days_with_content = set(day_journal.keys()) | set(day_card.keys())
+    # Photo days: dates where at least one journal has a non-deleted attachment
+    photo_stmt = (
+        select(func.date(local_journal_ts).label("d"))
+        .select_from(Journal)
+        .join(JournalAttachment, JournalAttachment.journal_id == Journal.id)
+        .where(
+            Journal.user_id.in_(user_ids),
+            Journal.deleted_at.is_(None),
+            JournalAttachment.deleted_at.is_(None),
+            func.date(local_journal_ts) >= start,
+            func.date(local_journal_ts) <= end,
+        )
+        .group_by(func.date(local_journal_ts))
+    )
+    photo_days: set[date] = set(session.exec(photo_stmt).all())
+
+    # Appreciation per day
+    appr_stmt = (
+        select(func.date(local_appr_ts).label("d"), func.count(Appreciation.id))
+        .where(
+            Appreciation.user_id.in_(user_ids),
+            func.date(local_appr_ts) >= start,
+            func.date(local_appr_ts) <= end,
+        )
+        .group_by(func.date(local_appr_ts))
+    )
+    day_appreciation: dict[date, int] = {}
+    for row in session.exec(appr_stmt):
+        day_appreciation[row.d] = row[1] or 0
+
+    days_with_content = set(day_journal.keys()) | set(day_card.keys()) | photo_days | set(day_appreciation.keys())
     result = []
     for d in days_with_content:
         j_cnt, mood = day_journal.get(d, (0, None))
@@ -511,7 +640,8 @@ def get_calendar_days(
             "mood_color": _mood_to_color(mood),
             "journal_count": j_cnt,
             "card_count": c_cnt,
-            "has_photo": False,
+            "appreciation_count": day_appreciation.get(d, 0),
+            "has_photo": d in photo_days,
         })
     result.sort(key=lambda x: x["date"])
     return result
@@ -522,42 +652,93 @@ def get_time_capsule_memory(
     session: Session,
     user_id: UUID,
     partner_id: Optional[UUID],
-    past_date: date,
+    from_date: date,
+    to_date: date,
 ) -> Optional[dict[str, Any]]:
     """
-    Fetch memories (journals + card count) from exactly `past_date` for the pair.
-    Returns None if no content; otherwise dict with journals_count, cards_count, summary_text, items.
+    Fetch memories from `from_date` to `to_date` (inclusive) for the pair.
+    Returns None if no content; otherwise dict with counts, summary_text, items, and date window.
     """
     user_ids = [user_id] if not partner_id else [user_id, partner_id]
+
+    # --- Journals (full content for previews) ---
     j_stmt = (
-        select(Journal.id, Journal.created_at)
+        select(Journal.id, Journal.content, Journal.created_at)
         .where(
             Journal.user_id.in_(user_ids),
             Journal.deleted_at.is_(None),
-            func.date(Journal.created_at) == past_date,
+            func.date(Journal.created_at).between(from_date, to_date),
         )
     )
     journals = list(session.exec(j_stmt).all())
-    clauses = [
-        CardSession.mode == CardSessionMode.DECK,
+
+    # --- Cards (count + detail for previews) ---
+    card_clauses = [
         CardSession.status == CardSessionStatus.COMPLETED,
         CardSession.deleted_at.is_(None),
-        func.date(CardSession.created_at) == past_date,
+        func.date(CardSession.created_at).between(from_date, to_date),
         or_(CardSession.creator_id == user_id, CardSession.partner_id == user_id),
     ]
     if partner_id:
-        clauses.append(or_(CardSession.creator_id == partner_id, CardSession.partner_id == partner_id))
-    card_count_stmt = select(func.count(CardSession.id)).where(and_(*clauses))
-    card_count = int(session.exec(card_count_stmt).one() or 0)
-    if not journals and card_count == 0:
+        card_clauses.append(or_(CardSession.creator_id == partner_id, CardSession.partner_id == partner_id))
+    card_count = int(session.exec(select(func.count(CardSession.id)).where(and_(*card_clauses))).one() or 0)
+
+    card_detail_stmt = (
+        select(CardSession.id, CardSession.created_at, Card.title)
+        .join(Card, CardSession.card_id == Card.id)
+        .where(and_(*card_clauses))
+    )
+    card_details = list(session.exec(card_detail_stmt).all())
+
+    # --- Appreciations (count + detail for previews) ---
+    appr_where = [
+        Appreciation.user_id.in_(user_ids),
+        func.date(Appreciation.created_at).between(from_date, to_date),
+    ]
+    appr_count = int(session.exec(select(func.count(Appreciation.id)).where(*appr_where)).one() or 0)
+
+    appr_details = list(
+        session.exec(
+            select(Appreciation.id, Appreciation.body_text, Appreciation.created_at).where(*appr_where)
+        ).all()
+    )
+
+    if not journals and card_count == 0 and appr_count == 0:
         return None
-    summary = f"一年前的今天：{len(journals)} 則日記、{card_count} 則共同卡片回憶。"
+
+    # --- Build enriched items with content previews (capped at 5) ---
+    journal_items = [
+        {"type": "journal", "preview_text": _truncate_text(r.content, max_length=80) or "日記", "created_at": r.created_at}
+        for r in journals
+    ]
+    card_items = [
+        {"type": "card", "preview_text": _truncate_text(r.title, max_length=80) or "卡片", "created_at": r.created_at}
+        for r in card_details
+    ]
+    appr_items = [
+        {"type": "appreciation", "preview_text": _truncate_text(r.body_text, max_length=80) or "感恩", "created_at": r.created_at}
+        for r in appr_details
+    ]
+    all_items = journal_items + card_items + appr_items
+    all_items.sort(key=lambda x: x.get("created_at") or datetime.min)
+    items = all_items[:5]
+
+    is_single_day = from_date == to_date
+    if is_single_day:
+        summary = f"一年前的今天：{len(journals)} 則日記、{card_count} 則共同卡片回憶、{appr_count} 則感恩。"
+    else:
+        summary = (
+            f"一年前這幾天（{from_date.month}/{from_date.day} – {to_date.month}/{to_date.day}）："
+            f"{len(journals)} 則日記、{card_count} 則共同卡片回憶、{appr_count} 則感恩。"
+        )
     return {
-        "date": past_date,
+        "from_date": from_date,
+        "to_date": to_date,
         "journals_count": len(journals),
         "cards_count": card_count,
+        "appreciations_count": appr_count,
         "summary_text": summary,
-        "items": [{"type": "journal", "id": str(r.id), "created_at": r.created_at} for r in journals],
+        "items": items,
     }
 
 

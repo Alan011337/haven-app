@@ -5,6 +5,14 @@
 import api from '@/lib/api';
 import { logClientError } from '@/lib/safe-error-log';
 
+export interface TimelineAttachmentMeta {
+  id: string;
+  file_name: string;
+  caption?: string | null;
+  mime_type: string;
+  url?: string | null;
+}
+
 export interface TimelineJournalItem {
   type: 'journal';
   id: string;
@@ -13,6 +21,8 @@ export interface TimelineJournalItem {
   mood_label?: string | null;
   content_preview?: string | null;
   is_own: boolean;
+  attachment_count?: number;
+  attachments?: TimelineAttachmentMeta[];
 }
 
 export interface TimelineCardItem {
@@ -27,6 +37,16 @@ export interface TimelineCardItem {
   is_own: boolean;
 }
 
+export interface TimelineAppreciationItem {
+  type: 'appreciation';
+  id: string;
+  created_at: string;
+  user_id: string;
+  partner_id: string;
+  body_text: string;
+  is_mine: boolean;
+}
+
 export interface TimelinePhotoItem {
   type: 'photo';
   id: string;
@@ -36,7 +56,7 @@ export interface TimelinePhotoItem {
   is_own: boolean;
 }
 
-export type TimelineItem = TimelineJournalItem | TimelineCardItem | TimelinePhotoItem;
+export type TimelineItem = TimelineJournalItem | TimelineCardItem | TimelineAppreciationItem | TimelinePhotoItem;
 
 export interface TimelineResponse {
   items: TimelineItem[];
@@ -49,6 +69,7 @@ export interface CalendarDay {
   mood_color?: string | null;
   journal_count: number;
   card_count: number;
+  appreciation_count: number;
   has_photo: boolean;
 }
 
@@ -60,10 +81,13 @@ export interface CalendarResponse {
 
 export interface TimeCapsuleMemory {
   date: string;
+  from_date: string;
+  to_date: string;
   journals_count: number;
   cards_count: number;
+  appreciations_count: number;
   summary_text?: string | null;
-  items: Array<{ type: string; id?: string; created_at?: string }>;
+  items: Array<{ type: string; preview_text: string; created_at?: string }>;
 }
 
 export interface TimeCapsuleResponse {
@@ -88,6 +112,7 @@ export const memoryService = {
     cursor?: string;
     from_date?: string;
     to_date?: string;
+    tz_offset_minutes?: number;
   }): Promise<TimelineResponse> => {
     try {
       const res = await api.get<TimelineResponse>('/memory/timeline', { params });
@@ -98,10 +123,10 @@ export const memoryService = {
     }
   },
 
-  getCalendar: async (year: number, month: number): Promise<CalendarResponse> => {
+  getCalendar: async (year: number, month: number, tzOffsetMinutes?: number): Promise<CalendarResponse> => {
     try {
       const res = await api.get<CalendarResponse>('/memory/calendar', {
-        params: { year, month },
+        params: { year, month, tz_offset_minutes: tzOffsetMinutes ?? 0 },
       });
       return res.data;
     } catch (e) {

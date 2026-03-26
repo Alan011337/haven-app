@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Gift,
+  Heart,
   Image as ImageIcon,
   LayoutGrid,
   List,
@@ -17,9 +18,9 @@ import {
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
-import type { CalendarDay } from '@/services/memoryService';
+import type { CalendarDay, TimelineAttachmentMeta } from '@/services/memoryService';
 
-export type MemoryCardKind = 'capsule' | 'journal' | 'card' | 'photo' | 'empty';
+export type MemoryCardKind = 'capsule' | 'journal' | 'card' | 'appreciation' | 'photo' | 'empty';
 type MemoryPanelTone = 'default' | 'quiet' | 'error';
 
 const panelToneClasses: Record<MemoryPanelTone, string> = {
@@ -36,6 +37,8 @@ const cardToneClasses: Record<MemoryCardKind, string> = {
     'border-white/52 bg-[linear-gradient(165deg,rgba(255,253,249,0.95),rgba(242,235,226,0.92))]',
   card:
     'border-white/52 bg-[linear-gradient(165deg,rgba(255,251,248,0.95),rgba(243,233,226,0.92))]',
+  appreciation:
+    'border-white/52 bg-[linear-gradient(165deg,rgba(255,249,250,0.95),rgba(244,230,234,0.92))]',
   photo:
     'border-white/52 bg-[linear-gradient(165deg,rgba(253,250,246,0.96),rgba(239,232,224,0.92))]',
   empty:
@@ -47,8 +50,49 @@ function MemoryKindIcon({ kind }: { kind: MemoryCardKind }) {
   if (kind === 'capsule') return <Gift className={iconClass} aria-hidden />;
   if (kind === 'journal') return <BookOpen className={iconClass} aria-hidden />;
   if (kind === 'card') return <MessageCircle className={iconClass} aria-hidden />;
+  if (kind === 'appreciation') return <Heart className={iconClass} aria-hidden />;
   if (kind === 'photo') return <ImageIcon className={iconClass} aria-hidden />;
   return <Sparkles className={iconClass} aria-hidden />;
+}
+
+function MemoryPhotoStrip({ attachments }: { attachments: TimelineAttachmentMeta[] }) {
+  const withUrls = attachments.filter((a) => a.url);
+  const withCaptionsOnly = withUrls.length === 0 ? attachments.filter((a) => a.caption?.trim()) : [];
+
+  if (withUrls.length > 0) {
+    return (
+      <div className="flex gap-2.5 overflow-x-auto py-1" role="list" aria-label="照片">
+        {withUrls.map((a) => (
+          <div key={a.id} className="shrink-0" role="listitem">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={a.url!}
+              alt={a.caption || a.file_name}
+              className="h-24 w-24 rounded-[1.2rem] border border-white/56 object-cover shadow-soft"
+              loading="lazy"
+            />
+            {a.caption ? (
+              <p className="mt-1 max-w-[6rem] truncate text-caption text-muted-foreground">{a.caption}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (withCaptionsOnly.length > 0) {
+    return (
+      <div className="space-y-1" role="list" aria-label="照片描述">
+        {withCaptionsOnly.map((a) => (
+          <p key={a.id} className="text-body-muted text-muted-foreground" role="listitem">
+            📷 {a.caption}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
 }
 
 interface MemoryShellProps {
@@ -257,6 +301,7 @@ interface MemoryFeaturedMemoryCardProps {
   badges?: string[];
   detailLines?: string[];
   support?: string;
+  attachments?: TimelineAttachmentMeta[];
 }
 
 export function MemoryFeaturedMemoryCard({
@@ -268,6 +313,7 @@ export function MemoryFeaturedMemoryCard({
   badges = [],
   detailLines = [],
   support,
+  attachments,
 }: MemoryFeaturedMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
@@ -306,30 +352,33 @@ export function MemoryFeaturedMemoryCard({
             </div>
           </div>
 
-          {badges.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {badges.map((badge) => (
-                <Badge
-                  key={badge}
-                  variant="metadata"
-                  size="sm"
-                  className="border-white/56 bg-white/72 text-card-foreground"
-                >
-                  {badge}
-                </Badge>
-              ))}
+          {detailLines.length > 0 ? (
+            <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+              <div className="space-y-2.5">
+                {detailLines.map((line) => (
+                  <p key={line} className="type-body-muted text-card-foreground">{line}</p>
+                ))}
+              </div>
             </div>
           ) : null}
 
-          {detailLines.length > 0 ? (
-            <div className="grid gap-3">
-              {detailLines.map((line) => (
-                <div
-                  key={line}
-                  className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft"
+          {attachments && attachments.length > 0 ? (
+            <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+              <MemoryPhotoStrip attachments={attachments} />
+            </div>
+          ) : null}
+
+          {badges.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {badges.map((badge, i) => (
+                <Badge
+                  key={badge}
+                  variant={i === 0 ? 'default' : 'metadata'}
+                  size="sm"
+                  className={i === 0 ? '' : 'border-white/56 bg-white/72 text-card-foreground'}
                 >
-                  <p className="type-body-muted text-card-foreground">{line}</p>
-                </div>
+                  {badge}
+                </Badge>
               ))}
             </div>
           ) : null}
@@ -354,6 +403,7 @@ interface MemoryCompanionMemoryCardProps {
   badges?: string[];
   detailLines?: string[];
   support?: string;
+  attachments?: TimelineAttachmentMeta[];
 }
 
 export function MemoryCompanionMemoryCard({
@@ -365,6 +415,7 @@ export function MemoryCompanionMemoryCard({
   badges = [],
   detailLines = [],
   support,
+  attachments,
 }: MemoryCompanionMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
@@ -406,14 +457,18 @@ export function MemoryCompanionMemoryCard({
           </div>
         ) : null}
 
+        {attachments && attachments.length > 0 ? (
+          <MemoryPhotoStrip attachments={attachments} />
+        ) : null}
+
         {badges.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {badges.slice(0, 2).map((badge) => (
+            {badges.slice(0, 2).map((badge, i) => (
               <Badge
                 key={badge}
-                variant="outline"
+                variant={i === 0 ? 'default' : 'outline'}
                 size="sm"
-                className="border-white/56 bg-white/68"
+                className={i === 0 ? '' : 'border-white/56 bg-white/68'}
               >
                 {badge}
               </Badge>
@@ -438,6 +493,7 @@ interface MemoryStreamMemoryCardProps {
   badges?: string[];
   detailLines?: string[];
   support?: string;
+  attachments?: TimelineAttachmentMeta[];
 }
 
 export function MemoryStreamMemoryCard({
@@ -449,6 +505,7 @@ export function MemoryStreamMemoryCard({
   badges = [],
   detailLines = [],
   support,
+  attachments,
 }: MemoryStreamMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
@@ -491,23 +548,27 @@ export function MemoryStreamMemoryCard({
             </div>
           ) : null}
 
-          {support ? (
-            <p className="type-caption leading-6 text-card-foreground/74">{support}</p>
+          {attachments && attachments.length > 0 ? (
+            <MemoryPhotoStrip attachments={attachments} />
           ) : null}
 
           {badges.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {badges.map((badge) => (
+              {badges.map((badge, i) => (
                 <Badge
                   key={badge}
-                  variant="metadata"
+                  variant={i === 0 ? 'default' : 'metadata'}
                   size="sm"
-                  className="border-white/56 bg-white/70"
+                  className={i === 0 ? '' : 'border-white/56 bg-white/70'}
                 >
                   {badge}
                 </Badge>
               ))}
             </div>
+          ) : null}
+
+          {support ? (
+            <p className="type-caption leading-6 text-card-foreground/74">{support}</p>
           ) : null}
         </div>
       </div>
@@ -519,6 +580,7 @@ type MemoryCalendarSummary = {
   activeDays: number;
   journalDays: number;
   cardDays: number;
+  appreciationDays: number;
   photoDays: number;
 };
 
@@ -589,11 +651,14 @@ export function MemoryCalendarAtlas({
     return acc;
   }, {} as Record<string, CalendarDay>);
 
+  /** Format a local Date as YYYY-MM-DD without UTC shift from toISOString. */
+  const fmtLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   const cells: Array<{ date: string; day: CalendarDay | null; isCurrentMonth: boolean }> = [];
 
   for (let i = 0; i < startPad; i += 1) {
-    const date = new Date(year, month - 1, -startPad + i + 1);
-    const dateKey = date.toISOString().slice(0, 10);
+    const dateKey = fmtLocal(new Date(year, month - 1, -startPad + i + 1));
     cells.push({
       date: dateKey,
       day: daysByDate[dateKey] ?? null,
@@ -611,6 +676,7 @@ export function MemoryCalendarAtlas({
           mood_color: null,
           journal_count: 0,
           card_count: 0,
+          appreciation_count: 0,
           has_photo: false,
         },
       isCurrentMonth: true,
@@ -619,8 +685,7 @@ export function MemoryCalendarAtlas({
 
   while (cells.length % 7 !== 0) {
     const offset = cells.length - (startPad + monthEnd.getDate()) + 1;
-    const date = new Date(year, month, offset);
-    const dateKey = date.toISOString().slice(0, 10);
+    const dateKey = fmtLocal(new Date(year, month, offset));
     cells.push({
       date: dateKey,
       day: daysByDate[dateKey] ?? null,
@@ -628,7 +693,7 @@ export function MemoryCalendarAtlas({
     });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = fmtLocal(new Date());
 
   return (
     <GlassCard className="overflow-hidden rounded-[2.85rem] border-white/52 bg-[linear-gradient(165deg,rgba(255,252,248,0.95),rgba(243,236,227,0.92))] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10">
@@ -664,7 +729,7 @@ export function MemoryCalendarAtlas({
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-5">
           <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
             <p className="type-micro uppercase text-primary/80">有痕跡的日子</p>
             <p className="mt-2 text-2xl font-semibold text-card-foreground">{summary.activeDays}</p>
@@ -676,6 +741,10 @@ export function MemoryCalendarAtlas({
           <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
             <p className="type-micro uppercase text-primary/80">留下卡片</p>
             <p className="mt-2 text-2xl font-semibold text-card-foreground">{summary.cardDays}</p>
+          </div>
+          <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+            <p className="type-micro uppercase text-primary/80">有感恩記錄</p>
+            <p className="mt-2 text-2xl font-semibold text-card-foreground">{summary.appreciationDays}</p>
           </div>
           <div className="rounded-[1.8rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
             <p className="type-micro uppercase text-primary/80">有照片記錄</p>
@@ -698,13 +767,15 @@ export function MemoryCalendarAtlas({
               const day = cell.day;
               const hasJournal = Boolean(day?.journal_count);
               const hasCard = Boolean(day?.card_count);
+              const hasAppreciation = Boolean(day?.appreciation_count);
               const hasPhoto = Boolean(day?.has_photo);
-              const hasContent = hasJournal || hasCard || hasPhoto;
+              const hasContent = hasJournal || hasCard || hasAppreciation || hasPhoto;
               const isSelected = cell.date === selectedDate;
               const cellLabel = [
                 cell.date,
                 hasJournal ? `日記 ${day?.journal_count ?? 0} 則` : null,
                 hasCard ? `卡片 ${day?.card_count ?? 0} 張` : null,
+                hasAppreciation ? `感恩 ${day?.appreciation_count ?? 0} 則` : null,
                 hasPhoto ? '有照片' : null,
                 hasContent ? '可展開這一天' : null,
               ]
@@ -725,7 +796,7 @@ export function MemoryCalendarAtlas({
               const cellContent = (
                 <div className="flex h-full flex-col justify-between gap-3">
                   <span className="text-sm font-medium tabular-nums text-card-foreground/86">
-                    {new Date(cell.date).getDate()}
+                    {parseInt(cell.date.slice(8, 10), 10)}
                   </span>
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -734,6 +805,9 @@ export function MemoryCalendarAtlas({
                     ) : null}
                     {hasCard ? (
                       <span className="inline-flex h-2.5 w-2.5 rounded-full bg-accent/85" aria-hidden />
+                    ) : null}
+                    {hasAppreciation ? (
+                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-rose-400/70" aria-hidden />
                     ) : null}
                     {hasPhoto ? (
                       <span className="inline-flex h-2.5 w-2.5 rounded-full border border-primary/35 bg-white/90" aria-hidden />
@@ -774,6 +848,10 @@ export function MemoryCalendarAtlas({
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 rounded-full bg-accent/85" aria-hidden />
             <span className="type-caption text-muted-foreground">有卡片</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-rose-400/70" aria-hidden />
+            <span className="type-caption text-muted-foreground">有感恩</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 rounded-full border border-primary/35 bg-white/90" aria-hidden />

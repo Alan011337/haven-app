@@ -33,8 +33,8 @@ def build_email_payload(sender_name: str, action_type: str) -> tuple[str, str]:
         )
     if action_type == "time_capsule":
         return (
-            "🕐 時光膠囊：一年前的今天",
-            "一年前的今天，你們一起寫下了回憶。快來看看當時的心情吧。",
+            "🕰 時光膠囊：回憶回來找你們了",
+            "你們過去一起寫下的回憶，現在回來找你們了。快來看看當時的心情吧。",
         )
     if action_type == "active_care":
         return (

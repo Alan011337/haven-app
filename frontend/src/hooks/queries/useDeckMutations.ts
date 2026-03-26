@@ -7,8 +7,15 @@ import { drawDeckCard, respondToDeckCard } from '@/services/deckService';
 export function useDrawDeckCard() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ category, forceNew }: { category: string; forceNew?: boolean }) =>
-      drawDeckCard(category, forceNew ?? false),
+    mutationFn: ({
+      category,
+      forceNew,
+      preferredDepth,
+    }: {
+      category: string;
+      forceNew?: boolean;
+      preferredDepth?: 1 | 2 | 3;
+    }) => drawDeckCard(category, forceNew ?? false, preferredDepth),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deckHistoryInfinite'] });
       queryClient.invalidateQueries({ queryKey: ['deckHistorySummary'] });

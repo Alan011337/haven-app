@@ -2,7 +2,7 @@
  * Haven shared domain types (backend-aligned).
  * Used by both Next.js frontend and future React Native/Expo app.
  */
-type JournalVisibility = 'PRIVATE' | 'PARTNER_ORIGINAL' | 'PARTNER_TRANSLATED_ONLY';
+type JournalVisibility = 'PRIVATE' | 'PRIVATE_LOCAL' | 'PARTNER_ORIGINAL' | 'PARTNER_TRANSLATED_ONLY' | 'PARTNER_ANALYSIS_ONLY';
 type JournalContentFormat = 'markdown';
 type JournalTranslationStatus = 'FAILED' | 'NOT_REQUESTED' | 'PENDING' | 'READY';
 interface JournalAttachmentPublic {

@@ -13,3 +13,4 @@ class AppreciationPublic(SQLModel):
     id: int
     body_text: str
     created_at: datetime
+    is_mine: bool = False

@@ -36,6 +36,7 @@ export interface CreateJournalOptions {
 export interface UpdateJournalPayload {
   content?: string;
   is_draft?: boolean;
+  request_analysis?: boolean;
   title?: string | null;
   visibility?: JournalVisibility;
 }

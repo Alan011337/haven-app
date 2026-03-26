@@ -7,8 +7,10 @@ from datetime import datetime
 JOURNAL_VISIBILITIES = frozenset(
     {
         "PRIVATE",
+        "PRIVATE_LOCAL",
         "PARTNER_ORIGINAL",
         "PARTNER_TRANSLATED_ONLY",
+        "PARTNER_ANALYSIS_ONLY",
     }
 )
 JOURNAL_CONTENT_FORMATS = frozenset({"markdown"})
@@ -75,6 +77,7 @@ class JournalUpdate(BaseModel):
     content: str | None = Field(default=None, max_length=12000)
     is_draft: bool | None = None
     visibility: str | None = None
+    request_analysis: bool = False
     model_config = {"extra": "forbid"}
 
     @field_validator("title")

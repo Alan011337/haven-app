@@ -27,7 +27,7 @@ from app.models.card_session import (
 )
 from app.core.datetime_utils import utcnow
 from app.core.socket_manager import manager
-from app.services.depth_policy import iter_depth_caps, resolve_depth_cap
+from app.services.depth_policy import iter_depth_caps, resolve_effective_depth_cap
 from app.services.notification import queue_partner_notification
 from app.services.notification_payloads import build_partner_notification_payload
 from app.services.request_identity import resolve_client_ip, resolve_device_id
@@ -229,7 +229,8 @@ def deck_draw_card(
     session: SessionDep,
     current_user: CurrentUser,
     category: CardCategory,
-    skip_waiting: bool = False 
+    skip_waiting: bool = False,
+    preferred_depth: Optional[int] = Query(None, ge=1, le=3),
 ):
     card_draw_quota_limit = resolve_quota_limit(
         session=session,
@@ -296,7 +297,7 @@ def deck_draw_card(
         user_id=current_user.id,
         category=category,
     )
-    start_depth_cap = resolve_depth_cap(answered_count)
+    start_depth_cap = resolve_effective_depth_cap(answered_count, preferred_depth)
 
     chosen_card = None
     for depth_cap in iter_depth_caps(start_depth_cap):

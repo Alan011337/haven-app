@@ -11,6 +11,7 @@ Usage:
   bash scripts/local-dev-db.sh start
   bash scripts/local-dev-db.sh stop
   bash scripts/local-dev-db.sh migrate
+  bash scripts/local-dev-db.sh seed [--reset]
   bash scripts/local-dev-db.sh reset
   bash scripts/local-dev-db.sh status
 EOF
@@ -34,6 +35,16 @@ ensure_docker_compose() {
 run_alembic_for_local_dev() {
   cd "${BACKEND_DIR}"
   ./scripts/run-alembic.sh --mode fresh-bootstrap upgrade head
+}
+
+run_seed_local_dev_data() {
+  echo "[local-dev-db] seed: inserting representative dev data"
+  cd "${BACKEND_DIR}"
+  local py="${BACKEND_DIR}/venv/bin/python3"
+  if [[ ! -x "${py}" ]]; then
+    py="$(command -v python3 || command -v python)"
+  fi
+  "${py}" "${REPO_ROOT}/scripts/seed-local-dev-data.py"
 }
 
 wait_for_local_postgres_ready() {
@@ -92,6 +103,18 @@ case "${command}" in
     run_local_dev_docker_compose down -v --remove-orphans
     ensure_local_db_started
     run_alembic_for_local_dev
+    ;;
+  seed)
+    if [[ "${2:-}" == "--reset" ]]; then
+      ensure_docker_compose
+      echo "[local-dev-db] seed --reset: recreating canonical local Postgres volume"
+      run_local_dev_docker_compose down -v --remove-orphans
+      ensure_local_db_started
+      run_alembic_for_local_dev
+    else
+      ensure_local_db_started
+    fi
+    run_seed_local_dev_data
     ;;
   status)
     print_local_runtime_summary

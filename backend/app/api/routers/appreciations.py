@@ -47,7 +47,15 @@ def list_appreciations(
             pass
     stmt = stmt.order_by(Appreciation.created_at.desc()).offset(offset).limit(limit)
     rows = list(session.exec(stmt).all())
-    return [AppreciationPublic.model_validate(r) for r in rows]
+    return [
+        AppreciationPublic(
+            id=r.id,
+            body_text=r.body_text,
+            created_at=r.created_at,
+            is_mine=(r.user_id == current_user.id),
+        )
+        for r in rows
+    ]
 
 
 @router.post("", response_model=AppreciationPublic, status_code=status.HTTP_201_CREATED)
@@ -76,4 +84,9 @@ def create_appreciation(
         failure_detail="儲存失敗，請稍後再試。",
     )
     session.refresh(row)
-    return AppreciationPublic.model_validate(row)
+    return AppreciationPublic(
+        id=row.id,
+        body_text=row.body_text,
+        created_at=row.created_at,
+        is_mine=True,
+    )

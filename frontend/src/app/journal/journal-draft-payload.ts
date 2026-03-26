@@ -67,12 +67,14 @@ export function buildCreateJournalPayload({
 export function buildUpdateJournalPayload({
   content,
   isDraft,
+  requestAnalysis = false,
   title,
   visibility,
-}: JournalDraftFields): UpdateJournalPayload {
+}: JournalDraftFields & { requestAnalysis?: boolean }): UpdateJournalPayload {
   return {
     content: normalizeJournalDraftContent(content),
     is_draft: isDraft,
+    request_analysis: requestAnalysis,
     title: normalizeJournalDraftTitle(title),
     visibility,
   };

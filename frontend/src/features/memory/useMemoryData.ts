@@ -22,8 +22,14 @@ function getTimelineItemKey(item: TimelineItem): string {
   if (item.type === 'card') {
     return `card:${item.session_id}`;
   }
+  if (item.type === 'appreciation') {
+    return `appreciation:${item.id}`;
+  }
   return `photo:${item.id}`;
 }
+
+/** Browser timezone offset (minutes UTC is ahead of local). Stable for session lifetime. */
+const TZ_OFFSET_MINUTES = new Date().getTimezoneOffset();
 
 export function useMemoryData() {
   const [view, setView] = useState<'feed' | 'calendar'>('feed');
@@ -101,8 +107,8 @@ export function useMemoryData() {
   }, [timelineQuery.isFetching]);
 
   const calendarQuery = useQuery({
-    queryKey: ['memory', 'calendar', calendarMonth.year, calendarMonth.month],
-    queryFn: () => memoryService.getCalendar(calendarMonth.year, calendarMonth.month),
+    queryKey: ['memory', 'calendar', calendarMonth.year, calendarMonth.month, TZ_OFFSET_MINUTES],
+    queryFn: () => memoryService.getCalendar(calendarMonth.year, calendarMonth.month, TZ_OFFSET_MINUTES),
     enabled: view === 'calendar',
     staleTime: STALE_TIME_TIMELINE_AND_CALENDAR_MS,
   });

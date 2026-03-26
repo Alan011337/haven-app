@@ -9,6 +9,8 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import { useMemoryData } from '@/features/memory/useMemoryData';
 import type {
   TimeCapsuleMemory,
+  TimelineAppreciationItem,
+  TimelineAttachmentMeta,
   TimelineCardItem,
   TimelineItem,
   TimelineJournalItem,
@@ -37,6 +39,7 @@ type TimelineMemoryModel = {
   badges: string[];
   detailLines: string[];
   support?: string;
+  attachments?: TimelineAttachmentMeta[];
 };
 
 const MEMORY_DAY_TIMELINE_LIMIT = 100;
@@ -69,6 +72,13 @@ function formatGeneratedLabel(dateString: string) {
 
 function buildJournalModel(item: TimelineJournalItem): TimelineMemoryModel {
   const mood = item.mood_label?.trim();
+  const attachments = item.attachments ?? [];
+  const attachCount = attachments.length || (item.attachment_count ?? 0);
+
+  // Surface photo captions as detail lines
+  const captionLines = attachments
+    .filter((a) => a.caption?.trim())
+    .map((a) => `\u{1F4F7} ${a.caption!.trim()}`);
 
   return {
     kind: 'journal',
@@ -78,8 +88,13 @@ function buildJournalModel(item: TimelineJournalItem): TimelineMemoryModel {
       item.content_preview?.trim() ||
       '那天的感受被簡短地留了下來，等你們下次回來時，再把那一刻慢慢讀完整。',
     dateLabel: formatDateLong(item.created_at),
-    badges: [item.is_own ? '我寫下' : '伴侶寫下', ...(mood ? [mood] : [])],
-    detailLines: [],
+    badges: [
+      item.is_own ? '我寫下' : '伴侶寫下',
+      ...(mood ? [mood] : []),
+      ...(attachCount > 0 ? [`\u{1F4F7} ${attachCount} 張圖片`] : []),
+    ],
+    detailLines: captionLines,
+    attachments,
     support: item.is_own
       ? '你把那天的心情留在了這裡。'
       : '對方把那天的心情留在了這裡。',
@@ -131,12 +146,32 @@ function buildPhotoModel(item: TimelinePhotoItem): TimelineMemoryModel {
   };
 }
 
+function buildAppreciationModel(item: TimelineAppreciationItem): TimelineMemoryModel {
+  return {
+    kind: 'appreciation',
+    eyebrow: 'Gratitude Memory',
+    title: item.is_mine ? '我寫給伴侶的感謝' : '伴侶寫給我的感謝',
+    description:
+      item.body_text?.trim() ||
+      '一段安靜的感謝，被留在了這裡。',
+    dateLabel: formatDateLong(item.created_at),
+    badges: [item.is_mine ? '我寫的' : '伴侶寫的', '感恩'],
+    detailLines: [],
+    support: item.is_mine
+      ? '你把感謝放在了對方看得見的地方。'
+      : '對方把感謝放在了你看得見的地方。',
+  };
+}
+
 function buildTimelineModel(item: TimelineItem): TimelineMemoryModel {
   if (item.type === 'journal') {
     return buildJournalModel(item);
   }
   if (item.type === 'card') {
     return buildCardModel(item);
+  }
+  if (item.type === 'appreciation') {
+    return buildAppreciationModel(item);
   }
   return buildPhotoModel(item);
 }
@@ -150,20 +185,28 @@ function buildTimeCapsuleModel(memory: TimeCapsuleMemory): TimelineMemoryModel {
   if (memory.cards_count > 0) {
     badges.push(`${memory.cards_count} 次抽卡`);
   }
-  if (memory.items.length > 0) {
-    badges.push(`${memory.items.length} 段紀錄`);
+  if (memory.appreciations_count > 0) {
+    badges.push(`${memory.appreciations_count} 則感恩`);
   }
-
+  const isExactDay = memory.from_date === memory.to_date;
   return {
     kind: 'capsule',
     eyebrow: 'Time Capsule',
-    title: '一年前的今天，這一刻回來找你們。',
+    title: isExactDay
+      ? '一年前的今天，這一刻回來找你們。'
+      : '一年前的這幾天，這些記憶回來找你們。',
     description:
       memory.summary_text?.trim() ||
       '這不是最新的一段，而是剛好在今天回頭敲門的一段記錄，提醒你們有些生活值得被重新打開。',
     dateLabel: memory.date,
     badges,
-    detailLines: [],
+    detailLines: (memory.items ?? [])
+      .filter((item) => item.preview_text?.trim())
+      .slice(0, 3)
+      .map((item) => {
+        const icon = item.type === 'journal' ? '📖' : item.type === 'card' ? '🃏' : '💛';
+        return `${icon} ${item.preview_text.trim()}`;
+      }),
     support: '有些回憶不是最新的，卻最值得在對的時間重新被看見。',
   };
 }
@@ -235,9 +278,10 @@ export default function MemoryPageContent() {
   const loadedCardCount = items.filter((item) => item.type === 'card').length;
   const loadedPhotoCount = items.filter((item) => item.type === 'photo').length;
   const calendarActiveDays =
-    calendar?.days.filter((day) => day.journal_count > 0 || day.card_count > 0 || day.has_photo).length ?? 0;
+    calendar?.days.filter((day) => day.journal_count > 0 || day.card_count > 0 || day.appreciation_count > 0 || day.has_photo).length ?? 0;
   const calendarJournalDays = calendar?.days.filter((day) => day.journal_count > 0).length ?? 0;
   const calendarCardDays = calendar?.days.filter((day) => day.card_count > 0).length ?? 0;
+  const calendarAppreciationDays = calendar?.days.filter((day) => day.appreciation_count > 0).length ?? 0;
   const calendarPhotoDays = calendar?.days.filter((day) => day.has_photo).length ?? 0;
   const timeCapsuleMemory = timeCapsule?.available ? timeCapsule.memory : null;
   const timeCapsuleAvailable = Boolean(timeCapsuleMemory);
@@ -264,10 +308,6 @@ export default function MemoryPageContent() {
     selectedCalendarDate && activeCalendarDates.includes(selectedCalendarDate)
       ? selectedCalendarDate
       : latestActiveCalendarDate;
-  const selectedCalendarDay =
-    activeSelectedCalendarDate && calendar
-      ? calendar.days.find((day) => day.date === activeSelectedCalendarDate) ?? null
-      : null;
   const selectedDayQuery = useQuery({
     queryKey: ['memory', 'timeline', 'day-spotlight', activeSelectedCalendarDate],
     queryFn: () =>
@@ -275,6 +315,7 @@ export default function MemoryPageContent() {
         limit: MEMORY_DAY_TIMELINE_LIMIT,
         from_date: activeSelectedCalendarDate ?? undefined,
         to_date: activeSelectedCalendarDate ?? undefined,
+        tz_offset_minutes: new Date().getTimezoneOffset(),
       }),
     enabled: view === 'calendar' && Boolean(activeSelectedCalendarDate),
     staleTime: MEMORY_DAY_STALE_TIME_MS,
@@ -315,7 +356,9 @@ export default function MemoryPageContent() {
                     {timeCapsuleMemory ? timeCapsuleMemory.date : '等待回來'}
                   </p>
                   <p className="type-caption text-muted-foreground">
-                    一年前的今天，會在對的時間重新回來。
+                    {timeCapsuleMemory && timeCapsuleMemory.from_date !== timeCapsuleMemory.to_date
+                      ? '一年前的這段時間，回來找你們了。'
+                      : '一年前的今天，會在對的時間重新回來。'}
                   </p>
                 </div>
               </div>
@@ -370,6 +413,7 @@ export default function MemoryPageContent() {
             badges={featuredMemoryChamber.badges}
             detailLines={featuredMemoryChamber.detailLines}
             support={featuredMemoryChamber.support}
+            attachments={featuredMemoryChamber.attachments}
           />
         }
         aside={
@@ -572,6 +616,7 @@ export default function MemoryPageContent() {
                   badges={featuredFeedModel.badges}
                   detailLines={featuredFeedModel.detailLines}
                   support={featuredFeedModel.support}
+                  attachments={featuredFeedModel.attachments}
                 />
               ) : null}
 
@@ -597,6 +642,7 @@ export default function MemoryPageContent() {
                           badges={model.badges}
                           detailLines={model.detailLines}
                           support={model.support}
+                          attachments={model.attachments}
                         />
                       );
                     })}
@@ -624,6 +670,7 @@ export default function MemoryPageContent() {
                           badges={model.badges}
                           detailLines={model.detailLines}
                           support={model.support}
+                          attachments={model.attachments}
                         />
                       );
                     })}
@@ -695,6 +742,7 @@ export default function MemoryPageContent() {
                   activeDays: calendarActiveDays,
                   journalDays: calendarJournalDays,
                   cardDays: calendarCardDays,
+                  appreciationDays: calendarAppreciationDays,
                   photoDays: calendarPhotoDays,
                 }}
                 selectedDate={activeSelectedCalendarDate}
@@ -764,13 +812,10 @@ export default function MemoryPageContent() {
                           title={selectedDayFeaturedModel.title}
                           description={selectedDayFeaturedModel.description}
                           dateLabel={selectedDayFeaturedModel.dateLabel}
-                          badges={[
-                            ...(selectedCalendarDay?.journal_count ? [`${selectedCalendarDay.journal_count} 則日記`] : []),
-                            ...(selectedCalendarDay?.card_count ? [`${selectedCalendarDay.card_count} 張卡片`] : []),
-                            ...(selectedCalendarDay?.has_photo ? ['有照片'] : []),
-                          ]}
+                          badges={selectedDayFeaturedModel.badges}
                           detailLines={selectedDayFeaturedModel.detailLines}
                           support={selectedDayFeaturedModel.support}
+                          attachments={selectedDayFeaturedModel.attachments}
                         />
                       ) : null}
 
@@ -789,6 +834,7 @@ export default function MemoryPageContent() {
                                 badges={model.badges}
                                 detailLines={model.detailLines}
                                 support={model.support}
+                                attachments={model.attachments}
                               />
                             );
                           })}

@@ -29,9 +29,11 @@ export interface DailyStatus {
 }
 
 export const cardService = {
-  drawCard: async (category?: CardCategory): Promise<Card> => {
+  drawCard: async (category?: CardCategory, preferredDepth?: 1 | 2 | 3): Promise<Card> => {
     try {
-      const params = category ? { category } : {};
+      const params: Record<string, string | number> = {};
+      if (category) params.category = category;
+      if (preferredDepth) params.preferred_depth = preferredDepth;
       const response = await api.get<Card>('/cards/draw', {
         params,
       });
@@ -72,13 +74,15 @@ export const cardService = {
     }
   },
 
-  drawDailyCard: async (): Promise<Card> => {
+  drawDailyCard: async (preferredDepth?: 1 | 2 | 3): Promise<Card> => {
     try {
+      const params: Record<string, string | number> = {
+        category: 'daily_vibe',
+        source: 'daily_ritual',
+      };
+      if (preferredDepth) params.preferred_depth = preferredDepth;
       const response = await api.get<Card>('/cards/draw', {
-        params: {
-          category: 'daily_vibe',
-          source: 'daily_ritual',
-        },
+        params,
       });
       return response.data;
     } catch (error) {

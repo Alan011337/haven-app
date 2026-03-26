@@ -87,18 +87,24 @@ export interface DeckHistorySummary {
 // ----------------------------------------------------------------
 
 // 1. 抽卡 (開啟一個 Session)
-export const drawDeckCard = async (category: string, forceNew: boolean = false): Promise<CardSession> => {
+export const drawDeckCard = async (
+  category: string,
+  forceNew: boolean = false,
+  preferredDepth?: 1 | 2 | 3,
+): Promise<CardSession> => {
   const normalizedCategory = normalizeDeckCategory(category);
   if (!normalizedCategory) {
     throw new Error(`無效的牌組分類：${category}`);
   }
 
   try {
+    const params: Record<string, string | number | boolean> = {
+      category: normalizedCategory,
+      skip_waiting: forceNew,
+    };
+    if (preferredDepth) params.preferred_depth = preferredDepth;
     const response = await api.post<CardSession>('/card-decks/draw', null, {
-      params: { 
-        category: normalizedCategory,
-        skip_waiting: forceNew
-      }
+      params,
     });
     return response.data;
   } catch (error) {

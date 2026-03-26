@@ -98,7 +98,7 @@ function JournalImageCard({ alt, src }: InsertJournalImagePayload) {
       {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
       <img
         alt={alt || 'journal image'}
-        className="max-h-[520px] w-full object-cover"
+        className="max-h-[520px] w-full object-contain"
         src={resolvedSrc}
       />
       <figcaption className="border-t border-white/58 px-5 py-3 text-sm leading-7 text-muted-foreground">

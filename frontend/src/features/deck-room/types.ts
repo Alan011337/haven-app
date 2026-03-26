@@ -13,6 +13,8 @@ export interface DeckRoomViewModel {
   partnerTyping: boolean;
   roomStatus: RoomStatus;
   resultData: DeckHistoryEntry | null;
+  selectedDepth: 1 | 2 | 3 | null;
+  handleDepthChange: (depth: 1 | 2 | 3 | null) => void;
   handleAnswerChange: (value: string) => void;
   handleSubmit: () => Promise<void>;
   handleNextCard: () => void;

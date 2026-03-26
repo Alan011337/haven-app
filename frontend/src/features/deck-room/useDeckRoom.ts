@@ -98,6 +98,7 @@ export function useDeckRoom(): DeckRoomViewModel {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [selectedDepth, setSelectedDepth] = useState<1 | 2 | 3 | null>(null);
 
   const sessionRef = useRef<CardSession | null>(null);
   const roomStatusRef = useRef<RoomStatus>('IDLE');
@@ -242,6 +243,7 @@ export function useDeckRoom(): DeckRoomViewModel {
         const data = await drawDeckCardMutation.mutateAsync({
           category: normalizedCategory,
           forceNew,
+          preferredDepth: selectedDepth ?? undefined,
         });
         if (!isMountedRef.current || requestId !== loadRequestIdRef.current) {
           return;
@@ -305,6 +307,7 @@ export function useDeckRoom(): DeckRoomViewModel {
       hapticsEnabled,
       hapticStrength,
       normalizedCategory,
+      selectedDepth,
       soundEnabled,
       router,
       showToast,
@@ -550,6 +553,10 @@ export function useDeckRoom(): DeckRoomViewModel {
     }
   }, [upgradeLoading, showToast]);
 
+  const handleDepthChange = useCallback((depth: 1 | 2 | 3 | null) => {
+    setSelectedDepth(depth);
+  }, []);
+
   const handleAnswerChange = useCallback((value: string) => {
     const nextValue = value.slice(0, 2000);
     setAnswer(nextValue);
@@ -583,6 +590,8 @@ export function useDeckRoom(): DeckRoomViewModel {
     partnerTyping,
     roomStatus,
     resultData,
+    selectedDepth,
+    handleDepthChange,
     quotaExceeded,
     handleAnswerChange,
     handleSubmit,

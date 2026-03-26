@@ -5,8 +5,10 @@
 
 export type JournalVisibility =
   | 'PRIVATE'
+  | 'PRIVATE_LOCAL'
   | 'PARTNER_ORIGINAL'
-  | 'PARTNER_TRANSLATED_ONLY';
+  | 'PARTNER_TRANSLATED_ONLY'
+  | 'PARTNER_ANALYSIS_ONLY';
 
 export type JournalContentFormat = 'markdown';
 

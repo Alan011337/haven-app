@@ -30,8 +30,8 @@ def main() -> int:
     from app.services.notification import queue_partner_notification
 
     today = date.today()
-    past = today - timedelta(days=365)
-    logger.info("Time capsule dispatch: past_date=%s", past)
+    exact_date = today - timedelta(days=365)
+    logger.info("Time capsule dispatch: exact_date=%s", exact_date)
 
     with Session(engine) as session:
         users_with_partner = list(
@@ -57,16 +57,27 @@ def main() -> int:
                 continue
             seen_pairs.add(pair)
 
+            # Pass 1: exact anniversary date
             memory = get_time_capsule_memory(
                 session=session,
                 user_id=user.id,
                 partner_id=partner_id,
-                past_date=past,
+                from_date=exact_date,
+                to_date=exact_date,
             )
+            # Pass 2: widen ±3 days if exact date has no content
+            if not memory:
+                memory = get_time_capsule_memory(
+                    session=session,
+                    user_id=user.id,
+                    partner_id=partner_id,
+                    from_date=exact_date - timedelta(days=3),
+                    to_date=exact_date + timedelta(days=3),
+                )
             if not memory:
                 continue
 
-            scope_id = f"time_capsule:{past.isoformat()}"
+            scope_id = f"time_capsule:{exact_date.isoformat()}"
             # Notify partner from user
             payload_a = build_partner_notification_payload(
                 session=session,

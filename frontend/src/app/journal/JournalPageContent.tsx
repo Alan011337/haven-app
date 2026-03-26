@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   Save,
+  Sparkles,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -197,10 +198,14 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   });
   const visibilityLabel =
     visibility === 'PRIVATE'
-      ? '只留給自己'
-      : visibility === 'PARTNER_ORIGINAL'
-        ? '伴侶看原文'
-        : '伴侶只看 AI 譯文';
+      ? '私密保存'
+      : visibility === 'PRIVATE_LOCAL'
+        ? '完全私密'
+        : visibility === 'PARTNER_ORIGINAL'
+          ? '伴侶看原文'
+          : visibility === 'PARTNER_ANALYSIS_ONLY'
+            ? '伴侶只看分析'
+            : '伴侶看整理後的版本';
   const shouldAutoOpenDraft = searchParams.get('compose') === '1';
 
   const commitContentState = useCallback((nextContent: string) => {
@@ -427,11 +432,13 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
       intent = 'auto',
       navigate = true,
       reason,
+      requestAnalysis = false,
       silent,
     }: {
       intent?: 'auto' | 'draft' | 'page';
       navigate?: boolean;
       reason: 'autosave' | 'manual';
+      requestAnalysis?: boolean;
       silent: boolean;
     }): Promise<PersistJournalDraftResult | null> => {
       await settleDraftInputs();
@@ -464,6 +471,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           const payload = buildUpdateJournalPayload({
             content: currentContent,
             isDraft: targetIsDraft,
+            requestAnalysis,
             title: currentTitle,
             visibility: visibilityRef.current,
           });
@@ -472,12 +480,32 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             payload,
           });
 
-          const resolvedAttachments = updated.attachments ?? attachments;
-          const resolvedContent = updated.content ?? payload.content ?? currentContent;
-          const resolvedIsDraft = Boolean(updated.is_draft ?? targetIsDraft);
-          const resolvedTitle = updated.title?.trim() ?? currentTitle;
-          const resolvedVisibility = updated.visibility ?? visibilityRef.current;
+          // Use the same fallback values as the hydration useEffect so the
+          // savedSnapshot matches what hydration would compute from setQueryData.
+          const resolvedAttachments = updated.attachments ?? [];
+          const resolvedContent = updated.content ?? '';
+          const resolvedIsDraft = Boolean(updated.is_draft);
+          const resolvedTitle = updated.title?.trim() ?? '';
+          const resolvedVisibility = updated.visibility ?? DEFAULT_VISIBILITY;
 
+          // Detect concurrent local edits during the async save round-trip
+          const latestLocalContent = contentRef.current;
+          const latestLocalTitle = titleRef.current;
+          const latestLocalVisibility = visibilityRef.current;
+          const contentChangedDuringSave = latestLocalContent !== currentContent;
+          const titleChangedDuringSave = latestLocalTitle !== currentTitle;
+          const visibilityChangedDuringSave = latestLocalVisibility !== visibilityRef.current;
+          const hasLocalEditsSinceSubmit =
+            contentChangedDuringSave || titleChangedDuringSave || visibilityChangedDuringSave;
+          const nextContentState = contentChangedDuringSave ? latestLocalContent : resolvedContent;
+          const nextTitleState = titleChangedDuringSave ? latestLocalTitle : resolvedTitle;
+          const nextVisibilityState = visibilityChangedDuringSave
+            ? latestLocalVisibility
+            : resolvedVisibility;
+
+          // Build the saved snapshot using the server-confirmed values so the
+          // hydration useEffect (which also builds a snapshot from activeJournal)
+          // will see an identical string and skip the unnecessary editor remount.
           savedSnapshotRef.current = buildSnapshot({
             attachments: resolvedAttachments,
             content: resolvedContent,
@@ -486,14 +514,17 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             visibility: resolvedVisibility,
           });
           setAttachments(resolvedAttachments);
-          commitContentState(resolvedContent);
+          commitContentState(nextContentState);
           setIsDraft(resolvedIsDraft);
-          commitTitleState(resolvedTitle);
-          setVisibility(resolvedVisibility);
+          commitTitleState(nextTitleState);
+          setVisibility(nextVisibilityState);
           setLastSavedAt(updated.updated_at ?? updated.created_at);
-          setSaveState('saved');
+          setSaveState(hasLocalEditsSinceSubmit ? 'dirty' : 'saved');
+          if (requestAnalysis) {
+            router.push('/');
+          }
           return {
-            content: resolvedContent,
+            content: nextContentState,
             isDraft: resolvedIsDraft,
             journalId: updated.id,
           };
@@ -511,10 +542,10 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         suppressBlankEditorSyncRef.current = true;
         hydratedJournalIdRef.current = created.id;
         const resolvedAttachments = created.attachments ?? [];
-        const resolvedIsDraft = Boolean(created.is_draft ?? targetIsDraft);
-        const resolvedTitle = created.title?.trim() ?? currentTitle;
-        const resolvedContent = created.content ?? draft.content;
-        const resolvedVisibility = created.visibility ?? visibilityRef.current;
+        const resolvedIsDraft = Boolean(created.is_draft);
+        const resolvedTitle = created.title?.trim() ?? '';
+        const resolvedContent = created.content ?? '';
+        const resolvedVisibility = created.visibility ?? DEFAULT_VISIBILITY;
         const latestLocalContent = contentRef.current;
         const latestLocalTitle = titleRef.current;
         const latestLocalVisibility = visibilityRef.current;
@@ -573,7 +604,6 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
       }
     },
     [
-      attachments,
       createJournalMutation,
       currentJournalId,
       commitContentState,
@@ -681,9 +711,13 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const previewContextMessage =
     visibility === 'PRIVATE'
       ? '這一頁只留在你自己的書房裡。'
-      : visibility === 'PARTNER_ORIGINAL'
-        ? '伴侶會看到這份原文與同一組圖片。'
-        : '伴侶只會收到 Haven 整理後的譯文與同一組圖片。';
+      : visibility === 'PRIVATE_LOCAL'
+        ? '這一頁完全私密，不分享、不送 AI 分析。'
+        : visibility === 'PARTNER_ORIGINAL'
+          ? '伴侶會看到這份原文與同一組圖片。'
+          : visibility === 'PARTNER_ANALYSIS_ONLY'
+            ? '伴侶只會看到情緒分析與建議，看不到日記內容。'
+            : '伴侶只會收到 Haven 整理後的版本與同一組圖片。';
 
   const insertAttachmentIntoDraft = useCallback(
     ({
@@ -1051,7 +1085,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 <p className="text-[0.68rem] uppercase tracking-[0.26em] text-primary/80">Library</p>
                 <p className="mt-3 font-art text-[1.7rem] text-card-foreground">{journals.length} 篇</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  所有私人頁面、原文共享與 AI 譯文共享，都回到同一個書房管理。
+                  所有私人頁面、原文共享與整理版本共享，都回到同一個書房管理。
                 </p>
               </div>
               <div className="rounded-[1.6rem] border border-white/58 bg-white/78 p-4 shadow-soft">
@@ -1063,9 +1097,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               </div>
               <div className="rounded-[1.6rem] border border-white/58 bg-white/78 p-4 shadow-soft">
                 <p className="text-[0.68rem] uppercase tracking-[0.26em] text-primary/80">Trust</p>
-                <p className="mt-3 font-art text-[1.7rem] text-card-foreground">3 種分享邊界</p>
+                <p className="mt-3 font-art text-[1.7rem] text-card-foreground">分享邊界</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  private、partner original、partner translated only 都被拉進同一個寫作決策裡。
+                  原文共享、整理後版本、僅分析、私密保存——你決定伴侶能看到多少。
                 </p>
               </div>
             </div>
@@ -1171,9 +1205,25 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               onClick={() => void persistDraft({ intent: 'auto', reason: 'manual', silent: false })}
             >
               {currentJournalId
-                ? (isDraft ? (draftHasSubstantiveContent ? '完成這一頁' : '保存草稿') : '立即保存')
+                ? (isDraft ? '保存草稿' : '立即保存')
                 : '建立這一頁'}
             </Button>
+            {currentJournalId && draftHasSubstantiveContent ? (
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<Sparkles className="h-4 w-4" aria-hidden />}
+                loading={saveState === 'saving'}
+                onClick={() => void persistDraft({
+                  intent: 'page',
+                  reason: 'manual',
+                  requestAnalysis: true,
+                  silent: false,
+                })}
+              >
+                AI 分析
+              </Button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
