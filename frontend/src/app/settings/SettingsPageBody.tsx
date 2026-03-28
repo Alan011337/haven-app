@@ -40,11 +40,8 @@ import {
   type WeeklyReportPublic,
 } from '@/services/api-client';
 import {
-  BASELINE_DIMENSIONS,
   fetchBaseline,
   fetchCoupleGoal,
-  setCoupleGoal,
-  upsertBaseline,
   type BaselineSummaryPublic,
   type CoupleGoalPublic,
 } from '@/services/relationship-api';
@@ -81,10 +78,6 @@ type RelationshipSettingsData = {
   goal: CoupleGoalPublic | null;
 };
 
-const DEFAULT_BASELINE_SCORES = Object.fromEntries(
-  BASELINE_DIMENSIONS.map((dimension) => [dimension, 3]),
-) as Record<string, number>;
-
 const SECTION_ITEMS: SettingsSectionRailItem[] = [
   { id: 'settings-trust', label: 'Trust & Boundaries', description: '隱私、通知與 AI 介入的邊界。' },
   { id: 'settings-relationship', label: 'Relationship Direction', description: '伴侶連結、雷達與共同目標。' },
@@ -116,22 +109,6 @@ const HAPTIC_OPTIONS: SettingsChoiceOption[] = [
   { value: 'light', label: '輕', description: '只是輕輕碰一下，不打擾。', eyebrow: 'Soft' },
   { value: 'medium', label: '中', description: '保留更明確的回饋感。', eyebrow: 'Present' },
 ];
-
-const DIMENSION_LABELS: Record<string, string> = {
-  intimacy: '親密感',
-  conflict: '衝突處理',
-  trust: '信任',
-  communication: '溝通',
-  commitment: '承諾',
-};
-
-const DIMENSION_HELPERS: Record<string, string> = {
-  intimacy: '你們最近有多常感到靠近與願意分享。',
-  conflict: '遇到摩擦時，你們有多能回到同一邊。',
-  trust: '現在的關係有多讓你感到安心與可依靠。',
-  communication: '想法與需求能否被說清楚、聽進去。',
-  commitment: '你們是否都在主動照顧這段關係。',
-};
 
 function scrollToSection(id: string) {
   if (typeof document === 'undefined') return;
@@ -245,8 +222,6 @@ export default function SettingsPageBody() {
     notificationFrequency?: NotifFreq;
     aiIntensity?: AIIntensity;
   }>({});
-  const [scoreDraft, setScoreDraft] = useState<Record<string, number> | null>(null);
-  const [goalDraft, setGoalDraft] = useState<string | null>(null);
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [copied, setCopied] = useState(false);
@@ -305,6 +280,7 @@ export default function SettingsPageBody() {
     onSuccess: async () => {
       await Promise.all([
         partnerQuery.refetch(),
+        relationshipQuery.refetch(),
         queryClient.invalidateQueries({ queryKey: queryKeys.partnerStatus() }),
         queryClient.invalidateQueries({ queryKey: queryKeys.partnerJournals() }),
       ]);
@@ -315,49 +291,6 @@ export default function SettingsPageBody() {
     onError: (error) => {
       logClientError('partner-settings-bind-failed', error);
       showToast(getPairErrorMessage(error), 'error');
-    },
-  });
-
-  const saveBaselineMutation = useMutation({
-    mutationFn: (nextScores: Record<string, number>) => upsertBaseline(nextScores),
-    onSuccess: (baseline) => {
-      queryClient.setQueryData<RelationshipSettingsData | undefined>(['settings', 'relationship'], (current) =>
-        current
-          ? {
-              ...current,
-              baseline: {
-                ...current.baseline,
-                mine: baseline,
-              },
-            }
-          : current,
-      );
-      setScoreDraft(null);
-      showToast('關係雷達已儲存', 'success');
-    },
-    onError: (error) => {
-      logClientError('relationship-radar-save-failed', error);
-      showToast('儲存失敗，請稍後再試', 'error');
-    },
-  });
-
-  const saveGoalMutation = useMutation({
-    mutationFn: (goalSlug: string) => setCoupleGoal(goalSlug),
-    onSuccess: (goal) => {
-      queryClient.setQueryData<RelationshipSettingsData | undefined>(['settings', 'relationship'], (current) =>
-        current
-          ? {
-              ...current,
-              goal,
-            }
-          : current,
-      );
-      setGoalDraft(null);
-      showToast('北極星目標已儲存', 'success');
-    },
-    onError: (error) => {
-      logClientError('couple-goal-save-failed', error);
-      showToast('儲存失敗，請稍後再試', 'error');
     },
   });
 
@@ -397,11 +330,6 @@ export default function SettingsPageBody() {
     trustDraft.notificationFrequency ?? (consent?.notification_frequency as NotifFreq | undefined) ?? 'normal';
   const aiIntensity =
     trustDraft.aiIntensity ?? (consent?.ai_intensity as AIIntensity | undefined) ?? 'gentle';
-  const scores = scoreDraft ?? {
-    ...DEFAULT_BASELINE_SCORES,
-    ...(relationshipQuery.data?.baseline.mine?.scores ?? {}),
-  };
-  const selectedGoal = goalDraft ?? relationshipQuery.data?.goal?.goal_slug ?? '';
   const inviteCode = generatedInviteCode ?? partner?.invite_code ?? '';
   const isPartnerLinked = Boolean(partner?.partner_id);
   const trustLooksIncomplete = !consent || !consent.privacy_scope_accepted;
@@ -950,16 +878,16 @@ export default function SettingsPageBody() {
           {relationshipQuery.isLoading ? (
             <SettingsStatePanel
               tone="quiet"
-              eyebrow="Relationship Radar"
-              title="正在整理你們的關係方向"
-              description="五維雷達與北極星目標會在這裡一起出現。"
+              eyebrow="Relationship System"
+              title="正在整理你們目前的關係知識"
+              description="Love Map 會接手承載關係脈動、共同方向與 shared future。"
             />
           ) : relationshipQuery.isError ? (
             <SettingsStatePanel
               tone="error"
-              eyebrow="Relationship Radar"
-              title="關係雷達暫時沒有順利載入"
-              description="這一區應該幫你快速看清楚目前最值得一起照顧的方向。重新讀取後，我們會把它帶回來。"
+              eyebrow="Relationship System"
+              title="Relationship System 摘要暫時沒有順利載入"
+              description="Settings 不再是關係知識的主要編輯面；重新讀取後，我們會把目前的摘要帶回來。"
               actions={
                 <Button
                   variant="secondary"
@@ -975,94 +903,55 @@ export default function SettingsPageBody() {
               <div className="space-y-5">
                 <div className="space-y-2">
                   <Badge variant="metadata" size="sm" className="border-white/56 bg-white/78">
-                    Relationship Compass
+                    Relationship System
                   </Badge>
-                  <h3 className="type-h3 text-card-foreground">五維雷達與北極星目標</h3>
+                  <h3 className="type-h3 text-card-foreground">Love Map 現在是這塊知識的主場</h3>
                   <p className="type-body-muted text-muted-foreground">
-                    先用 1 到 5 分看目前的狀態，再為你們選一個最值得一起靠近的方向。
+                    Settings 只保留摘要與配對狀態；真正的關係脈動、內在地圖與共同未來，現在都應該回到 Love Map 裡被一起理解。
                   </p>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  {BASELINE_DIMENSIONS.map((dimension) => (
-                    <div
-                      key={dimension}
-                      className="rounded-[1.55rem] border border-white/58 bg-white/78 p-4 shadow-soft"
-                    >
-                      <label htmlFor={`settings-baseline-${dimension}`} className="block">
-                        <p className="type-section-title text-card-foreground">
-                          {DIMENSION_LABELS[dimension] ?? dimension}
-                        </p>
-                        <p className="mt-1 type-caption text-muted-foreground">
-                          {DIMENSION_HELPERS[dimension] ?? '用最直覺的感受先評估。'}
-                        </p>
-                      </label>
-                      <select
-                        id={`settings-baseline-${dimension}`}
-                        value={scores[dimension] ?? 3}
-                        onChange={(event) =>
-                          setScoreDraft((current) => ({
-                            ...(current ?? scores),
-                            [dimension]: Number(event.target.value),
-                          }))
-                        }
-                        className="select-premium mt-3 w-full"
-                      >
-                        {[1, 2, 3, 4, 5].map((score) => (
-                          <option key={score} value={score}>
-                            {score}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    loading={saveBaselineMutation.isPending}
-                    onClick={() => void saveBaselineMutation.mutateAsync(scores)}
-                  >
-                    儲存關係雷達
-                  </Button>
-                  <p className="type-caption text-muted-foreground">
-                    填完後，不用追求完美，只要先對現在誠實。
-                  </p>
-                </div>
-                {saveBaselineMutation.isError ? (
-                  <p className="type-caption text-destructive" role="alert">
-                    儲存失敗，請稍後再試。
-                  </p>
-                ) : null}
-
-                <div className="h-px bg-border/60" aria-hidden />
-
-                <div className="rounded-[1.9rem] border border-white/58 bg-white/78 p-4 shadow-soft md:p-5">
-                  <SettingsChoiceGrid
-                    legend="共同北極星目標"
-                    name="settings-couple-goal"
-                    value={selectedGoal}
-                    onChange={setGoalDraft}
-                    options={GOAL_OPTIONS}
-                    columns={2}
-                  />
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <Button
-                      loading={saveGoalMutation.isPending}
-                      disabled={!selectedGoal}
-                      onClick={() => void saveGoalMutation.mutateAsync(selectedGoal)}
-                    >
-                      儲存北極星目標
-                    </Button>
-                    <p className="type-caption text-muted-foreground">
-                      目前方向：{getGoalLabel(relationshipQuery.data?.goal?.goal_slug)}
+                  <div className="rounded-[1.7rem] border border-white/58 bg-white/78 p-4 shadow-soft">
+                    <p className="type-micro uppercase text-primary/78">Relationship Pulse</p>
+                    <p className="mt-2 type-section-title text-card-foreground">
+                      {relationshipQuery.data?.baseline.mine ? '已建立個人脈動' : '尚未建立'}
+                    </p>
+                    <p className="mt-2 type-caption text-muted-foreground">
+                      {relationshipQuery.data?.baseline.partner
+                        ? '伴侶最近也留下了自己的脈動。'
+                        : '伴侶端脈動還沒完整建立。'}
                     </p>
                   </div>
-                  {saveGoalMutation.isError ? (
-                    <p className="mt-3 type-caption text-destructive" role="alert">
-                      儲存失敗，請稍後再試。
+                  <div className="rounded-[1.7rem] border border-white/58 bg-white/78 p-4 shadow-soft">
+                    <p className="type-micro uppercase text-primary/78">North Star</p>
+                    <p className="mt-2 type-section-title text-card-foreground">
+                      {getGoalLabel(relationshipQuery.data?.goal?.goal_slug)}
                     </p>
-                  ) : null}
+                    <p className="mt-2 type-caption text-muted-foreground">
+                      {relationshipQuery.data?.goal
+                        ? `最近更新於 ${formatShortDate(relationshipQuery.data.goal.chosen_at)}。`
+                        : '共同方向還沒被正式寫下。'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.9rem] border border-white/58 bg-white/78 p-4 shadow-soft md:p-5">
+                  <p className="type-section-title text-card-foreground">這塊現在怎麼運作</p>
+                  <p className="mt-2 type-caption text-muted-foreground">
+                    Love Map 會把關係脈動、你的內在地圖與 shared future 放回同一張頁面。Settings 只留下摘要，避免你們在兩個地方維護同一份 relationship truth。
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/love-map"
+                      className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/82 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                    >
+                      前往 Love Map / Relationship System
+                    </Link>
+                    <p className="type-caption text-muted-foreground">
+                      之後所有這類更新，應該都從 Love Map 進行。
+                    </p>
+                  </div>
                 </div>
               </div>
             </GlassCard>

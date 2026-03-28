@@ -2,43 +2,32 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Heart } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Gift, Heart, MessageCircle, Sparkles } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
 
-type ChapterNavItem = {
-  href: string;
-  label: string;
-  description: string;
-  complete: boolean;
-};
+type StateTone = 'default' | 'quiet' | 'error';
 
-type LoveMapLayerTone = 'safe' | 'medium' | 'deep';
-type LoveMapStateTone = 'default' | 'quiet' | 'error';
-
-const layerToneClasses: Record<LoveMapLayerTone, string> = {
-  safe:
-    'border-white/54 bg-[linear-gradient(165deg,rgba(255,253,250,0.96),rgba(247,241,232,0.9))]',
-  medium:
-    'border-white/52 bg-[linear-gradient(165deg,rgba(255,252,248,0.96),rgba(243,235,228,0.92))]',
-  deep:
-    'border-white/50 bg-[linear-gradient(165deg,rgba(252,248,243,0.97),rgba(238,229,221,0.94))]',
-};
-
-const stateToneClasses: Record<LoveMapStateTone, string> = {
+const stateToneClasses: Record<StateTone, string> = {
   default: 'border-white/54 bg-white/84',
   quiet: 'border-primary/12 bg-white/76',
   error: 'border-destructive/16 bg-[linear-gradient(180deg,rgba(255,251,249,0.96),rgba(248,240,236,0.94))]',
 };
 
-interface LoveMapShellProps {
-  children: ReactNode;
+function StoryKindIcon({ kind }: { kind: 'card' | 'appreciation' | 'journal' }) {
+  if (kind === 'card') {
+    return <MessageCircle className="h-4 w-4" aria-hidden />;
+  }
+  if (kind === 'journal') {
+    return <BookOpen className="h-4 w-4" aria-hidden />;
+  }
+  return <Heart className="h-4 w-4" aria-hidden />;
 }
 
-export function LoveMapShell({ children }: LoveMapShellProps) {
+export function LoveMapShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,181,136,0.18),transparent_26%),radial-gradient(circle_at_88%_10%,rgba(233,239,233,0.5),transparent_28%),linear-gradient(180deg,#fcfaf6_0%,#f6f0e9_52%,#f1ebe2_100%)] px-4 pb-16 pt-6 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-ethereal-mesh opacity-30" aria-hidden />
@@ -57,7 +46,7 @@ export function LoveMapShell({ children }: LoveMapShellProps) {
           </Link>
 
           <Badge variant="metadata" size="md" className="border-white/50 bg-white/72 text-primary/78 shadow-soft">
-            Shared Emotional Landscape
+            Relationship System v1
           </Badge>
         </div>
 
@@ -67,34 +56,34 @@ export function LoveMapShell({ children }: LoveMapShellProps) {
   );
 }
 
-interface LoveMapCoverProps {
+interface LoveMapSystemCoverProps {
   eyebrow: string;
   title: string;
   description: string;
   pulse: string;
-  ctaHref: string;
-  ctaLabel: string;
-  highlights?: ReactNode;
+  primaryHref: string;
+  primaryLabel: string;
+  highlights: ReactNode;
   aside: ReactNode;
 }
 
-export function LoveMapCover({
+export function LoveMapSystemCover({
   eyebrow,
   title,
   description,
   pulse,
-  ctaHref,
-  ctaLabel,
+  primaryHref,
+  primaryLabel,
   highlights,
   aside,
-}: LoveMapCoverProps) {
+}: LoveMapSystemCoverProps) {
   return (
     <section className="relative overflow-hidden rounded-[3.1rem] border border-white/54 bg-[linear-gradient(165deg,rgba(255,253,250,0.94),rgba(246,239,230,0.9))] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_36%),radial-gradient(circle_at_86%_12%,rgba(255,255,255,0.34),transparent_22%)]" aria-hidden />
       <div className="pointer-events-none absolute right-[-4rem] top-[-2rem] h-72 w-72 rounded-full bg-primary/10 blur-hero-orb" aria-hidden />
       <div className="pointer-events-none absolute bottom-[-3rem] left-[-1rem] h-64 w-64 rounded-full bg-accent/10 blur-hero-orb-sm" aria-hidden />
 
-      <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_370px]">
         <div className="space-y-6">
           <div className="space-y-4">
             <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
@@ -114,10 +103,10 @@ export function LoveMapCover({
           {highlights}
 
           <a
-            href={ctaHref}
+            href={primaryHref}
             className="inline-flex items-center gap-2 rounded-full border border-primary/18 bg-primary/10 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-primary/14 hover:shadow-lift focus-ring-premium"
           >
-            {ctaLabel}
+            {primaryLabel}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </a>
         </div>
@@ -128,21 +117,21 @@ export function LoveMapCover({
   );
 }
 
-interface LoveMapOverviewCardProps {
+interface LoveMapSnapshotCardProps {
   eyebrow: string;
   title: string;
   description: string;
   children?: ReactNode;
 }
 
-export function LoveMapOverviewCard({
+export function LoveMapSnapshotCard({
   eyebrow,
   title,
   description,
   children,
-}: LoveMapOverviewCardProps) {
+}: LoveMapSnapshotCardProps) {
   return (
-    <GlassCard className="overflow-hidden rounded-[2.3rem] border-white/52 bg-white/80 p-5 md:p-6">
+    <GlassCard className="overflow-hidden rounded-[2.25rem] border-white/52 bg-white/80 p-5 md:p-6">
       <div className="space-y-4">
         <div className="space-y-2">
           <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
@@ -155,74 +144,26 @@ export function LoveMapOverviewCard({
   );
 }
 
-interface LoveMapChapterNavProps {
-  items: ChapterNavItem[];
-}
-
-export function LoveMapChapterNav({ items }: LoveMapChapterNavProps) {
-  return (
-    <GlassCard className="overflow-hidden rounded-[2.3rem] border-white/52 bg-white/80 p-5 md:p-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="type-micro uppercase text-primary/80">Chapter Rail</p>
-          <h2 className="type-h3 text-card-foreground">沿著這張地圖慢慢往內走。</h2>
-          <p className="type-body-muted text-muted-foreground">
-            三層不是難度切換，而是理解彼此時，願意走到多深的三段距離。
-          </p>
-        </div>
-
-        <div className="grid gap-2.5">
-          {items.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="group flex items-start gap-3 rounded-[1.6rem] border border-white/50 bg-white/72 px-4 py-4 shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:border-primary/14 hover:shadow-lift focus-ring-premium"
-            >
-              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/70 shadow-[0_0_0_8px_rgba(201,163,100,0.12)]" aria-hidden />
-              <div className="min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="type-section-title text-card-foreground">{item.label}</span>
-                  <Badge variant={item.complete ? 'success' : 'metadata'} size="sm">
-                    {item.complete ? '已寫下筆記' : '尚未寫下'}
-                  </Badge>
-                </div>
-                <p className="type-caption text-muted-foreground">{item.description}</p>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
-interface LoveMapLayerStageProps {
-  id: string;
+interface LoveMapSectionProps {
+  id?: string;
   eyebrow: string;
   title: string;
   description: string;
-  tone: LoveMapLayerTone;
   aside?: ReactNode;
   children: ReactNode;
 }
 
-export function LoveMapLayerStage({
+export function LoveMapSection({
   id,
   eyebrow,
   title,
   description,
-  tone,
   aside,
   children,
-}: LoveMapLayerStageProps) {
+}: LoveMapSectionProps) {
   return (
     <section id={id} className="scroll-mt-24">
-      <GlassCard
-        className={cn(
-          'overflow-hidden rounded-[2.8rem] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10',
-          layerToneClasses[tone],
-        )}
-      >
+      <GlassCard className="overflow-hidden rounded-[2.8rem] border-white/54 bg-[linear-gradient(180deg,rgba(255,253,249,0.94),rgba(245,238,229,0.9))] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10">
         <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-10">
           <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
             <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
@@ -232,11 +173,223 @@ export function LoveMapLayerStage({
             </div>
             {aside}
           </div>
-
           <div className="space-y-5">{children}</div>
         </div>
       </GlassCard>
     </section>
+  );
+}
+
+interface LoveMapStatePanelProps {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  tone?: StateTone;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+export function LoveMapStatePanel({
+  eyebrow,
+  title,
+  description,
+  tone = 'default',
+  actionLabel,
+  onAction,
+}: LoveMapStatePanelProps) {
+  return (
+    <GlassCard
+      className={cn('overflow-hidden rounded-[2.2rem] p-6 shadow-soft backdrop-blur-md md:p-7', stateToneClasses[tone])}
+    >
+      <div className="space-y-4">
+        {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
+        <div className="space-y-2">
+          <h2 className="type-h3 text-card-foreground">{title}</h2>
+          <p className="type-body-muted text-muted-foreground">{description}</p>
+        </div>
+        {actionLabel && onAction ? (
+          <Button variant="secondary" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        ) : null}
+      </div>
+    </GlassCard>
+  );
+}
+
+interface LoveMapStoryMomentCardProps {
+  kind: 'card' | 'appreciation' | 'journal';
+  title: string;
+  description: string;
+  occurredAtLabel?: string | null;
+  badges?: string[];
+  whyText: string;
+}
+
+export function LoveMapStoryMomentCard({
+  kind,
+  title,
+  description,
+  occurredAtLabel,
+  badges = [],
+  whyText,
+}: LoveMapStoryMomentCardProps) {
+  return (
+    <GlassCard className="overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6">
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/72 px-3 py-1.5 shadow-soft">
+              <StoryKindIcon kind={kind} />
+              <span className="type-micro uppercase text-primary/80">Story anchor</span>
+            </div>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {occurredAtLabel ? <Badge variant="metadata" size="sm">{occurredAtLabel}</Badge> : null}
+            {badges.map((badge) => (
+              <Badge key={badge} variant="status" size="sm">
+                {badge}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-primary/10 bg-primary/8 px-4 py-4">
+          <p className="type-caption text-muted-foreground">Why this belongs in your story</p>
+          <p className="mt-2 type-body text-card-foreground">{whyText}</p>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+interface LoveMapStoryCapsuleCardProps {
+  summaryText: string;
+  rangeLabel: string;
+  journalsCount: number;
+  cardsCount: number;
+  appreciationsCount: number;
+}
+
+export function LoveMapStoryCapsuleCard({
+  summaryText,
+  rangeLabel,
+  journalsCount,
+  cardsCount,
+  appreciationsCount,
+}: LoveMapStoryCapsuleCardProps) {
+  return (
+    <GlassCard className="overflow-hidden rounded-[2.35rem] border-white/58 bg-[linear-gradient(165deg,rgba(255,253,249,0.95),rgba(244,236,226,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6">
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/72 px-3 py-1.5 shadow-soft">
+              <Gift className="h-4 w-4 text-primary" aria-hidden />
+              <span className="type-micro uppercase text-primary/80">Time Capsule echo</span>
+            </div>
+            <h3 className="type-h3 text-card-foreground">一年前，這些片段曾經真的發生過。</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">{summaryText}</p>
+          </div>
+
+          <Badge variant="metadata" size="sm">{rangeLabel}</Badge>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[1.45rem] border border-white/56 bg-white/74 px-4 py-4 shadow-soft">
+            <p className="type-micro uppercase text-primary/80">Journals</p>
+            <p className="mt-2 type-section-title text-card-foreground">{journalsCount}</p>
+          </div>
+          <div className="rounded-[1.45rem] border border-white/56 bg-white/74 px-4 py-4 shadow-soft">
+            <p className="type-micro uppercase text-primary/80">Cards</p>
+            <p className="mt-2 type-section-title text-card-foreground">{cardsCount}</p>
+          </div>
+          <div className="rounded-[1.45rem] border border-white/56 bg-white/74 px-4 py-4 shadow-soft">
+            <p className="type-micro uppercase text-primary/80">Appreciations</p>
+            <p className="mt-2 type-section-title text-card-foreground">{appreciationsCount}</p>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+interface LoveMapReflectionStudioProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  textareaId: string;
+  textareaLabel: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  helperText: string;
+  placeholder: string;
+  lastUpdated?: string | null;
+  badgeText?: string;
+}
+
+export function LoveMapReflectionStudio({
+  eyebrow,
+  title,
+  description,
+  textareaId,
+  textareaLabel,
+  value,
+  onChange,
+  onSave,
+  saving,
+  helperText,
+  placeholder,
+  lastUpdated,
+  badgeText,
+}: LoveMapReflectionStudioProps) {
+  return (
+    <GlassCard className="overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6">
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {badgeText ? <Badge variant="status" size="sm">{badgeText}</Badge> : null}
+            <Badge variant={lastUpdated ? 'success' : 'metadata'} size="sm">
+              {lastUpdated ? `最近更新 ${lastUpdated}` : '尚未寫下'}
+            </Badge>
+          </div>
+        </div>
+
+        <Textarea
+          id={textareaId}
+          label={textareaLabel}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          helperText={helperText}
+          maxLength={5000}
+          className="min-h-[12rem] bg-white/74"
+        />
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="type-caption text-muted-foreground">
+            這些筆記只代表你此刻願意留下的理解，不會被 Haven 當成自動共享的雙人真相。
+          </p>
+          <Button
+            onClick={onSave}
+            loading={saving}
+            rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
+          >
+            保存這一層
+          </Button>
+        </div>
+      </div>
+    </GlassCard>
   );
 }
 
@@ -254,13 +407,13 @@ export function LoveMapPromptCard({
   question,
 }: LoveMapPromptCardProps) {
   return (
-    <div className="rounded-[2rem] border border-white/56 bg-white/78 p-5 shadow-soft backdrop-blur-md">
+    <div className="rounded-[1.9rem] border border-white/56 bg-white/78 p-5 shadow-soft backdrop-blur-md">
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <Badge variant="metadata" size="sm">
             Prompt {String(index).padStart(2, '0')}
           </Badge>
-          <span className="type-caption text-muted-foreground">Love Map</span>
+          <span className="type-caption text-muted-foreground">Conversation support</span>
         </div>
 
         <div className="space-y-2">
@@ -276,116 +429,36 @@ export function LoveMapPromptCard({
   );
 }
 
-interface LoveMapReflectionStudioProps {
+interface LoveMapFutureComposerProps {
   eyebrow: string;
   title: string;
   description: string;
-  textareaId: string;
-  textareaLabel: string;
-  value: string;
-  onChange: (value: string) => void;
-  onSave: () => void;
-  saving: boolean;
-  lastUpdated?: string | null;
-  helperText: string;
-  placeholder: string;
-  promptCount: number;
+  children: ReactNode;
+  footer?: ReactNode;
 }
 
-export function LoveMapReflectionStudio({
+export function LoveMapFutureComposer({
   eyebrow,
   title,
   description,
-  textareaId,
-  textareaLabel,
-  value,
-  onChange,
-  onSave,
-  saving,
-  lastUpdated,
-  helperText,
-  placeholder,
-  promptCount,
-}: LoveMapReflectionStudioProps) {
+  children,
+  footer,
+}: LoveMapFutureComposerProps) {
   return (
     <GlassCard className="overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6">
       <div className="space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
-            <h3 className="type-h3 text-card-foreground">{title}</h3>
-            <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="status" size="sm">
-              {promptCount} 個 prompts
-            </Badge>
-            <Badge variant={lastUpdated ? 'success' : 'metadata'} size="sm">
-              {lastUpdated ? `最近更新 ${lastUpdated}` : '尚未寫下'}
-            </Badge>
-          </div>
-        </div>
-
-        <Textarea
-          id={textareaId}
-          label={textareaLabel}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          helperText={helperText}
-          maxLength={5000}
-          className="min-h-[14rem] bg-white/74"
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="type-caption text-muted-foreground">
-            每一層會保存成一段完整筆記，之後仍可以一起回來補寫或重讀。
-          </p>
-          <Button
-            onClick={onSave}
-            loading={saving}
-            rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
-          >
-            儲存這一層的筆記
-          </Button>
-        </div>
-      </div>
-    </GlassCard>
-  );
-}
-
-interface LoveMapStatePanelProps {
-  eyebrow?: string;
-  title: string;
-  description: string;
-  tone?: LoveMapStateTone;
-  actionLabel?: string;
-  onAction?: () => void;
-}
-
-export function LoveMapStatePanel({
-  eyebrow,
-  title,
-  description,
-  tone = 'default',
-  actionLabel,
-  onAction,
-}: LoveMapStatePanelProps) {
-  return (
-    <GlassCard className={cn('overflow-hidden rounded-[2.2rem] p-6 shadow-soft backdrop-blur-md md:p-7', stateToneClasses[tone])}>
-      <div className="space-y-4">
-        {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
         <div className="space-y-2">
-          <h2 className="type-h3 text-card-foreground">{title}</h2>
-          <p className="type-body-muted text-muted-foreground">{description}</p>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/72 px-3 py-1.5 shadow-soft">
+            <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+            <span className="type-micro uppercase text-primary/80">{eyebrow}</span>
+          </div>
+          <h3 className="type-h3 text-card-foreground">{title}</h3>
+          <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
         </div>
 
-        {actionLabel && onAction ? (
-          <Button variant="secondary" onClick={onAction}>
-            {actionLabel}
-          </Button>
-        ) : null}
+        {children}
+
+        {footer}
       </div>
     </GlassCard>
   );

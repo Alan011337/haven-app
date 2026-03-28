@@ -65,6 +65,10 @@ import type {
   ActionCardData,
   PartnerStatus,
 } from '@/services/api-client.types';
+import type {
+  BaselineSummaryPublic,
+  CoupleGoalPublic,
+} from '@/services/relationship-api';
 
 const LOCAL_CARDS: Record<string, ActionCardData> = {
   card_hug: {
@@ -287,12 +291,71 @@ export interface LoveMapNotePublic {
   updated_at: string;
 }
 
+export interface LoveMapSystemMePublic {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
+
+export interface LoveMapSystemPartnerPublic {
+  id: string;
+  partner_name: string | null;
+}
+
+export interface LoveMapStoryMomentPublic {
+  kind: 'card' | 'appreciation' | 'journal';
+  title: string;
+  description: string;
+  occurred_at: string;
+  badges: string[];
+  why_text: string;
+}
+
+export interface LoveMapStoryCapsulePublic {
+  summary_text: string;
+  from_date: string;
+  to_date: string;
+  journals_count: number;
+  cards_count: number;
+  appreciations_count: number;
+}
+
+export interface LoveMapStoryPublic {
+  available: boolean;
+  moments: LoveMapStoryMomentPublic[];
+  time_capsule: LoveMapStoryCapsulePublic | null;
+}
+
+export interface LoveMapSystemStatsPublic {
+  filled_note_layers: number;
+  baseline_ready_mine: boolean;
+  baseline_ready_partner: boolean;
+  wishlist_count: number;
+  last_activity_at: string | null;
+}
+
+export interface LoveMapSystemResponse {
+  has_partner: boolean;
+  me: LoveMapSystemMePublic;
+  partner: LoveMapSystemPartnerPublic | null;
+  baseline: BaselineSummaryPublic;
+  couple_goal: CoupleGoalPublic | null;
+  story: LoveMapStoryPublic;
+  notes: LoveMapNotePublic[];
+  wishlist_items: WishlistItemPublic[];
+  stats: LoveMapSystemStatsPublic;
+}
+
 export const fetchLoveMapCards = async (): Promise<LoveMapCardsResponse> => {
   return apiGet<LoveMapCardsResponse>('/love-map/cards');
 };
 
 export const fetchLoveMapNotes = async (): Promise<LoveMapNotePublic[]> => {
   return apiGet<LoveMapNotePublic[]>('/love-map/notes');
+};
+
+export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
+  return apiGet<LoveMapSystemResponse>('/love-map/system');
 };
 
 export const createOrUpdateLoveMapNote = async (

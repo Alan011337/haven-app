@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
-import { fetchLoveMapCards, fetchLoveMapNotes } from '@/services/api-client';
+import { fetchLoveMapCards, fetchLoveMapNotes, fetchLoveMapSystem } from '@/services/api-client';
 
 export function useLoveMapCards() {
   return useQuery({
@@ -16,6 +16,14 @@ export function useLoveMapNotes() {
   return useQuery({
     queryKey: queryKeys.loveMapNotes(),
     queryFn: () => fetchLoveMapNotes().catch(() => []),
+    staleTime: 60_000,
+  });
+}
+
+export function useLoveMapSystem() {
+  return useQuery({
+    queryKey: queryKeys.loveMapSystem(),
+    queryFn: fetchLoveMapSystem,
     staleTime: 60_000,
   });
 }

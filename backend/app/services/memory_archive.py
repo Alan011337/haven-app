@@ -74,6 +74,125 @@ def _truncate_text(value: Optional[str], *, max_length: int) -> Optional[str]:
     return f"{text[:safe_max_length]}…"
 
 
+def get_relationship_story_slice(
+    *,
+    session: Session,
+    user_id: UUID,
+    partner_id: Optional[UUID],
+) -> dict[str, Any]:
+    """Build a bounded, memory-backed Story slice for Love Map.
+
+    This read model is intentionally narrow:
+    - recent anchors come from safe timeline previews only
+    - the time-capsule echo uses counts-based summary only
+    - no AI-generated themes or inferred relationship claims
+    """
+    if not partner_id:
+        return {
+            "available": False,
+            "moments": [],
+            "time_capsule": None,
+        }
+
+    recent_items, _, _ = get_unified_timeline(
+        session=session,
+        user_id=user_id,
+        partner_id=partner_id,
+        limit=30,
+        detail_level="summary",
+        include_answers=True,
+    )
+
+    selected_by_kind: dict[str, dict[str, Any]] = {}
+
+    for item in recent_items:
+        kind = str(item.get("type") or "").strip().lower()
+
+        if kind == "card" and "card" not in selected_by_kind:
+            if item.get("my_answer") and item.get("partner_answer"):
+                selected_by_kind["card"] = {
+                    "kind": "card",
+                    "title": item.get("card_title") or "一次被記住的對話",
+                    "description": item.get("card_question") or "你們一起回答了一張關於彼此的卡。",
+                    "occurred_at": item.get("revealed_at"),
+                    "badges": [badge for badge in [item.get("category"), "雙方都回答了"] if badge],
+                    "why_text": "這是一段真的被兩個人一起回答過的對話，不是 Haven 替你們補寫的詮釋。",
+                }
+                continue
+
+        if kind == "appreciation" and "appreciation" not in selected_by_kind:
+            body_text = item.get("body_text")
+            if body_text:
+                selected_by_kind["appreciation"] = {
+                    "kind": "appreciation",
+                    "title": "一段被說出口的感謝",
+                    "description": body_text,
+                    "occurred_at": item.get("created_at"),
+                    "badges": ["感恩"],
+                    "why_text": "感謝被留下來時，不只是訊息紀錄，也會變成你們故事裡可回頭看的證據。",
+                }
+                continue
+
+        if kind == "journal" and "journal" not in selected_by_kind:
+            attachment_count = int(item.get("attachment_count") or 0)
+            if item.get("is_own") or attachment_count > 0:
+                badges: list[str] = ["我寫下"] if item.get("is_own") else ["伴侶留下"]
+                if attachment_count > 0:
+                    badges.append("有照片")
+                selected_by_kind["journal"] = {
+                    "kind": "journal",
+                    "title": item.get("mood_label") or "一頁被留下的日記",
+                    "description": item.get("content_preview") or "那一天被留了下來，成了能重新回頭看的生活切片。",
+                    "occurred_at": item.get("created_at"),
+                    "badges": badges,
+                    "why_text": "這是當時真的被寫下或拍下的一刻，不代表整段關係的本質，只代表它曾經重要到值得被留下。",
+                }
+
+        if len(selected_by_kind) == 3:
+            break
+
+    story_moments = sorted(
+        selected_by_kind.values(),
+        key=lambda item: item.get("occurred_at") or "",
+        reverse=True,
+    )[:3]
+
+    today = utcnow().date()
+    exact_date = today - timedelta(days=365)
+    capsule = get_time_capsule_memory(
+        session=session,
+        user_id=user_id,
+        partner_id=partner_id,
+        from_date=exact_date,
+        to_date=exact_date,
+    )
+    if not capsule:
+        capsule = get_time_capsule_memory(
+            session=session,
+            user_id=user_id,
+            partner_id=partner_id,
+            from_date=exact_date - timedelta(days=3),
+            to_date=exact_date + timedelta(days=3),
+        )
+
+    capsule_payload = None
+    if capsule:
+        capsule_payload = {
+            "summary_text": capsule["summary_text"],
+            "from_date": capsule["from_date"].isoformat(),
+            "to_date": capsule["to_date"].isoformat(),
+            "journals_count": capsule["journals_count"],
+            "cards_count": capsule["cards_count"],
+            "appreciations_count": capsule["appreciations_count"],
+        }
+
+    return {
+        "available": bool(story_moments or capsule_payload),
+        "moments": story_moments,
+        "time_capsule": capsule_payload,
+    }
+
+
 def _date_range_bounds(
     *,
     from_date: Optional[date],

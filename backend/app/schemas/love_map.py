@@ -2,6 +2,9 @@
 
 from pydantic import BaseModel, Field
 
+from app.schemas.baseline import BaselineSummaryPublic, CoupleGoalPublic
+from app.schemas.blueprint import WishlistItemPublic
+
 
 LAYER_VALUES = ("safe", "medium", "deep")
 
@@ -36,3 +39,58 @@ class LoveMapNoteCreate(BaseModel):
 
 class LoveMapNoteUpdate(BaseModel):
     content: str = Field(max_length=5000)
+
+
+class LoveMapSystemMePublic(BaseModel):
+    id: str
+    full_name: str | None = None
+    email: str
+
+
+class LoveMapSystemPartnerPublic(BaseModel):
+    id: str
+    partner_name: str | None = None
+
+
+class LoveMapStoryMomentPublic(BaseModel):
+    kind: str
+    title: str
+    description: str
+    occurred_at: str
+    badges: list[str] = Field(default_factory=list)
+    why_text: str
+
+
+class LoveMapStoryCapsulePublic(BaseModel):
+    summary_text: str
+    from_date: str
+    to_date: str
+    journals_count: int
+    cards_count: int
+    appreciations_count: int
+
+
+class LoveMapStoryPublic(BaseModel):
+    available: bool = False
+    moments: list[LoveMapStoryMomentPublic] = Field(default_factory=list)
+    time_capsule: LoveMapStoryCapsulePublic | None = None
+
+
+class LoveMapSystemStatsPublic(BaseModel):
+    filled_note_layers: int
+    baseline_ready_mine: bool
+    baseline_ready_partner: bool
+    wishlist_count: int
+    last_activity_at: str | None = None
+
+
+class LoveMapSystemResponse(BaseModel):
+    has_partner: bool
+    me: LoveMapSystemMePublic
+    partner: LoveMapSystemPartnerPublic | None = None
+    baseline: BaselineSummaryPublic
+    couple_goal: CoupleGoalPublic | None = None
+    story: LoveMapStoryPublic = Field(default_factory=LoveMapStoryPublic)
+    notes: list[LoveMapNotePublic] = Field(default_factory=list)
+    wishlist_items: list[WishlistItemPublic] = Field(default_factory=list)
+    stats: LoveMapSystemStatsPublic

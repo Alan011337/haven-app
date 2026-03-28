@@ -62,6 +62,7 @@ var queryKeys = {
   featureFlags: () => ["featureFlags"],
   loveMapCards: () => ["loveMapCards"],
   loveMapNotes: () => ["loveMapNotes"],
+  loveMapSystem: () => ["loveMapSystem"],
   mediationStatus: () => ["mediationStatus"],
   blueprint: () => ["blueprint"],
   cooldownStatus: () => ["cooldownStatus"],

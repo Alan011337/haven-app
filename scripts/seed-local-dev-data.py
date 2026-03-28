@@ -69,6 +69,10 @@ from app.models.billing import BillingEntitlementState
 from app.models.user_onboarding_consent import UserOnboardingConsent
 from app.models.consent_receipt import ConsentReceipt
 from app.models.journal_attachment import JournalAttachment
+from app.models.relationship_baseline import RelationshipBaseline
+from app.models.couple_goal import CoupleGoal
+from app.models.love_map_note import LoveMapNote
+from app.models.wishlist_item import WishlistItem
 
 # ---------------------------------------------------------------------------
 # Engine
@@ -386,6 +390,125 @@ def seed_appreciations(session: Session) -> None:
 
 
 # =========================================================================
+# 6.5 Seed Relationship System data
+# =========================================================================
+def seed_relationship_system(session: Session) -> None:
+    baseline_exists = session.exec(select(RelationshipBaseline).limit(1)).first()
+    goal_exists = session.exec(select(CoupleGoal).limit(1)).first()
+    note_exists = session.exec(select(LoveMapNote).limit(1)).first()
+    wishlist_exists = session.exec(select(WishlistItem).limit(1)).first()
+
+    if baseline_exists and goal_exists and note_exists and wishlist_exists:
+        print("[seed] relationship_system: already exist — skipping")
+        return
+
+    if not baseline_exists:
+        baselines = [
+            RelationshipBaseline(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                filled_at=_days_ago(2),
+                scores={
+                    "intimacy": 4,
+                    "conflict": 3,
+                    "trust": 5,
+                    "communication": 4,
+                    "commitment": 5,
+                },
+            ),
+            RelationshipBaseline(
+                user_id=BOB_ID,
+                partner_id=ALICE_ID,
+                filled_at=_days_ago(1),
+                scores={
+                    "intimacy": 4,
+                    "conflict": 3,
+                    "trust": 4,
+                    "communication": 4,
+                    "commitment": 5,
+                },
+            ),
+        ]
+        for baseline in baselines:
+            session.add(baseline)
+        session.commit()
+        print("[seed] relationship_system: seeded 2 relationship baselines")
+
+    if not goal_exists:
+        session.add(
+            CoupleGoal(
+                user_id=min(ALICE_ID, BOB_ID),
+                partner_id=max(ALICE_ID, BOB_ID),
+                goal_slug="better_communication",
+                chosen_at=_days_ago(1),
+            )
+        )
+        session.commit()
+        print("[seed] relationship_system: seeded couple goal")
+
+    if not note_exists:
+        notes = [
+            LoveMapNote(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                layer="safe",
+                content="我已經知道你在工作很累的晚上，最需要的不是解法，而是一點安靜、一點被理解，還有先被抱一下。",
+                created_at=_days_ago(3),
+                updated_at=_days_ago(1),
+            ),
+            LoveMapNote(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                layer="medium",
+                content="最近我更清楚地感覺到，當我們忙起來時，不是感情變淡，而是需要一個更穩定的方式提醒彼此回來對話。",
+                created_at=_days_ago(2),
+                updated_at=_days_ago(1),
+            ),
+            LoveMapNote(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                layer="deep",
+                content="我真正想被你理解的，是我不是在要求完美回應，而是在害怕那些重要的感受如果沒有被接住，會慢慢變得不敢再說。",
+                created_at=_days_ago(1),
+                updated_at=_days_ago(0),
+            ),
+        ]
+        for note in notes:
+            session.add(note)
+        session.commit()
+        print("[seed] relationship_system: seeded 3 love map reflections")
+
+    if not wishlist_exists:
+        wishlist_items = [
+            WishlistItem(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                title="每個月留一晚只屬於我們",
+                notes="不安排社交，不追進度，只把那晚留給我們兩個人的晚餐和散步。",
+                created_at=_days_ago(5),
+            ),
+            WishlistItem(
+                user_id=BOB_ID,
+                partner_id=ALICE_ID,
+                title="一起去京都看秋天",
+                notes="想在有涼意的季節，一起住安靜的小旅館，慢慢走神社和巷子。",
+                created_at=_days_ago(4),
+            ),
+            WishlistItem(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                title="建立我們的衝突後修復儀式",
+                notes="吵完架之後，不急著分輸贏，而是固定留二十分鐘說彼此真正卡住的是什麼。",
+                created_at=_days_ago(2),
+            ),
+        ]
+        for item in wishlist_items:
+            session.add(item)
+        session.commit()
+        print("[seed] relationship_system: seeded 3 shared future items")
+
+
+# =========================================================================
 # 7. Seed Streak Summaries
 # =========================================================================
 def seed_streak_summaries(session: Session) -> None:
@@ -644,6 +767,7 @@ def seed_all() -> None:
         seed_card_sessions(session, cards)
         seed_daily_syncs(session)
         seed_appreciations(session)
+        seed_relationship_system(session)
         seed_time_capsule_data(session, cards)
         seed_streak_summaries(session)
         seed_billing_entitlements(session)
