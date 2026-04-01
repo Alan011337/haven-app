@@ -8,9 +8,15 @@ from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, verify_active_partner_id
 from app.api.error_handling import commit_with_error_handling
+from app.core.datetime_utils import utcnow
+from app.models.appreciation import Appreciation
 from app.models.card import Card
+from app.models.card_response import CardResponse, ResponseStatus
+from app.models.card_session import CardSession, CardSessionStatus
 from app.models.couple_goal import CoupleGoal
+from app.models.journal import Journal
 from app.models.love_map_note import LoveMapNote
+from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.user import User
 from app.models.wishlist_item import WishlistItem
@@ -29,11 +35,24 @@ from app.schemas.love_map import (
     LoveMapSystemResponse,
     LoveMapSystemStatsPublic,
     LoveMapNoteUpdate,
+    RelationshipKnowledgeSuggestionEvidencePublic,
+    RelationshipKnowledgeSuggestionPublic,
 )
+from app.services.ai import (
+    generate_shared_future_suggestions,
+    normalize_shared_future_suggestion_key,
+)
+from app.services.ai_errors import HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError
 from app.services.memory_archive import get_relationship_story_slice
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["love-map"])
+
+SUGGESTION_SECTION_SHARED_FUTURE = "shared_future"
+SUGGESTION_STATUS_PENDING = "pending"
+SUGGESTION_STATUS_ACCEPTED = "accepted"
+SUGGESTION_STATUS_DISMISSED = "dismissed"
+SUGGESTION_GENERATOR_SHARED_FUTURE_V1 = "shared_future_v1"
 
 
 def _depth_to_layer(d: int) -> str:
@@ -100,6 +119,7 @@ def _to_story_public(story_slice: dict[str, object] | None) -> LoveMapStoryPubli
                 occurred_at=_to_iso_z(row["occurred_at"]),
                 badges=[str(badge) for badge in row.get("badges", [])],
                 why_text=str(row["why_text"]),
+                source_id=str(row["source_id"]) if row.get("source_id") else None,
             )
             for row in moment_rows
             if isinstance(row, dict)
@@ -119,6 +139,188 @@ def _to_story_public(story_slice: dict[str, object] | None) -> LoveMapStoryPubli
             else None
         ),
     )
+
+
+def _truncate_preview(value: str, limit: int) -> str:
+    normalized = " ".join((value or "").strip().split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _pair_scope_ids(user_id: UUID, partner_id: UUID) -> tuple[UUID, UUID]:
+    return min(user_id, partner_id), max(user_id, partner_id)
+
+
+def _pair_wishlist_rows(*, session, user_id: UUID, partner_id: UUID) -> list[WishlistItem]:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(WishlistItem).where(
+            ((WishlistItem.user_id == uid1) & (WishlistItem.partner_id == uid2))
+            | ((WishlistItem.user_id == uid2) & (WishlistItem.partner_id == uid1)),
+        ).order_by(WishlistItem.created_at.desc())
+    ).all()
+
+
+def _pair_appreciation_rows(*, session, user_id: UUID, partner_id: UUID) -> list[Appreciation]:
+    return session.exec(
+        select(Appreciation).where(
+            ((Appreciation.user_id == user_id) & (Appreciation.partner_id == partner_id))
+            | ((Appreciation.user_id == partner_id) & (Appreciation.partner_id == user_id)),
+        ).order_by(Appreciation.created_at.desc())
+    ).all()
+
+
+def _to_suggestion_public(row: RelationshipKnowledgeSuggestion) -> RelationshipKnowledgeSuggestionPublic:
+    evidence_rows = row.evidence_json if isinstance(row.evidence_json, list) else []
+    return RelationshipKnowledgeSuggestionPublic(
+        id=str(row.id),
+        section=row.section,
+        status=row.status,
+        generator_version=row.generator_version,
+        proposed_title=row.proposed_title,
+        proposed_notes=row.proposed_notes,
+        evidence=[
+            RelationshipKnowledgeSuggestionEvidencePublic(
+                source_kind=str(item.get("source_kind", "")),
+                source_id=str(item.get("source_id", "")),
+                label=str(item.get("label", "")),
+                excerpt=str(item.get("excerpt", "")),
+            )
+            for item in evidence_rows
+            if isinstance(item, dict)
+        ],
+        created_at=row.created_at.isoformat() + "Z",
+        reviewed_at=row.reviewed_at.isoformat() + "Z" if row.reviewed_at else None,
+        accepted_wishlist_item_id=str(row.accepted_wishlist_item_id) if row.accepted_wishlist_item_id else None,
+    )
+
+
+def _get_owned_suggestion_or_404(
+    *,
+    session,
+    current_user: CurrentUser,
+    suggestion_id: UUID,
+) -> RelationshipKnowledgeSuggestion:
+    row = session.get(RelationshipKnowledgeSuggestion, suggestion_id)
+    if not row or row.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+    return row
+
+
+def _load_shared_future_pending_suggestions(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+) -> list[RelationshipKnowledgeSuggestion]:
+    return session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
+        ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
+    ).all()
+
+
+def _build_shared_future_generation_sources(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+) -> tuple[list[dict[str, str]], list[str], set[str]]:
+    evidence_catalog: list[dict[str, str]] = []
+
+    journal_rows = session.exec(
+        select(Journal).where(
+            Journal.user_id == current_user.id,
+            Journal.deleted_at.is_(None),
+            Journal.is_draft.is_(False),
+        ).order_by(Journal.created_at.desc())
+    ).all()
+    for row in journal_rows[:6]:
+        evidence_catalog.append(
+            {
+                "evidence_id": f"journal:{row.id}",
+                "source_kind": "journal",
+                "source_id": str(row.id),
+                "label": f"你的日記 · {row.created_at.date().isoformat()}",
+                "excerpt": _truncate_preview(row.content, 280),
+            }
+        )
+
+    session_rows = session.exec(
+        select(CardSession).where(
+            CardSession.deleted_at.is_(None),
+            CardSession.status == CardSessionStatus.COMPLETED,
+            (((CardSession.creator_id == current_user.id) & (CardSession.partner_id == partner_id))
+             | ((CardSession.creator_id == partner_id) & (CardSession.partner_id == current_user.id))),
+        ).order_by(CardSession.created_at.desc())
+    ).all()
+    for session_row in session_rows[:6]:
+        response_rows = session.exec(
+            select(CardResponse).where(
+                CardResponse.session_id == session_row.id,
+                CardResponse.deleted_at.is_(None),
+                CardResponse.status == ResponseStatus.REVEALED,
+            )
+        ).all()
+        if len(response_rows) < 2:
+            continue
+        my_response = next((row for row in response_rows if row.user_id == current_user.id), None)
+        partner_response = next((row for row in response_rows if row.user_id == partner_id), None)
+        if not my_response or not partner_response:
+            continue
+        card = session.get(Card, session_row.card_id)
+        card_title = card.title if card else "共同卡片對話"
+        card_question = card.question if card else ""
+        evidence_catalog.append(
+            {
+                "evidence_id": f"card:{session_row.id}",
+                "source_kind": "card",
+                "source_id": str(session_row.id),
+                "label": f"共同卡片 · {card_title}",
+                "excerpt": _truncate_preview(
+                    f"問題：{card_question} 我：{my_response.content} 對方：{partner_response.content}",
+                    280,
+                ),
+            }
+        )
+
+    appreciation_rows = _pair_appreciation_rows(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    for row in appreciation_rows[:6]:
+        evidence_catalog.append(
+            {
+                "evidence_id": f"appreciation:{row.id}",
+                "source_kind": "appreciation",
+                "source_id": str(row.id),
+                "label": f"感恩 · {row.created_at.date().isoformat()}",
+                "excerpt": _truncate_preview(row.body_text, 280),
+            }
+        )
+
+    existing_wishlist_titles = [
+        row.title
+        for row in _pair_wishlist_rows(session=session, user_id=current_user.id, partner_id=partner_id)
+        if row.title.strip()
+    ]
+    blocked_dedupe_keys = {
+        row.dedupe_key
+        for row in session.exec(
+            select(RelationshipKnowledgeSuggestion).where(
+                RelationshipKnowledgeSuggestion.user_id == current_user.id,
+                RelationshipKnowledgeSuggestion.partner_id == partner_id,
+                RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE,
+            )
+        ).all()
+        if row.dedupe_key.strip()
+    }
+    return evidence_catalog, existing_wishlist_titles, blocked_dedupe_keys
 
 
 @router.get("/cards", response_model=LoveMapCardsResponse)
@@ -199,7 +401,7 @@ def get_love_map_system(
     story = LoveMapStoryPublic()
 
     if verified_partner_id:
-        uid1, uid2 = min(current_user.id, verified_partner_id), max(current_user.id, verified_partner_id)
+        uid1, uid2 = _pair_scope_ids(current_user.id, verified_partner_id)
         goal_row = session.exec(
             select(CoupleGoal).where(
                 CoupleGoal.user_id == uid1,
@@ -217,12 +419,11 @@ def get_love_map_system(
         ).all()
         notes = [_to_note_public(row) for row in note_rows]
 
-        wishlist_rows = session.exec(
-            select(WishlistItem).where(
-                ((WishlistItem.user_id == uid1) & (WishlistItem.partner_id == uid2))
-                | ((WishlistItem.user_id == uid2) & (WishlistItem.partner_id == uid1)),
-            ).order_by(WishlistItem.created_at.desc())
-        ).all()
+        wishlist_rows = _pair_wishlist_rows(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
         wishlist_items = [_to_wishlist_public(row=row, current_user=current_user) for row in wishlist_rows]
         story = _to_story_public(
             get_relationship_story_slice(
@@ -277,6 +478,190 @@ def get_love_map_system(
     )
 
 
+@router.get(
+    "/suggestions/shared-future",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+def list_shared_future_suggestions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        return []
+    rows = _load_shared_future_pending_suggestions(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    return [_to_suggestion_public(row) for row in rows]
+
+
+@router.post(
+    "/suggestions/shared-future/generate",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+async def generate_shared_future_review_suggestions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    pending_rows = _load_shared_future_pending_suggestions(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    if pending_rows:
+        return [_to_suggestion_public(row) for row in pending_rows]
+
+    evidence_catalog, existing_titles, blocked_dedupe_keys = _build_shared_future_generation_sources(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    try:
+        generated_rows = await generate_shared_future_suggestions(
+            evidence_catalog=evidence_catalog,
+            existing_titles=existing_titles,
+        )
+    except (HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError) as exc:
+        logger.warning(
+            "shared_future_suggestions_generate_failed: reason=%s",
+            getattr(exc, "reason", type(exc).__name__),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 建議暫時無法使用，請稍後再試。",
+        ) from exc
+
+    created_rows: list[RelationshipKnowledgeSuggestion] = []
+    for generated in generated_rows:
+        dedupe_key = normalize_shared_future_suggestion_key(str(generated.get("dedupe_key") or generated.get("proposed_title") or ""))
+        if not dedupe_key or dedupe_key in blocked_dedupe_keys:
+            continue
+        row = RelationshipKnowledgeSuggestion(
+            user_id=current_user.id,
+            partner_id=partner_id,
+            section=SUGGESTION_SECTION_SHARED_FUTURE,
+            status=SUGGESTION_STATUS_PENDING,
+            generator_version=SUGGESTION_GENERATOR_SHARED_FUTURE_V1,
+            proposed_title=_truncate_preview(str(generated.get("proposed_title") or ""), 500),
+            proposed_notes=_truncate_preview(str(generated.get("proposed_notes") or ""), 2000),
+            evidence_json=[
+                item
+                for item in generated.get("evidence", [])
+                if isinstance(item, dict)
+            ],
+            dedupe_key=dedupe_key,
+        )
+        session.add(row)
+        created_rows.append(row)
+        blocked_dedupe_keys.add(dedupe_key)
+        if len(created_rows) >= 2:
+            break
+
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Generate shared future suggestions",
+        conflict_detail="儲存建議時發生衝突，請稍後再試。",
+        failure_detail="儲存建議失敗，請稍後再試。",
+    )
+    for row in created_rows:
+        session.refresh(row)
+    return [_to_suggestion_public(row) for row in created_rows]
+
+
+@router.post(
+    "/suggestions/{suggestion_id}/accept",
+    response_model=WishlistItemPublic,
+)
+def accept_relationship_knowledge_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    suggestion_id: UUID,
+) -> WishlistItemPublic:
+    row = _get_owned_suggestion_or_404(
+        session=session,
+        current_user=current_user,
+        suggestion_id=suggestion_id,
+    )
+    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_SHARED_FUTURE:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+
+    active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not active_partner_id or active_partner_id != row.partner_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    wishlist_row = WishlistItem(
+        user_id=current_user.id,
+        partner_id=row.partner_id,
+        title=row.proposed_title,
+        notes=row.proposed_notes,
+    )
+    session.add(wishlist_row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Accept shared future suggestion",
+        conflict_detail="接受建議時發生衝突，請稍後再試。",
+        failure_detail="接受建議失敗，請稍後再試。",
+    )
+    session.refresh(wishlist_row)
+
+    row.status = SUGGESTION_STATUS_ACCEPTED
+    row.accepted_wishlist_item_id = wishlist_row.id
+    row.reviewed_at = utcnow()
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Mark shared future suggestion accepted",
+        conflict_detail="更新建議狀態時發生衝突，請稍後再試。",
+        failure_detail="更新建議狀態失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return _to_wishlist_public(row=wishlist_row, current_user=current_user)
+
+
+@router.post(
+    "/suggestions/{suggestion_id}/dismiss",
+    response_model=RelationshipKnowledgeSuggestionPublic,
+)
+def dismiss_relationship_knowledge_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    suggestion_id: UUID,
+) -> RelationshipKnowledgeSuggestionPublic:
+    row = _get_owned_suggestion_or_404(
+        session=session,
+        current_user=current_user,
+        suggestion_id=suggestion_id,
+    )
+    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_SHARED_FUTURE:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+
+    row.status = SUGGESTION_STATUS_DISMISSED
+    row.reviewed_at = utcnow()
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Dismiss shared future suggestion",
+        conflict_detail="略過建議時發生衝突，請稍後再試。",
+        failure_detail="略過建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return _to_suggestion_public(row)
+
+
 @router.post("/notes", response_model=LoveMapNotePublic)
 def create_or_update_love_map_note(
     *,
@@ -288,7 +673,6 @@ def create_or_update_love_map_note(
     partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not partner_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
-    from app.core.datetime_utils import utcnow
     existing = session.exec(
         select(LoveMapNote).where(
             LoveMapNote.user_id == current_user.id,
@@ -336,7 +720,6 @@ def update_love_map_note(
     row = session.get(LoveMapNote, note_id)
     if not row or row.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該筆記")
-    from app.core.datetime_utils import utcnow
     row.content = (body.content or "")[:5000]
     row.updated_at = utcnow()
     session.add(row)

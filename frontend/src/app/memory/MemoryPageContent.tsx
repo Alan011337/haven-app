@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, Clock3, Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
@@ -243,7 +244,11 @@ function renderSourceState(
 }
 
 export default function MemoryPageContent() {
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [manualSelectedCalendarDate, setManualSelectedCalendarDate] = useState<string | null>(() => {
+    const initialDate = searchParams.get('date');
+    return initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : null;
+  });
   const {
     view,
     setView,
@@ -270,6 +275,41 @@ export default function MemoryPageContent() {
     reportError,
     refetchReport,
   } = useMemoryData();
+
+  // Deep-link: /memory?date=YYYY-MM-DD&kind=card&id=... switches to calendar
+  // view on that date and focuses the matching item.
+  const deepLinkDate = searchParams.get('date');
+  const focusKind = searchParams.get('kind');
+  const focusId = searchParams.get('id');
+  const deepLinkedCalendarDate = useMemo(
+    () => (deepLinkDate && /^\d{4}-\d{2}-\d{2}$/.test(deepLinkDate) ? deepLinkDate : null),
+    [deepLinkDate],
+  );
+  const focusKey = useMemo(
+    () => (deepLinkDate && focusKind && focusId ? `${deepLinkDate}:${focusKind}:${focusId}` : null),
+    [deepLinkDate, focusId, focusKind],
+  );
+  useEffect(() => {
+    if (deepLinkedCalendarDate) {
+      setView('calendar');
+    }
+  }, [deepLinkedCalendarDate, setView]);
+  const selectedCalendarDate = deepLinkedCalendarDate ?? manualSelectedCalendarDate;
+
+  const isFocusTarget = useCallback(
+    (item: TimelineItem): boolean => {
+      if (!focusKind || !focusId) return false;
+      if (item.type === 'card') return focusKind === 'card' && item.session_id === focusId;
+      return item.type === focusKind && item.id === focusId;
+    },
+    [focusKind, focusId],
+  );
+
+  const focusRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToFocus = useRef(false);
+  useEffect(() => {
+    hasScrolledToFocus.current = false;
+  }, [focusKey]);
 
   const featuredTimelineItem = items[0] ?? null;
   const companionItems = items.slice(1, 3);
@@ -298,7 +338,7 @@ export default function MemoryPageContent() {
   const activeCalendarDates = useMemo(
     () =>
       (calendar?.days ?? [])
-        .filter((day) => day.journal_count > 0 || day.card_count > 0 || day.has_photo)
+        .filter((day) => day.journal_count > 0 || day.card_count > 0 || day.appreciation_count > 0 || day.has_photo)
         .map((day) => day.date)
         .sort(),
     [calendar],
@@ -320,9 +360,25 @@ export default function MemoryPageContent() {
     enabled: view === 'calendar' && Boolean(activeSelectedCalendarDate),
     staleTime: MEMORY_DAY_STALE_TIME_MS,
   });
-  const selectedDayItems = selectedDayQuery.data?.items ?? [];
+  const selectedDayItems = useMemo(() => selectedDayQuery.data?.items ?? [], [selectedDayQuery.data?.items]);
+  const hasFocusedDayItem = useMemo(
+    () => Boolean(focusKey) && selectedDayItems.some((item) => isFocusTarget(item)),
+    [focusKey, isFocusTarget, selectedDayItems],
+  );
   const selectedDayFeaturedModel = selectedDayItems[0] ? buildTimelineModel(selectedDayItems[0]) : null;
   const selectedDayStreamItems = selectedDayItems.slice(1);
+  useEffect(() => {
+    if (!focusKey || view !== 'calendar' || !hasFocusedDayItem || !focusRef.current || hasScrolledToFocus.current) {
+      return;
+    }
+
+    hasScrolledToFocus.current = true;
+    // Small delay to let the day spotlight section render fully.
+    const timer = window.setTimeout(() => {
+      focusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [focusKey, hasFocusedDayItem, view]);
   const initialPageLoading =
     items.length === 0 && timelineLoading && timeCapsuleLoading && reportLoading;
 
@@ -746,7 +802,7 @@ export default function MemoryPageContent() {
                   photoDays: calendarPhotoDays,
                 }}
                 selectedDate={activeSelectedCalendarDate}
-                onSelectDate={setSelectedCalendarDate}
+                onSelectDate={setManualSelectedCalendarDate}
                 onPrevMonth={prevMonth}
                 onNextMonth={nextMonth}
               />
@@ -805,27 +861,33 @@ export default function MemoryPageContent() {
 
                   {!selectedDayQuery.isLoading && !selectedDayQuery.isError && selectedDayItems.length > 0 ? (
                     <>
-                      {selectedDayFeaturedModel ? (
-                        <MemoryFeaturedMemoryCard
-                          kind={selectedDayFeaturedModel.kind}
-                          eyebrow={selectedDayFeaturedModel.eyebrow}
-                          title={selectedDayFeaturedModel.title}
-                          description={selectedDayFeaturedModel.description}
-                          dateLabel={selectedDayFeaturedModel.dateLabel}
-                          badges={selectedDayFeaturedModel.badges}
-                          detailLines={selectedDayFeaturedModel.detailLines}
-                          support={selectedDayFeaturedModel.support}
-                          attachments={selectedDayFeaturedModel.attachments}
-                        />
-                      ) : null}
+                      {selectedDayFeaturedModel && selectedDayItems[0] ? (() => {
+                        const featuredFocused = isFocusTarget(selectedDayItems[0]);
+                        const card = (
+                          <MemoryFeaturedMemoryCard
+                            kind={selectedDayFeaturedModel.kind}
+                            eyebrow={selectedDayFeaturedModel.eyebrow}
+                            title={selectedDayFeaturedModel.title}
+                            description={selectedDayFeaturedModel.description}
+                            dateLabel={selectedDayFeaturedModel.dateLabel}
+                            badges={selectedDayFeaturedModel.badges}
+                            detailLines={selectedDayFeaturedModel.detailLines}
+                            support={selectedDayFeaturedModel.support}
+                            attachments={selectedDayFeaturedModel.attachments}
+                            focused={featuredFocused}
+                          />
+                        );
+                        return featuredFocused ? <div ref={focusRef}>{card}</div> : card;
+                      })() : null}
 
                       {selectedDayStreamItems.length > 0 ? (
                         <div className="grid gap-4">
                           {selectedDayStreamItems.map((item) => {
                             const model = buildTimelineModel(item);
-                            return (
+                            const itemFocused = isFocusTarget(item);
+                            const itemKey = item.type === 'card' ? `day-card-${item.session_id}` : `day-${item.type}-${item.id}`;
+                            const card = (
                               <MemoryStreamMemoryCard
-                                key={item.type === 'card' ? `day-card-${item.session_id}` : `day-${item.type}-${item.id}`}
                                 kind={model.kind}
                                 eyebrow={model.eyebrow}
                                 title={model.title}
@@ -835,8 +897,12 @@ export default function MemoryPageContent() {
                                 detailLines={model.detailLines}
                                 support={model.support}
                                 attachments={model.attachments}
+                                focused={itemFocused}
                               />
                             );
+                            return itemFocused
+                              ? <div key={itemKey} ref={focusRef}>{card}</div>
+                              : <div key={itemKey}>{card}</div>;
                           })}
                         </div>
                       ) : null}

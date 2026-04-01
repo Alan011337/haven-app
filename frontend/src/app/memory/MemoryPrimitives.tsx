@@ -302,6 +302,7 @@ interface MemoryFeaturedMemoryCardProps {
   detailLines?: string[];
   support?: string;
   attachments?: TimelineAttachmentMeta[];
+  focused?: boolean;
 }
 
 export function MemoryFeaturedMemoryCard({
@@ -314,14 +315,18 @@ export function MemoryFeaturedMemoryCard({
   detailLines = [],
   support,
   attachments,
+  focused,
 }: MemoryFeaturedMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
   return (
     <GlassCard
+      data-memory-kind={kind}
+      data-memory-focused={focused ? 'true' : undefined}
       className={cn(
         'overflow-hidden rounded-[2.95rem] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10',
         cardToneClasses[kind],
+        focused && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-white/60',
       )}
     >
       <div className="space-y-6">
@@ -494,6 +499,7 @@ interface MemoryStreamMemoryCardProps {
   detailLines?: string[];
   support?: string;
   attachments?: TimelineAttachmentMeta[];
+  focused?: boolean;
 }
 
 export function MemoryStreamMemoryCard({
@@ -506,14 +512,18 @@ export function MemoryStreamMemoryCard({
   detailLines = [],
   support,
   attachments,
+  focused,
 }: MemoryStreamMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
   return (
     <GlassCard
+      data-memory-kind={kind}
+      data-memory-focused={focused ? 'true' : undefined}
       className={cn(
         'overflow-hidden rounded-[2rem] p-5 shadow-soft backdrop-blur-md md:p-6',
         cardToneClasses[kind],
+        focused && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-white/60',
       )}
     >
       <div className="grid gap-4 md:grid-cols-[auto_minmax(0,1fr)] md:items-start">

@@ -3,6 +3,7 @@
 # READ_AUTHZ_MATRIX: GET /api/love-map/cards
 # READ_AUTHZ_MATRIX: GET /api/love-map/notes
 # READ_AUTHZ_MATRIX: GET /api/love-map/system
+# READ_AUTHZ_MATRIX: GET /api/love-map/suggestions/shared-future
 # READ_AUTHZ_MATRIX: GET /api/blueprint/
 # READ_AUTHZ_MATRIX: GET /api/blueprint/date-suggestions
 # READ_AUTHZ_MATRIX: GET /api/reports/weekly
@@ -36,6 +37,7 @@ CORE_READ_PATHS = [
     "/api/love-map/cards",
     "/api/love-map/notes",
     "/api/love-map/system",
+    "/api/love-map/suggestions/shared-future",
     "/api/blueprint/",
     "/api/blueprint/date-suggestions",
     "/api/reports/weekly",
@@ -133,6 +135,11 @@ class CoreReadAuthorizationMatrixTests(unittest.TestCase):
         self.assertIn("has_partner", payload)
         self.assertIn("baseline", payload)
         self.assertIn("stats", payload)
+
+    def test_authenticated_can_read_love_map_shared_future_suggestions(self) -> None:
+        response = self.client.get("/api/love-map/suggestions/shared-future")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), list)
 
     def test_authenticated_can_read_blueprint(self) -> None:
         response = self.client.get("/api/blueprint/")

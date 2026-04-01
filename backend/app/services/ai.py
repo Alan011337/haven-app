@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from pathlib import Path
 import httpx
 import logging
+from pydantic import BaseModel, Field
 from app.core.config import settings
 # 引入必要的 Schema 和 Enum
 from app.schemas.ai import JournalAnalysis, CardRecommendation 
@@ -692,6 +693,169 @@ def _coerce_json_object(raw_text: str) -> dict:
     if not isinstance(parsed, dict):
         raise ValueError("provider response must be JSON object")
     return parsed
+
+
+class SharedFutureSuggestionEvidenceInput(BaseModel):
+    evidence_id: str
+    source_kind: str
+    source_id: str
+    label: str
+    excerpt: str
+
+
+class SharedFutureSuggestionDraft(BaseModel):
+    proposed_title: str = Field(max_length=500)
+    proposed_notes: str = Field(default="", max_length=2000)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=3)
+
+
+class SharedFutureSuggestionDraftBundle(BaseModel):
+    suggestions: list[SharedFutureSuggestionDraft] = Field(default_factory=list, max_length=2)
+
+
+def normalize_shared_future_suggestion_key(title: str) -> str:
+    return " ".join((title or "").strip().lower().split())
+
+
+def _truncate_text(value: str, limit: int) -> str:
+    normalized = (value or "").strip()
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        normalized = (value or "").strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(normalized)
+    return ordered
+
+
+async def generate_shared_future_suggestions(
+    *,
+    evidence_catalog: list[dict[str, str]],
+    existing_titles: list[str],
+) -> list[dict[str, object]]:
+    if len(evidence_catalog) < 2:
+        return []
+
+    client = _get_openai_client()
+    if client is None or not (settings.OPENAI_API_KEY or "").strip():
+        raise HavenAIProviderError(
+            reason="shared_future_suggestions_provider_unavailable",
+            retryable=True,
+            provider="openai",
+        )
+
+    catalog_models = [SharedFutureSuggestionEvidenceInput.model_validate(item) for item in evidence_catalog]
+    blocked_title_keys = {
+        normalize_shared_future_suggestion_key(title)
+        for title in existing_titles
+        if normalize_shared_future_suggestion_key(title)
+    }
+
+    system_prompt = (
+        "You propose at most two relationship Shared Future suggestions for a personal review queue. "
+        "Only use the supplied evidence catalog. Never invent facts, partner traits, diagnoses, or therapy advice. "
+        "Only suggest concrete future rituals, plans, or habits the couple could intentionally choose. "
+        "Return an empty list when evidence is weak or duplicates an existing wish. "
+        "Each suggestion must include 1 to 3 evidence_ids from the catalog. "
+        "Keep titles concise and human. Notes should explain the future fragment in one or two calm sentences."
+    )
+    user_prompt = json.dumps(
+        {
+            "task": "shared_future_suggestions_v1",
+            "existing_wishlist_titles": existing_titles,
+            "blocked_title_keys": sorted(blocked_title_keys),
+            "evidence_catalog": [item.model_dump() for item in catalog_models],
+        },
+        ensure_ascii=False,
+    )
+
+    try:
+        with trace_span("ai.generate_shared_future_suggestions"):
+            completion = await client.beta.chat.completions.parse(
+                model=ANALYSIS_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=SharedFutureSuggestionDraftBundle,
+                temperature=0.2,
+                max_tokens=900,
+            )
+    except Exception as exc:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc):
+            raise HavenAITimeoutError(
+                reason="shared_future_suggestions_timeout",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        if _is_openai_status_error(exc):
+            raise HavenAIProviderError(
+                reason="shared_future_suggestions_provider_error",
+                retryable=_get_openai_status_code(exc) != 400,
+                provider="openai",
+            ) from exc
+        raise HavenAIProviderError(
+            reason="shared_future_suggestions_failed",
+            retryable=True,
+            provider="openai",
+        ) from exc
+
+    parsed = completion.choices[0].message.parsed
+    if not parsed:
+        raise HavenAISchemaError(
+            reason="shared_future_suggestions_empty",
+            retryable=True,
+            provider="openai",
+        )
+
+    evidence_index = {item.evidence_id: item for item in catalog_models}
+    suggestions: list[dict[str, object]] = []
+    seen_title_keys: set[str] = set()
+
+    for draft in parsed.suggestions:
+        title = _truncate_text(draft.proposed_title, 500)
+        notes = _truncate_text(draft.proposed_notes, 2000)
+        title_key = normalize_shared_future_suggestion_key(title)
+        if not title or not title_key or title_key in blocked_title_keys or title_key in seen_title_keys:
+            continue
+
+        evidence_rows: list[dict[str, str]] = []
+        for evidence_id in _ordered_unique(draft.evidence_ids)[:3]:
+            source = evidence_index.get(evidence_id)
+            if not source:
+                continue
+            evidence_rows.append(
+                {
+                    "source_kind": source.source_kind,
+                    "source_id": source.source_id,
+                    "label": _truncate_text(source.label, 120),
+                    "excerpt": _truncate_text(source.excerpt, 280),
+                }
+            )
+        if not evidence_rows:
+            continue
+
+        suggestions.append(
+            {
+                "proposed_title": title,
+                "proposed_notes": notes,
+                "dedupe_key": title_key,
+                "evidence": evidence_rows,
+            }
+        )
+        seen_title_keys.add(title_key)
+        if len(suggestions) >= 2:
+            break
+
+    return suggestions
 
 
 _moderation_failure_count = 0

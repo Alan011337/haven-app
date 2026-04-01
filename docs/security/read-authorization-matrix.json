@@ -173,6 +173,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/love-map/suggestions/shared-future",
+      "auth_mode": "authenticated",
+      "subject_scope": "current_user",
+      "owner_team": "backend-platform",
+      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/blueprint/",
       "auth_mode": "authenticated",
       "subject_scope": "pair_member",

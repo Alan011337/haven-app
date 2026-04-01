@@ -21,7 +21,12 @@ export {
   useDeckHistorySummaryQuery,
 } from './useDeckHistoryQueries';
 export { useDrawDeckCard, useRespondToDeckCard } from './useDeckMutations';
-export { useLoveMapCards, useLoveMapNotes, useLoveMapSystem } from './useLoveMapQueries';
+export {
+  useLoveMapCards,
+  useLoveMapNotes,
+  useLoveMapSharedFutureSuggestions,
+  useLoveMapSystem,
+} from './useLoveMapQueries';
 export { useMediationStatus } from './useMediationStatus';
 export { useBlueprint } from './useBlueprint';
 export { useCooldownStatus } from './useCooldownStatus';

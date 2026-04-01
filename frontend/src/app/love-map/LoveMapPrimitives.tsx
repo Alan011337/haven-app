@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Gift, Heart, MessageCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Gift, Heart, MessageCircle, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -224,6 +224,7 @@ interface LoveMapStoryMomentCardProps {
   occurredAtLabel?: string | null;
   badges?: string[];
   whyText: string;
+  href?: string | null;
 }
 
 export function LoveMapStoryMomentCard({
@@ -233,9 +234,13 @@ export function LoveMapStoryMomentCard({
   occurredAtLabel,
   badges = [],
   whyText,
+  href,
 }: LoveMapStoryMomentCardProps) {
-  return (
-    <GlassCard className="overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6">
+  const card = (
+    <GlassCard className={cn(
+      "overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6",
+      href && "transition-shadow duration-200 hover:shadow-card-hover",
+    )}>
       <div className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
@@ -261,9 +266,18 @@ export function LoveMapStoryMomentCard({
           <p className="type-caption text-muted-foreground">Why this belongs in your story</p>
           <p className="mt-2 type-body text-card-foreground">{whyText}</p>
         </div>
+
+        {href ? (
+          <p className="type-caption text-primary/70">查看完整回憶 →</p>
+        ) : null}
       </div>
     </GlassCard>
   );
+
+  if (href) {
+    return <Link href={href} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[2.2rem]">{card}</Link>;
+  }
+  return card;
 }
 
 interface LoveMapStoryCapsuleCardProps {
@@ -459,6 +473,102 @@ export function LoveMapFutureComposer({
         {children}
 
         {footer}
+      </div>
+    </GlassCard>
+  );
+}
+
+interface LoveMapSuggestedUpdateCardProps {
+  title: string;
+  notes: string;
+  evidence: Array<{
+    source_kind: string;
+    label: string;
+    excerpt: string;
+  }>;
+  onAccept: () => void;
+  onDismiss: () => void;
+  accepting?: boolean;
+  dismissing?: boolean;
+}
+
+export function LoveMapSuggestedUpdateCard({
+  title,
+  notes,
+  evidence,
+  onAccept,
+  onDismiss,
+  accepting = false,
+  dismissing = false,
+}: LoveMapSuggestedUpdateCardProps) {
+  return (
+    <GlassCard className="overflow-hidden rounded-[2.2rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(249,243,234,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6">
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/10 px-3 py-1.5 shadow-soft">
+              <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+              <span className="type-micro uppercase text-primary/80">AI suggestion</span>
+            </div>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+            {notes ? <p className="max-w-2xl type-body-muted text-muted-foreground">{notes}</p> : null}
+          </div>
+
+          <Badge variant="metadata" size="sm">
+            Personal review only
+          </Badge>
+        </div>
+
+        <div className="rounded-[1.55rem] border border-white/58 bg-white/76 px-4 py-4 shadow-soft">
+          <p className="type-caption text-muted-foreground">
+            這是 Haven 根據已留下的活動提出的建議。只有你看得到，按下接受前不會變成 shared truth。
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <p className="type-caption text-card-foreground/82">Why Haven suggested this</p>
+          <div className="grid gap-3">
+            {evidence.map((item, index) => (
+              <div
+                key={`${item.source_kind}-${item.label}-${index}`}
+                className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="status" size="sm">
+                    {item.source_kind}
+                  </Badge>
+                  <span className="type-caption text-card-foreground">{item.label}</span>
+                </div>
+                <p className="mt-2 type-body-muted text-muted-foreground">{item.excerpt}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="type-caption text-muted-foreground">
+            接受後才會寫進 Shared Future；略過後它不會立刻又回來。
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              loading={dismissing}
+              disabled={accepting || dismissing}
+              leftIcon={<X className="h-4 w-4" aria-hidden />}
+              onClick={onDismiss}
+            >
+              略過
+            </Button>
+            <Button
+              loading={accepting}
+              disabled={accepting || dismissing}
+              leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              onClick={onAccept}
+            >
+              接受
+            </Button>
+          </div>
+        </div>
       </div>
     </GlassCard>
   );

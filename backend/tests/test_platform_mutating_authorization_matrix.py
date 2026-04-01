@@ -105,6 +105,9 @@ class PlatformMutatingAuthRequirementTests(unittest.TestCase):
             ("PUT", "/api/love-languages/preference", {"preference": {"primary": "words", "secondary": "time"}}),
             ("POST", "/api/love-languages/weekly-task/complete", None),
             ("POST", "/api/love-map/notes", {"layer": "safe", "content": "note"}),
+            ("POST", "/api/love-map/suggestions/shared-future/generate", None),
+            ("POST", f"/api/love-map/suggestions/{uuid.uuid4()}/accept", None),
+            ("POST", f"/api/love-map/suggestions/{uuid.uuid4()}/dismiss", None),
             ("PUT", f"/api/love-map/notes/{uuid.uuid4()}", {"content": "updated"}),
             (
                 "POST",

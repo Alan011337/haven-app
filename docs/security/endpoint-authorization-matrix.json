@@ -134,6 +134,33 @@
     },
     {
       "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/shared-future/generate",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_love_map_ai_suggestions.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/{suggestion_id}/accept",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_love_map_ai_suggestions.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/{suggestion_id}/dismiss",
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_love_map_ai_suggestions.py"
+    },
+    {
+      "auth_mode": "authenticated",
       "method": "POST",
       "owner_team": "backend-billing",
       "path": "/api/billing/create-checkout-session",

@@ -309,6 +309,7 @@ export interface LoveMapStoryMomentPublic {
   occurred_at: string;
   badges: string[];
   why_text: string;
+  source_id?: string | null;
 }
 
 export interface LoveMapStoryCapsulePublic {
@@ -346,6 +347,26 @@ export interface LoveMapSystemResponse {
   stats: LoveMapSystemStatsPublic;
 }
 
+export interface RelationshipKnowledgeSuggestionEvidencePublic {
+  source_kind: string;
+  source_id: string;
+  label: string;
+  excerpt: string;
+}
+
+export interface RelationshipKnowledgeSuggestionPublic {
+  id: string;
+  section: string;
+  status: string;
+  generator_version: string;
+  proposed_title: string;
+  proposed_notes: string;
+  evidence: RelationshipKnowledgeSuggestionEvidencePublic[];
+  created_at: string;
+  reviewed_at: string | null;
+  accepted_wishlist_item_id: string | null;
+}
+
 export const fetchLoveMapCards = async (): Promise<LoveMapCardsResponse> => {
   return apiGet<LoveMapCardsResponse>('/love-map/cards');
 };
@@ -356,6 +377,26 @@ export const fetchLoveMapNotes = async (): Promise<LoveMapNotePublic[]> => {
 
 export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
   return apiGet<LoveMapSystemResponse>('/love-map/system');
+};
+
+export const fetchLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future');
+};
+
+export const generateLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/generate');
+};
+
+export const acceptLoveMapSharedFutureSuggestion = async (
+  suggestionId: string,
+): Promise<WishlistItemPublic> => {
+  return apiPost<WishlistItemPublic>(`/love-map/suggestions/${suggestionId}/accept`);
+};
+
+export const dismissLoveMapSharedFutureSuggestion = async (
+  suggestionId: string,
+): Promise<RelationshipKnowledgeSuggestionPublic> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic>(`/love-map/suggestions/${suggestionId}/dismiss`);
 };
 
 export const createOrUpdateLoveMapNote = async (

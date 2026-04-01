@@ -182,6 +182,7 @@ declare const queryKeys: {
     readonly loveMapCards: () => readonly ["loveMapCards"];
     readonly loveMapNotes: () => readonly ["loveMapNotes"];
     readonly loveMapSystem: () => readonly ["loveMapSystem"];
+    readonly loveMapSharedFutureSuggestions: () => readonly ["loveMapSharedFutureSuggestions"];
     readonly mediationStatus: () => readonly ["mediationStatus"];
     readonly blueprint: () => readonly ["blueprint"];
     readonly cooldownStatus: () => readonly ["cooldownStatus"];

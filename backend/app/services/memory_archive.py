@@ -117,6 +117,7 @@ def get_relationship_story_slice(
                     "occurred_at": item.get("revealed_at"),
                     "badges": [badge for badge in [item.get("category"), "雙方都回答了"] if badge],
                     "why_text": "這是一段真的被兩個人一起回答過的對話，不是 Haven 替你們補寫的詮釋。",
+                    "source_id": str(item["session_id"]) if item.get("session_id") else None,
                 }
                 continue
 
@@ -130,6 +131,7 @@ def get_relationship_story_slice(
                     "occurred_at": item.get("created_at"),
                     "badges": ["感恩"],
                     "why_text": "感謝被留下來時，不只是訊息紀錄，也會變成你們故事裡可回頭看的證據。",
+                    "source_id": str(item["id"]) if item.get("id") else None,
                 }
                 continue
 
@@ -146,6 +148,7 @@ def get_relationship_story_slice(
                     "occurred_at": item.get("created_at"),
                     "badges": badges,
                     "why_text": "這是當時真的被寫下或拍下的一刻，不代表整段關係的本質，只代表它曾經重要到值得被留下。",
+                    "source_id": str(item["id"]) if item.get("id") else None,
                 }
 
         if len(selected_by_kind) == 3:

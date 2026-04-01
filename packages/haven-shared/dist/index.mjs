@@ -34,6 +34,7 @@ var queryKeys = {
   loveMapCards: () => ["loveMapCards"],
   loveMapNotes: () => ["loveMapNotes"],
   loveMapSystem: () => ["loveMapSystem"],
+  loveMapSharedFutureSuggestions: () => ["loveMapSharedFutureSuggestions"],
   mediationStatus: () => ["mediationStatus"],
   blueprint: () => ["blueprint"],
   cooldownStatus: () => ["cooldownStatus"],

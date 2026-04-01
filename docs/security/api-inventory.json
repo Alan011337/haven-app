@@ -856,6 +856,76 @@
     {
       "auth_policy": "authenticated",
       "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.list_shared_future_suggestions",
+      "method": "GET",
+      "name": "list_shared_future_suggestions",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/shared-future",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.generate_shared_future_review_suggestions",
+      "method": "POST",
+      "name": "generate_shared_future_review_suggestions",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/shared-future/generate",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.accept_relationship_knowledge_suggestion",
+      "method": "POST",
+      "name": "accept_relationship_knowledge_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/{suggestion_id}/accept",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.dismiss_relationship_knowledge_suggestion",
+      "method": "POST",
+      "name": "dismiss_relationship_knowledge_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/{suggestion_id}/dismiss",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.get_love_map_system",
+      "method": "GET",
+      "name": "get_love_map_system",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/system",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
       "endpoint": "app.api.routers.mediation.submit_mediation_answers",
       "method": "POST",
       "name": "submit_mediation_answers",

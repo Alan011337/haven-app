@@ -59,6 +59,7 @@ class LoveMapStoryMomentPublic(BaseModel):
     occurred_at: str
     badges: list[str] = Field(default_factory=list)
     why_text: str
+    source_id: str | None = None
 
 
 class LoveMapStoryCapsulePublic(BaseModel):
@@ -74,6 +75,26 @@ class LoveMapStoryPublic(BaseModel):
     available: bool = False
     moments: list[LoveMapStoryMomentPublic] = Field(default_factory=list)
     time_capsule: LoveMapStoryCapsulePublic | None = None
+
+
+class RelationshipKnowledgeSuggestionEvidencePublic(BaseModel):
+    source_kind: str
+    source_id: str
+    label: str
+    excerpt: str
+
+
+class RelationshipKnowledgeSuggestionPublic(BaseModel):
+    id: str
+    section: str
+    status: str
+    generator_version: str
+    proposed_title: str
+    proposed_notes: str
+    evidence: list[RelationshipKnowledgeSuggestionEvidencePublic] = Field(default_factory=list)
+    created_at: str
+    reviewed_at: str | None = None
+    accepted_wishlist_item_id: str | None = None
 
 
 class LoveMapSystemStatsPublic(BaseModel):

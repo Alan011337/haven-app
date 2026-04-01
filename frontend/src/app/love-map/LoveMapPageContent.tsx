@@ -7,14 +7,21 @@ import { HeartHandshake, Sparkles } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input, { Textarea } from '@/components/ui/Input';
-import { useLoveMapCards, useLoveMapSystem } from '@/hooks/queries';
+import {
+  useLoveMapCards,
+  useLoveMapSharedFutureSuggestions,
+  useLoveMapSystem,
+} from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
 import { queryKeys } from '@/lib/query-keys';
 import { logClientError } from '@/lib/safe-error-log';
 import { cn } from '@/lib/utils';
 import {
+  acceptLoveMapSharedFutureSuggestion,
   addBlueprintItem,
   createOrUpdateLoveMapNote,
+  dismissLoveMapSharedFutureSuggestion,
+  generateLoveMapSharedFutureSuggestions,
   type LoveMapCardSummary,
 } from '@/services/api-client';
 import {
@@ -28,6 +35,7 @@ import {
   LoveMapPromptCard,
   LoveMapReflectionStudio,
   LoveMapSection,
+  LoveMapSuggestedUpdateCard,
   LoveMapStoryCapsuleCard,
   LoveMapStoryMomentCard,
   LoveMapSnapshotCard,
@@ -135,6 +143,17 @@ function formatStoryRange(fromDate?: string | null, toDate?: string | null) {
   return `${new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(from)} - ${new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric' }).format(to)}`;
 }
 
+function storyMomentHref(moment: { kind: string; source_id?: string | null; occurred_at?: string }): string | null {
+  if (!moment.source_id) return null;
+  if (moment.kind === 'journal') return `/journal/${moment.source_id}`;
+  // Card and appreciation anchors deep-link to Memory calendar with item-level focus.
+  const dateMatch = moment.occurred_at?.match(/^\d{4}-\d{2}-\d{2}/);
+  if (dateMatch) {
+    return `/memory?date=${dateMatch[0]}&kind=${moment.kind}&id=${moment.source_id}`;
+  }
+  return null;
+}
+
 function getGoalLabel(goalSlug?: string | null) {
   return GOAL_OPTIONS.find((option) => option.value === goalSlug)?.label ?? '尚未設定';
 }
@@ -149,11 +168,17 @@ export default function LoveMapPageContent() {
   const { showToast } = useToast();
   const systemQuery = useLoveMapSystem();
   const cardsQuery = useLoveMapCards();
+  const suggestionQuery = useLoveMapSharedFutureSuggestions({
+    enabled: Boolean(systemQuery.data?.has_partner),
+  });
 
   const [savingLayer, setSavingLayer] = useState<LoveMapLayer | null>(null);
   const [savingBaseline, setSavingBaseline] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingWishlist, setSavingWishlist] = useState(false);
+  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [reviewingSuggestionId, setReviewingSuggestionId] = useState<string | null>(null);
+  const [reviewingAction, setReviewingAction] = useState<'accept' | 'dismiss' | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<LoveMapLayer, string>>({
     safe: '',
     medium: '',
@@ -203,6 +228,7 @@ export default function LoveMapPageContent() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSystem() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapNotes() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.blueprint() }),
       queryClient.invalidateQueries({ queryKey: ['settings', 'relationship'] }),
     ]);
@@ -274,6 +300,56 @@ export default function LoveMapPageContent() {
     }
   };
 
+  const handleGenerateSuggestions = async () => {
+    setGeneratingSuggestions(true);
+    try {
+      const suggestions = await generateLoveMapSharedFutureSuggestions();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
+      if (suggestions.length === 0) {
+        showToast('目前還沒有足夠清楚的 Shared Future 建議。', 'info');
+        return;
+      }
+      showToast('Haven 已經提出新的 Shared Future 建議。', 'success');
+    } catch (error) {
+      logClientError('love-map-shared-future-suggestions-generate-failed', error);
+      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+    } finally {
+      setGeneratingSuggestions(false);
+    }
+  };
+
+  const handleAcceptSuggestion = async (suggestionId: string) => {
+    setReviewingSuggestionId(suggestionId);
+    setReviewingAction('accept');
+    try {
+      await acceptLoveMapSharedFutureSuggestion(suggestionId);
+      await invalidateRelationshipViews();
+      showToast('建議已接受，現在已進入 Shared Future。', 'success');
+    } catch (error) {
+      logClientError('love-map-shared-future-suggestion-accept-failed', error);
+      showToast('接受建議失敗，請稍後再試。', 'error');
+    } finally {
+      setReviewingSuggestionId(null);
+      setReviewingAction(null);
+    }
+  };
+
+  const handleDismissSuggestion = async (suggestionId: string) => {
+    setReviewingSuggestionId(suggestionId);
+    setReviewingAction('dismiss');
+    try {
+      await dismissLoveMapSharedFutureSuggestion(suggestionId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
+      showToast('這則建議已略過。', 'success');
+    } catch (error) {
+      logClientError('love-map-shared-future-suggestion-dismiss-failed', error);
+      showToast('略過建議失敗，請稍後再試。', 'error');
+    } finally {
+      setReviewingSuggestionId(null);
+      setReviewingAction(null);
+    }
+  };
+
   if (systemQuery.isLoading && !system) {
     return <LoveMapSkeleton />;
   }
@@ -296,6 +372,7 @@ export default function LoveMapPageContent() {
   const lastActivityLabel = formatShortDateTime(system.stats.last_activity_at);
   const storyAnchorCount = system.story?.moments.length ?? 0;
   const storyHasCapsule = Boolean(system.story?.time_capsule);
+  const pendingSuggestions = Array.isArray(suggestionQuery.data) ? suggestionQuery.data : [];
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
@@ -615,6 +692,7 @@ export default function LoveMapPageContent() {
                     occurredAtLabel={formatStoryDate(moment.occurred_at)}
                     badges={moment.badges}
                     whyText={moment.why_text}
+                    href={storyMomentHref(moment)}
                   />
                 ))}
               </div>
@@ -779,6 +857,12 @@ export default function LoveMapPageContent() {
               <p className="mt-2 type-section-title text-card-foreground">{system.stats.wishlist_count}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
+              <p className="type-micro uppercase text-primary/80">AI pending</p>
+              <p className="mt-2 type-section-title text-card-foreground">
+                {system.has_partner ? pendingSuggestions.length : 0}
+              </p>
+            </div>
+            <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">Blueprint</p>
               <p className="mt-2 type-caption text-muted-foreground">Love Map 在這裡只顯示高價值摘要，完整 future shelf 仍保留在 Blueprint。</p>
             </div>
@@ -801,6 +885,85 @@ export default function LoveMapPageContent() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
             <div className="grid gap-4">
+              <LoveMapFutureComposer
+                eyebrow="AI Suggested Updates"
+                title="先讓 Haven 提案，再由你決定什麼值得變成 shared truth。"
+                description="這些建議只會出現在你的個人 review queue。接受前，它們都不是共同真相；接受後，才會寫進 Shared Future。"
+                footer={
+                  <div className="rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+                    <p className="type-caption text-muted-foreground">
+                      Pending AI suggestions 只對你可見，伴侶只會看到你接受之後真正放進 Shared Future 的項目。
+                    </p>
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  {suggestionQuery.isError ? (
+                    <LoveMapStatePanel
+                      eyebrow="AI suggestions"
+                      title="建議佇列暫時沒有順利載入。"
+                      description="目前的 Shared Future 仍然可用，但這一層 AI review queue 需要重新讀取。"
+                      tone="quiet"
+                      actionLabel="重新讀取建議"
+                      onAction={() => {
+                        void suggestionQuery.refetch();
+                      }}
+                    />
+                  ) : suggestionQuery.isLoading ? (
+                    <LoveMapStatePanel
+                      eyebrow="AI suggestions"
+                      title="Haven 正在讀取你的 review queue。"
+                      description="如果這裡有待審核的 Shared Future 建議，它們會在幾秒內出現。"
+                      tone="quiet"
+                    />
+                  ) : pendingSuggestions.length === 0 ? (
+                    <LoveMapStatePanel
+                      eyebrow="AI suggestions"
+                      title="目前沒有待你審核的 Shared Future 建議。"
+                      description="當 Haven 能從你留下的 journals、共同卡片與 appreciation 裡看到足夠清楚的方向時，它才會提出建議。"
+                      tone="quiet"
+                      actionLabel="讓 Haven 提出 Shared Future 建議"
+                      onAction={() => {
+                        void handleGenerateSuggestions();
+                      }}
+                    />
+                  ) : (
+                    pendingSuggestions.map((suggestion) => (
+                      <LoveMapSuggestedUpdateCard
+                        key={suggestion.id}
+                        title={suggestion.proposed_title}
+                        notes={suggestion.proposed_notes}
+                        evidence={suggestion.evidence}
+                        accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
+                        dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
+                        onAccept={() => {
+                          void handleAcceptSuggestion(suggestion.id);
+                        }}
+                        onDismiss={() => {
+                          void handleDismissSuggestion(suggestion.id);
+                        }}
+                      />
+                    ))
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+                    <p className="type-caption text-muted-foreground">
+                      Haven 只會在 evidence 足夠清楚時提出建議，並且不會直接寫進 shared truth。
+                    </p>
+                    <Button
+                      variant="secondary"
+                      loading={generatingSuggestions}
+                      disabled={generatingSuggestions || suggestionQuery.isLoading}
+                      onClick={() => {
+                        void handleGenerateSuggestions();
+                      }}
+                    >
+                      {pendingSuggestions.length > 0 ? '重新整理建議' : '讓 Haven 提案'}
+                    </Button>
+                  </div>
+                </div>
+              </LoveMapFutureComposer>
+
               {system.wishlist_items.length === 0 ? (
                 <LoveMapStatePanel
                   eyebrow="Shared Future"

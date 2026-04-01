@@ -270,6 +270,9 @@ class LoveMapRelationshipSystemTests(unittest.TestCase):
         self.assertTrue(payload["story"]["available"])
         self.assertEqual(len(payload["story"]["moments"]), 3)
         self.assertEqual({moment["kind"] for moment in payload["story"]["moments"]}, {"journal", "card", "appreciation"})
+        for moment in payload["story"]["moments"]:
+            self.assertIn("source_id", moment, f"moment kind={moment['kind']} missing source_id")
+            self.assertIsNotNone(moment["source_id"], f"moment kind={moment['kind']} has null source_id")
         self.assertIn("謝謝你每天早上幫我準備咖啡。", [moment["description"] for moment in payload["story"]["moments"]])
         self.assertIsNotNone(payload["story"]["time_capsule"])
         self.assertEqual(payload["story"]["time_capsule"]["journals_count"], 1)
