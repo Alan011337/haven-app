@@ -64,6 +64,7 @@ var queryKeys = {
   loveMapNotes: () => ["loveMapNotes"],
   loveMapSystem: () => ["loveMapSystem"],
   loveMapSharedFutureSuggestions: () => ["loveMapSharedFutureSuggestions"],
+  loveMapSharedFutureRefinements: () => ["loveMapSharedFutureRefinements"],
   mediationStatus: () => ["mediationStatus"],
   blueprint: () => ["blueprint"],
   cooldownStatus: () => ["cooldownStatus"],

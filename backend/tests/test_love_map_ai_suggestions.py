@@ -234,6 +234,158 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
         finally:
             love_map.generate_shared_future_suggestions = original
 
+    def test_generate_filters_near_duplicate_titles_against_existing_and_handled_ideas(self) -> None:
+        self.current_user_id = self.alice_id
+        with Session(self.engine) as session:
+            session.add(
+                WishlistItem(
+                    user_id=self.alice_id,
+                    partner_id=self.bob_id,
+                    title="每百天慶祝一次",
+                    notes="已經是一個存在的共同未來片段。",
+                    created_at=utcnow(),
+                )
+            )
+            session.add(
+                RelationshipKnowledgeSuggestion(
+                    user_id=self.alice_id,
+                    partner_id=self.bob_id,
+                    section="shared_future",
+                    status="dismissed",
+                    generator_version="shared_future_v1",
+                    proposed_title="每週一次感恩分享",
+                    proposed_notes="把感謝變成固定的週節奏。",
+                    evidence_json=[],
+                    dedupe_key="每週一次感恩分享",
+                    reviewed_at=utcnow(),
+                )
+            )
+            session.commit()
+
+        original = love_map.generate_shared_future_suggestions
+
+        async def fake_generate_shared_future_suggestions(*, evidence_catalog, existing_titles):
+            self.assertIn("每百天慶祝一次", existing_titles)
+            return [
+                {
+                    "proposed_title": "每一百天留一個小慶祝",
+                    "proposed_notes": "把重要的節點變成固定的關係儀式。",
+                    "dedupe_key": "每一百天留一個小慶祝",
+                    "evidence": [
+                        {
+                            "source_kind": "journal",
+                            "source_id": str(self.journal_id),
+                            "label": "你的日記 · today",
+                            "excerpt": "我們約好以後每個一百天都要慶祝一下。",
+                        }
+                    ],
+                },
+                {
+                    "proposed_title": "每週留一次感恩分享",
+                    "proposed_notes": "把謝謝彼此的話，固定留在一週的一個晚上。",
+                    "dedupe_key": "每週留一次感恩分享",
+                    "evidence": [
+                        {
+                            "source_kind": "appreciation",
+                            "source_id": str(self.appreciation_id),
+                            "label": "感恩 · today",
+                            "excerpt": "謝謝你每天早上幫我準備咖啡。",
+                        }
+                    ],
+                },
+                {
+                    "proposed_title": "一起存旅行基金",
+                    "proposed_notes": "把想去的地方變成更具體的共同計畫。",
+                    "dedupe_key": "一起存旅行基金",
+                    "evidence": [
+                        {
+                            "source_kind": "card",
+                            "source_id": str(self.card_session_id),
+                            "label": "共同卡片 · 未來節奏",
+                            "excerpt": "我想一起存一筆旅行基金，讓計畫更有形狀。",
+                        }
+                    ],
+                },
+            ]
+
+        love_map.generate_shared_future_suggestions = fake_generate_shared_future_suggestions
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate")
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual([item["proposed_title"] for item in payload], ["一起存旅行基金"])
+
+            with Session(self.engine) as session:
+                pending_rows = session.exec(
+                    select(RelationshipKnowledgeSuggestion).where(
+                        RelationshipKnowledgeSuggestion.section == "shared_future",
+                        RelationshipKnowledgeSuggestion.status == "pending",
+                    )
+                ).all()
+                self.assertEqual(len(pending_rows), 1)
+                self.assertEqual(pending_rows[0].proposed_title, "一起存旅行基金")
+        finally:
+            love_map.generate_shared_future_suggestions = original
+
+    def test_generate_filters_near_duplicate_titles_within_same_generation_batch(self) -> None:
+        self.current_user_id = self.alice_id
+        original = love_map.generate_shared_future_suggestions
+
+        async def fake_generate_shared_future_suggestions(*, evidence_catalog, existing_titles):
+            return [
+                {
+                    "proposed_title": "每百天慶祝一次",
+                    "proposed_notes": "把重要的關係節點留成固定的小小慶祝。",
+                    "dedupe_key": "每百天慶祝一次",
+                    "evidence": [
+                        {
+                            "source_kind": "journal",
+                            "source_id": str(self.journal_id),
+                            "label": "你的日記 · today",
+                            "excerpt": "我們約好以後每個一百天都要慶祝一下。",
+                        }
+                    ],
+                },
+                {
+                    "proposed_title": "每一百天留一個小慶祝",
+                    "proposed_notes": "讓一百天一次的紀念，變成會一起回來看的儀式。",
+                    "dedupe_key": "每一百天留一個小慶祝",
+                    "evidence": [
+                        {
+                            "source_kind": "card",
+                            "source_id": str(self.card_session_id),
+                            "label": "共同卡片 · 未來節奏",
+                            "excerpt": "我想一起把每個一百天都變成小小慶祝。",
+                        }
+                    ],
+                },
+                {
+                    "proposed_title": "一起存旅行基金",
+                    "proposed_notes": "把想去的地方變成更具體的共同計畫。",
+                    "dedupe_key": "一起存旅行基金",
+                    "evidence": [
+                        {
+                            "source_kind": "card",
+                            "source_id": str(self.card_session_id),
+                            "label": "共同卡片 · 未來節奏",
+                            "excerpt": "我想一起存一筆旅行基金，讓計畫更有形狀。",
+                        }
+                    ],
+                },
+            ]
+
+        love_map.generate_shared_future_suggestions = fake_generate_shared_future_suggestions
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate")
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(
+                [item["proposed_title"] for item in payload],
+                ["每百天慶祝一次", "一起存旅行基金"],
+            )
+        finally:
+            love_map.generate_shared_future_suggestions = original
+
     def test_accept_and_dismiss_are_owner_scoped_and_pending_queue_is_personal_only(self) -> None:
         with Session(self.engine) as session:
             accept_row = RelationshipKnowledgeSuggestion(

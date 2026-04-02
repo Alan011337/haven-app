@@ -94,6 +94,7 @@ class RelationshipKnowledgeSuggestionPublic(BaseModel):
     evidence: list[RelationshipKnowledgeSuggestionEvidencePublic] = Field(default_factory=list)
     created_at: str
     reviewed_at: str | None = None
+    target_wishlist_item_id: str | None = None
     accepted_wishlist_item_id: str | None = None
 
 

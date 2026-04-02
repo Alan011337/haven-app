@@ -1,11 +1,20 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
 const MOCK_API_HEADERS = {
-  'access-control-allow-origin': 'http://127.0.0.1:3000',
   'access-control-allow-credentials': 'true',
   'access-control-allow-headers': '*',
   'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+  'access-control-allow-private-network': 'true',
+  vary: 'Origin',
 };
+
+function resolveMockApiHeaders(route: Route) {
+  const requestOrigin = route.request().headers().origin?.trim();
+  return {
+    ...MOCK_API_HEADERS,
+    'access-control-allow-origin': requestOrigin || 'http://localhost:3000',
+  };
+}
 
 function apiSuccess(data: unknown, requestId = 'love-map-v1-e2e-req') {
   return {
@@ -19,20 +28,30 @@ async function fulfillJson(route: Route, data: unknown, status = 200) {
   await route.fulfill({
     status,
     contentType: 'application/json',
-    headers: MOCK_API_HEADERS,
+    headers: resolveMockApiHeaders(route),
     body: JSON.stringify(apiSuccess(data)),
   });
 }
 
 async function mockLoveMapApi(page: Page) {
+  await page.context().addCookies([
+    { name: 'access_token', value: 'love-map-mock-token', url: 'http://127.0.0.1:3000' },
+    { name: 'access_token', value: 'love-map-mock-token', url: 'http://localhost:8000' },
+  ]);
+
   const now = Date.now();
   const baselinePayloads: Array<Record<string, unknown>> = [];
   const goalPayloads: Array<Record<string, unknown>> = [];
   const notePayloads: Array<Record<string, unknown>> = [];
   const wishlistPayloads: Array<Record<string, unknown>> = [];
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
+  const generatedRefinementCalls: string[] = [];
+  const generatedCadenceRefinementCalls: string[] = [];
+  const generatedRefinementCallCounts: Record<string, number> = {};
   const acceptedSuggestionIds: string[] = [];
   const dismissedSuggestionIds: string[] = [];
+  const acceptedRefinementIds: string[] = [];
+  const dismissedRefinementIds: string[] = [];
 
   const system = {
     has_partner: true,
@@ -146,12 +165,19 @@ async function mockLoveMapApi(page: Page) {
         created_at: new Date(now - 28 * 60 * 60 * 1000).toISOString(),
         added_by_me: false,
       },
+      {
+        id: 'wish-3',
+        title: '建立我們的衝突後修復儀式',
+        notes: '希望每次明顯爭執後，都能慢慢回到同一邊。',
+        created_at: new Date(now - 26 * 60 * 60 * 1000).toISOString(),
+        added_by_me: true,
+      },
     ],
     stats: {
       filled_note_layers: 2,
       baseline_ready_mine: true,
       baseline_ready_partner: true,
-      wishlist_count: 2,
+      wishlist_count: 3,
       last_activity_at: new Date(now - 8 * 60 * 60 * 1000).toISOString(),
     },
   };
@@ -204,20 +230,49 @@ async function mockLoveMapApi(page: Page) {
     }>;
     created_at: string;
     reviewed_at: string | null;
+    target_wishlist_item_id: string | null;
     accepted_wishlist_item_id: string | null;
   }> = [];
 
-  await page.route('**/api/**', async (route) => {
+  let pendingRefinements: Array<{
+    id: string;
+    section: string;
+    status: string;
+    generator_version: string;
+    proposed_title: string;
+    proposed_notes: string;
+    evidence: Array<{
+      source_kind: string;
+      source_id: string;
+      label: string;
+      excerpt: string;
+    }>;
+    created_at: string;
+    reviewed_at: string | null;
+    target_wishlist_item_id: string | null;
+    accepted_wishlist_item_id: string | null;
+  }> = [];
+
+  const apiHandler = async (route: Route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
     const path = url.pathname;
+    const normalizedPath = path.replace(/\/+$/, '') || '/';
 
     if (method === 'OPTIONS') {
-      await route.fulfill({ status: 204, headers: MOCK_API_HEADERS });
+      await route.fulfill({ status: 204, headers: resolveMockApiHeaders(route) });
       return;
     }
 
-    if (path.endsWith('/users/me') && method === 'GET') {
+    if (path.includes('/auth/token') && method === 'POST') {
+      await fulfillJson(route, {
+        access_token: 'love-map-mock-token',
+        token_type: 'bearer',
+      });
+      return;
+    }
+
+    if (path.includes('/users/me') && method === 'GET') {
       await fulfillJson(route, {
         id: 'me',
         email: 'alice@example.com',
@@ -237,6 +292,11 @@ async function mockLoveMapApi(page: Page) {
 
     if (path.endsWith('/love-map/suggestions/shared-future') && method === 'GET') {
       await fulfillJson(route, pendingSuggestions);
+      return;
+    }
+
+    if (path.endsWith('/love-map/suggestions/shared-future/refinements') && method === 'GET') {
+      await fulfillJson(route, pendingRefinements);
       return;
     }
 
@@ -288,7 +348,7 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
-    if (path.endsWith('/blueprint') && method === 'POST') {
+    if (normalizedPath.endsWith('/blueprint') && method === 'POST') {
       const payload = route.request().postDataJSON() as { title: string; notes: string };
       wishlistPayloads.push(payload);
       const nextWish = {
@@ -307,102 +367,292 @@ async function mockLoveMapApi(page: Page) {
 
     if (path.endsWith('/love-map/suggestions/shared-future/generate') && method === 'POST') {
       generatedSuggestionCalls.push({});
-      pendingSuggestions = [
-        {
-          id: 'suggestion-1',
-          section: 'shared_future',
-          status: 'pending',
-          generator_version: 'shared_future_v1',
-          proposed_title: '每一百天留一個小慶祝',
-          proposed_notes: '把重要的關係節點變成固定會一起回來看的儀式。',
-          evidence: [
-            {
-              source_kind: 'journal',
-              source_id: 'journal-source-1',
-              label: '你的日記 · 2026-03-29',
-              excerpt: '我們約好以後每個一百天都要慶祝一下。',
-            },
-            {
-              source_kind: 'card',
-              source_id: 'session-source-1',
-              label: '共同卡片 · 今天能量',
-              excerpt: '我想一起把每個一百天都變成小小慶祝。',
-            },
-          ],
-          created_at: new Date().toISOString(),
-          reviewed_at: null,
-          accepted_wishlist_item_id: null,
-        },
-        {
-          id: 'suggestion-2',
-          section: 'shared_future',
-          status: 'pending',
-          generator_version: 'shared_future_v1',
-          proposed_title: '一起存旅行基金',
-          proposed_notes: '把想去的地方變成更具體的共同計畫。',
-          evidence: [
-            {
-              source_kind: 'card',
-              source_id: 'session-source-2',
-              label: '共同卡片 · 今天能量',
-              excerpt: '我想一起存一筆旅行基金，讓計畫更有形狀。',
-            },
-            {
-              source_kind: 'appreciation',
-              source_id: 'appreciation-source-1',
-              label: '感恩 · 2026-03-30',
-              excerpt: '謝謝你每天早上幫我準備咖啡。',
-            },
-          ],
-          created_at: new Date().toISOString(),
-          reviewed_at: null,
-          accepted_wishlist_item_id: null,
-        },
-      ];
+      if (generatedSuggestionCalls.length === 1) {
+        pendingSuggestions = [
+          {
+            id: 'suggestion-1',
+            section: 'shared_future',
+            status: 'pending',
+            generator_version: 'shared_future_v1',
+            proposed_title: '每一百天留一個小慶祝',
+            proposed_notes: '把重要的關係節點變成固定會一起回來看的儀式。',
+            evidence: [
+              {
+                source_kind: 'journal',
+                source_id: 'journal-source-1',
+                label: '你的日記 · 2026-03-29',
+                excerpt: '我們約好以後每個一百天都要慶祝一下。',
+              },
+              {
+                source_kind: 'card',
+                source_id: 'session-source-1',
+                label: '共同卡片 · 今天能量',
+                excerpt: '我想一起把每個一百天都變成小小慶祝。',
+              },
+            ],
+            created_at: new Date().toISOString(),
+            reviewed_at: null,
+            target_wishlist_item_id: null,
+            accepted_wishlist_item_id: null,
+          },
+          {
+            id: 'suggestion-2',
+            section: 'shared_future',
+            status: 'pending',
+            generator_version: 'shared_future_v1',
+            proposed_title: '一起存旅行基金',
+            proposed_notes: '把想去的地方變成更具體的共同計畫。',
+            evidence: [
+              {
+                source_kind: 'card',
+                source_id: 'session-source-2',
+                label: '共同卡片 · 今天能量',
+                excerpt: '我想一起存一筆旅行基金，讓計畫更有形狀。',
+              },
+              {
+                source_kind: 'appreciation',
+                source_id: 'appreciation-source-1',
+                label: '感恩 · 2026-03-30',
+                excerpt: '謝謝你每天早上幫我準備咖啡。',
+              },
+            ],
+            created_at: new Date().toISOString(),
+            reviewed_at: null,
+            target_wishlist_item_id: null,
+            accepted_wishlist_item_id: null,
+          },
+        ];
+      } else {
+        pendingSuggestions = [];
+      }
       await fulfillJson(route, pendingSuggestions);
+      return;
+    }
+
+    if (path.includes('/love-map/suggestions/shared-future/refinements/') && path.endsWith('/generate') && method === 'POST') {
+      const wishlistItemId = path.split('/').at(-2) ?? '';
+      generatedRefinementCalls.push(wishlistItemId);
+      generatedRefinementCallCounts[wishlistItemId] = (generatedRefinementCallCounts[wishlistItemId] ?? 0) + 1;
+      const targetItem = system.wishlist_items.find((item) => item.id === wishlistItemId);
+      if (!targetItem) {
+        await fulfillJson(route, [], 404);
+        return;
+      }
+      if (pendingRefinements.some((item) => item.target_wishlist_item_id === wishlistItemId)) {
+        await fulfillJson(
+          route,
+          pendingRefinements.filter((item) => item.target_wishlist_item_id === wishlistItemId),
+        );
+        return;
+      }
+      if (wishlistItemId === 'wish-2' && generatedRefinementCallCounts[wishlistItemId] > 1) {
+        await fulfillJson(route, []);
+        return;
+      }
+
+      const nextSuggestion =
+        wishlistItemId === 'wish-2'
+          ? {
+              id: 'refinement-kyoto',
+              section: 'shared_future_refinement',
+              status: 'pending',
+              generator_version: 'shared_future_refinement_next_step_v1',
+              proposed_title: '',
+              proposed_notes: '先一起挑一個想看的楓葉週，再把機票提醒設進行事曆。',
+              evidence: [
+                {
+                  source_kind: 'shared_future_item',
+                  source_id: 'wish-2',
+                  label: '目前的 Shared Future',
+                  excerpt: '一起去京都看秋天｜想慢慢走巷子和神社。',
+                },
+              ],
+              created_at: new Date().toISOString(),
+              reviewed_at: null,
+              target_wishlist_item_id: 'wish-2',
+              accepted_wishlist_item_id: null,
+            }
+          : {
+              id: 'refinement-monthly',
+              section: 'shared_future_refinement',
+              status: 'pending',
+              generator_version: 'shared_future_refinement_next_step_v1',
+              proposed_title: '',
+              proposed_notes: '先把每月第二個週五晚上固定留給彼此。',
+              evidence: [
+                {
+                  source_kind: 'shared_future_item',
+                  source_id: 'wish-1',
+                  label: '目前的 Shared Future',
+                  excerpt: '每個月留一晚只屬於我們｜先把那一晚留給散步和晚餐。',
+                },
+              ],
+              created_at: new Date().toISOString(),
+              reviewed_at: null,
+              target_wishlist_item_id: 'wish-1',
+              accepted_wishlist_item_id: null,
+            };
+      pendingRefinements = [...pendingRefinements, nextSuggestion];
+      await fulfillJson(route, [nextSuggestion]);
+      return;
+    }
+
+    if (path.includes('/love-map/suggestions/shared-future/refinements/') && path.endsWith('/generate-cadence') && method === 'POST') {
+      const wishlistItemId = path.split('/').at(-2) ?? '';
+      generatedCadenceRefinementCalls.push(wishlistItemId);
+      generatedRefinementCallCounts[`cadence:${wishlistItemId}`] = (generatedRefinementCallCounts[`cadence:${wishlistItemId}`] ?? 0) + 1;
+      const targetItem = system.wishlist_items.find((item) => item.id === wishlistItemId);
+      if (!targetItem) {
+        await fulfillJson(route, [], 404);
+        return;
+      }
+      if (pendingRefinements.some((item) => item.target_wishlist_item_id === wishlistItemId)) {
+        await fulfillJson(
+          route,
+          pendingRefinements.filter((item) => item.target_wishlist_item_id === wishlistItemId),
+        );
+        return;
+      }
+      if (wishlistItemId === 'wish-2') {
+        await fulfillJson(route, []);
+        return;
+      }
+      if (wishlistItemId === 'wish-1' && generatedRefinementCallCounts[`cadence:${wishlistItemId}`] > 1) {
+        await fulfillJson(route, []);
+        return;
+      }
+
+      const nextSuggestion =
+        wishlistItemId === 'wish-3'
+          ? {
+              id: 'refinement-repair-cadence',
+              section: 'shared_future_refinement',
+              status: 'pending',
+              generator_version: 'shared_future_refinement_cadence_v1',
+              proposed_title: '',
+              proposed_notes: '每次明顯爭執後 24 小時內安排一次短暫復盤。',
+              evidence: [
+                {
+                  source_kind: 'shared_future_item',
+                  source_id: 'wish-3',
+                  label: '目前的 Shared Future',
+                  excerpt: '建立我們的衝突後修復儀式｜希望每次明顯爭執後，都能慢慢回到同一邊。',
+                },
+              ],
+              created_at: new Date().toISOString(),
+              reviewed_at: null,
+              target_wishlist_item_id: 'wish-3',
+              accepted_wishlist_item_id: null,
+            }
+          : {
+              id: 'refinement-monthly-cadence',
+              section: 'shared_future_refinement',
+              status: 'pending',
+              generator_version: 'shared_future_refinement_cadence_v1',
+              proposed_title: '',
+              proposed_notes: '每月第二個週五晚上留給彼此。',
+              evidence: [
+                {
+                  source_kind: 'shared_future_item',
+                  source_id: 'wish-1',
+                  label: '目前的 Shared Future',
+                  excerpt: '每個月留一晚只屬於我們｜先把那一晚留給散步和晚餐。',
+                },
+              ],
+              created_at: new Date().toISOString(),
+              reviewed_at: null,
+              target_wishlist_item_id: 'wish-1',
+              accepted_wishlist_item_id: null,
+            };
+      pendingRefinements = [...pendingRefinements, nextSuggestion];
+      await fulfillJson(route, [nextSuggestion]);
       return;
     }
 
     if (path.includes('/love-map/suggestions/') && path.endsWith('/dismiss') && method === 'POST') {
       const suggestionId = path.split('/').at(-2) ?? '';
-      dismissedSuggestionIds.push(suggestionId);
-      pendingSuggestions = pendingSuggestions.filter((item) => item.id !== suggestionId);
+      const suggestion = pendingSuggestions.find((item) => item.id === suggestionId);
+      if (suggestion) {
+        dismissedSuggestionIds.push(suggestionId);
+        pendingSuggestions = pendingSuggestions.filter((item) => item.id !== suggestionId);
+        await fulfillJson(route, {
+          ...suggestion,
+          status: 'dismissed',
+          reviewed_at: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const refinement = pendingRefinements.find((item) => item.id === suggestionId);
+      dismissedRefinementIds.push(suggestionId);
+      pendingRefinements = pendingRefinements.filter((item) => item.id !== suggestionId);
       await fulfillJson(route, {
-        id: suggestionId,
-        section: 'shared_future',
+        ...(refinement ?? {
+          id: suggestionId,
+          section: 'shared_future_refinement',
+          status: 'dismissed',
+          generator_version: 'shared_future_refinement_next_step_v1',
+          proposed_title: '',
+          proposed_notes: '',
+          evidence: [],
+          target_wishlist_item_id: null,
+          accepted_wishlist_item_id: null,
+        }),
         status: 'dismissed',
-        generator_version: 'shared_future_v1',
-        proposed_title: 'dismissed',
-        proposed_notes: '',
-        evidence: [],
-        created_at: new Date().toISOString(),
         reviewed_at: new Date().toISOString(),
-        accepted_wishlist_item_id: null,
       });
       return;
     }
 
     if (path.includes('/love-map/suggestions/') && path.endsWith('/accept') && method === 'POST') {
       const suggestionId = path.split('/').at(-2) ?? '';
-      acceptedSuggestionIds.push(suggestionId);
       const acceptedSuggestion = pendingSuggestions.find((item) => item.id === suggestionId);
-      pendingSuggestions = pendingSuggestions.filter((item) => item.id !== suggestionId);
-      const nextWish = {
-        id: `wish-${system.wishlist_items.length + 1}`,
-        title: acceptedSuggestion?.proposed_title ?? 'Accepted suggestion',
-        notes: acceptedSuggestion?.proposed_notes ?? '',
-        created_at: new Date().toISOString(),
-        added_by_me: true,
-      };
-      system.wishlist_items = [nextWish, ...system.wishlist_items];
-      system.stats.wishlist_count = system.wishlist_items.length;
-      system.stats.last_activity_at = nextWish.created_at;
-      await fulfillJson(route, nextWish);
+      if (acceptedSuggestion) {
+        acceptedSuggestionIds.push(suggestionId);
+        pendingSuggestions = pendingSuggestions.filter((item) => item.id !== suggestionId);
+        const nextWish = {
+          id: `wish-${system.wishlist_items.length + 1}`,
+          title: acceptedSuggestion.proposed_title,
+          notes: acceptedSuggestion.proposed_notes,
+          created_at: new Date().toISOString(),
+          added_by_me: true,
+        };
+        system.wishlist_items = [nextWish, ...system.wishlist_items];
+        system.stats.wishlist_count = system.wishlist_items.length;
+        system.stats.last_activity_at = nextWish.created_at;
+        await fulfillJson(route, nextWish);
+        return;
+      }
+
+      const acceptedRefinement = pendingRefinements.find((item) => item.id === suggestionId);
+      acceptedRefinementIds.push(suggestionId);
+      pendingRefinements = pendingRefinements.filter((item) => item.id !== suggestionId);
+      const targetId = acceptedRefinement?.target_wishlist_item_id;
+      const refinementLine = acceptedRefinement?.proposed_notes
+        ? `${
+            acceptedRefinement.generator_version === 'shared_future_refinement_cadence_v1' ? '節奏' : '下一步'
+          }：${acceptedRefinement.proposed_notes}`
+        : '';
+      if (targetId && refinementLine) {
+        system.wishlist_items = system.wishlist_items.map((item) =>
+          item.id !== targetId || item.notes.includes(refinementLine)
+            ? item
+            : {
+                ...item,
+                notes: item.notes ? `${item.notes}\n\n${refinementLine}` : refinementLine,
+              },
+        );
+      }
+      const updatedTarget = system.wishlist_items.find((item) => item.id === targetId);
+      system.stats.last_activity_at = new Date().toISOString();
+      await fulfillJson(route, updatedTarget ?? {});
       return;
     }
 
     await fulfillJson(route, {});
-  });
+  };
+
+  await page.route('**/api/**', apiHandler);
 
   return {
     baselinePayloads,
@@ -411,6 +661,10 @@ async function mockLoveMapApi(page: Page) {
     notePayloads,
     acceptedSuggestionIds,
     dismissedSuggestionIds,
+    generatedRefinementCalls,
+    generatedCadenceRefinementCalls,
+    acceptedRefinementIds,
+    dismissedRefinementIds,
     wishlistPayloads,
   };
 }
@@ -466,6 +720,52 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect(page.getByText('一年前的這幾天（3/21 – 3/27）：1 則日記、1 則共同卡片回憶、1 則感恩。')).toBeVisible();
     await expect(page.getByText('目前沒有待你審核的 Shared Future 建議。')).toBeVisible();
 
+    const intimacySelect = page.locator('#love-map-baseline-intimacy');
+    await intimacySelect.evaluate((node) => {
+      const select = node as HTMLSelectElement;
+      select.value = '5';
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(intimacySelect).toHaveValue('5');
+    await page.getByRole('button', { name: '保存 Relationship Pulse' }).click();
+    await expect.poll(() => apiState.baselinePayloads.length).toBe(1);
+    expect(apiState.baselinePayloads[0]).toEqual({
+      scores: {
+        intimacy: 5,
+        conflict: 3,
+        trust: 5,
+        communication: 4,
+        commitment: 5,
+      },
+    });
+
+    await page.getByRole('button', { name: '更多信任' }).click();
+    const saveGoalButton = page.getByRole('button', { name: '保存共同方向' });
+    await saveGoalButton.scrollIntoViewIfNeeded();
+    await saveGoalButton.click();
+    await expect.poll(() => apiState.goalPayloads.length).toBe(1);
+    expect(apiState.goalPayloads[0]).toEqual({ goal_slug: 'more_trust' });
+
+    const safeLayerNote = page.getByLabel('安全層 筆記');
+    await expect(safeLayerNote).toHaveValue('我知道我們最近需要更穩定的回來對話節奏。');
+    await page.getByRole('button', { name: '保存這一層' }).first().click();
+    await expect.poll(() => apiState.notePayloads.length).toBe(1);
+    expect(apiState.notePayloads[0]).toEqual({
+      layer: 'safe',
+      content: '我知道我們最近需要更穩定的回來對話節奏。',
+    });
+
+    await page.getByLabel('未來片段標題').fill('一起把週日早晨留給散步');
+    await page.getByLabel('補充（選填）').fill('想把那段時間變成固定的安靜儀式。');
+    await page.getByRole('button', { name: '放進共同藍圖' }).click();
+    await expect.poll(() => apiState.wishlistPayloads.length).toBe(1);
+    expect(apiState.wishlistPayloads[0]).toEqual({
+      title: '一起把週日早晨留給散步',
+      notes: '想把那段時間變成固定的安靜儀式。',
+    });
+    await expect(page.getByText('一起把週日早晨留給散步')).toBeVisible();
+
     await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 建議' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
     await expect(page.getByText('每一百天留一個小慶祝')).toBeVisible();
@@ -480,41 +780,47 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
     await expect(page.getByText('一起存旅行基金')).toBeVisible();
 
-    await page.selectOption('#love-map-baseline-intimacy', '5');
-    await page.getByRole('button', { name: '保存 Relationship Pulse' }).click();
-    await expect.poll(() => apiState.baselinePayloads.length).toBe(1);
-    expect(apiState.baselinePayloads[0]).toEqual({
-      scores: {
-        intimacy: 5,
-        conflict: 3,
-        trust: 5,
-        communication: 4,
-        commitment: 5,
-      },
-    });
+    await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 建議' }).click();
+    await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(2);
+    await expect(page.getByText('目前沒有待你審核的 Shared Future 建議。')).toBeVisible();
+    await expect(page.getByText('每一百天留一個小慶祝')).not.toBeVisible();
 
-    await page.getByRole('button', { name: '更多信任' }).click();
-    await page.getByRole('button', { name: '保存共同方向' }).click();
-    await expect.poll(() => apiState.goalPayloads.length).toBe(1);
-    expect(apiState.goalPayloads[0]).toEqual({ goal_slug: 'more_trust' });
+    const kyotoCard = page.locator('[data-shared-future-item-id="wish-2"]');
+    await expect(kyotoCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' })).toHaveCount(0);
+    await kyotoCard.getByRole('button', { name: '讓 Haven 幫這個片段補下一步' }).click();
+    await expect.poll(() => apiState.generatedRefinementCalls.includes('wish-2')).toBe(true);
+    await expect(page.getByText('建議補上的下一步：先一起挑一個想看的楓葉週，再把機票提醒設進行事曆。')).toBeVisible();
+    await expect(page.getByText('只有你看得到；接受前不會改動這個 Shared Future 片段。')).toBeVisible();
 
-    await page.getByLabel('安全層 筆記').fill('我想讓 Haven 記得，我們最近最需要的是先慢下來再說話。');
-    await page.getByRole('button', { name: '保存這一層' }).first().click();
-    await expect.poll(() => apiState.notePayloads.length).toBe(1);
-    expect(apiState.notePayloads[0]).toEqual({
-      layer: 'safe',
-      content: '我想讓 Haven 記得，我們最近最需要的是先慢下來再說話。',
-    });
+    await page.getByRole('button', { name: '略過' }).last().click();
+    await expect.poll(() => apiState.dismissedRefinementIds.length).toBe(1);
+    await expect(page.getByText('建議補上的下一步：先一起挑一個想看的楓葉週，再把機票提醒設進行事曆。')).not.toBeVisible();
 
-    await page.getByLabel('未來片段標題').fill('一起把週日早晨留給散步');
-    await page.getByLabel('補充（選填）').fill('想把那段時間變成固定的安靜儀式。');
-    await page.getByRole('button', { name: '放進共同藍圖' }).click();
-    await expect.poll(() => apiState.wishlistPayloads.length).toBe(1);
-    expect(apiState.wishlistPayloads[0]).toEqual({
-      title: '一起把週日早晨留給散步',
-      notes: '想把那段時間變成固定的安靜儀式。',
-    });
-    await expect(page.getByText('一起把週日早晨留給散步')).toBeVisible();
+    await kyotoCard.getByRole('button', { name: '讓 Haven 幫這個片段補下一步' }).click();
+    await expect.poll(() => apiState.generatedRefinementCalls.filter((id) => id === 'wish-2').length).toBe(2);
+    await expect(page.getByText('建議補上的下一步：先一起挑一個想看的楓葉週，再把機票提醒設進行事曆。')).not.toBeVisible();
+
+    const monthlyCard = page.locator('[data-shared-future-item-id="wish-1"]');
+    await expect(monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' })).toBeVisible();
+    await monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' }).click();
+    await expect.poll(() => apiState.generatedCadenceRefinementCalls.includes('wish-1')).toBe(true);
+    await expect(page.getByText('建議補上的節奏：每月第二個週五晚上留給彼此。')).toBeVisible();
+    await page.getByRole('button', { name: '略過' }).last().click();
+    await expect.poll(() => apiState.dismissedRefinementIds.length).toBe(2);
+    await expect(page.getByText('建議補上的節奏：每月第二個週五晚上留給彼此。')).not.toBeVisible();
+
+    await monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' }).click();
+    await expect.poll(() => apiState.generatedCadenceRefinementCalls.filter((id) => id === 'wish-1').length).toBe(2);
+    await expect(page.getByText('建議補上的節奏：每月第二個週五晚上留給彼此。')).not.toBeVisible();
+
+    const repairCard = page.locator('[data-shared-future-item-id="wish-3"]');
+    await expect(repairCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' })).toBeVisible();
+    await repairCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' }).click();
+    await expect.poll(() => apiState.generatedCadenceRefinementCalls.includes('wish-3')).toBe(true);
+    await expect(page.getByText('建議補上的節奏：每次明顯爭執後 24 小時內安排一次短暫復盤。')).toBeVisible();
+    await page.getByRole('button', { name: '接受' }).last().click();
+    await expect.poll(() => apiState.acceptedRefinementIds.length).toBe(1);
+    await expect(page.getByText('節奏：每次明顯爭執後 24 小時內安排一次短暫復盤。')).toBeVisible();
   });
 
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {

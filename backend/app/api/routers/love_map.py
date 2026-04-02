@@ -1,6 +1,7 @@
 # Module D1: Love Map — layered cards and notes.
 
 import logging
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -39,8 +40,14 @@ from app.schemas.love_map import (
     RelationshipKnowledgeSuggestionPublic,
 )
 from app.services.ai import (
+    generate_shared_future_refinement_cadence,
+    generate_shared_future_refinement_next_step,
     generate_shared_future_suggestions,
+    is_shared_future_refinement_near_duplicate,
+    is_shared_future_title_near_duplicate,
     normalize_shared_future_suggestion_key,
+    shared_future_similarity_ratio,
+    supports_shared_future_cadence_refinement,
 )
 from app.services.ai_errors import HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError
 from app.services.memory_archive import get_relationship_story_slice
@@ -49,10 +56,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["love-map"])
 
 SUGGESTION_SECTION_SHARED_FUTURE = "shared_future"
+SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT = "shared_future_refinement"
 SUGGESTION_STATUS_PENDING = "pending"
 SUGGESTION_STATUS_ACCEPTED = "accepted"
 SUGGESTION_STATUS_DISMISSED = "dismissed"
 SUGGESTION_GENERATOR_SHARED_FUTURE_V1 = "shared_future_v1"
+SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1 = "shared_future_refinement_next_step_v1"
+SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1 = "shared_future_refinement_cadence_v1"
+REFINEMENT_DISMISS_COOLDOWN = timedelta(hours=24)
 
 
 def _depth_to_layer(d: int) -> str:
@@ -192,6 +203,7 @@ def _to_suggestion_public(row: RelationshipKnowledgeSuggestion) -> RelationshipK
         ],
         created_at=row.created_at.isoformat() + "Z",
         reviewed_at=row.reviewed_at.isoformat() + "Z" if row.reviewed_at else None,
+        target_wishlist_item_id=str(row.target_wishlist_item_id) if row.target_wishlist_item_id else None,
         accepted_wishlist_item_id=str(row.accepted_wishlist_item_id) if row.accepted_wishlist_item_id else None,
     )
 
@@ -224,12 +236,125 @@ def _load_shared_future_pending_suggestions(
     ).all()
 
 
+def _load_shared_future_pending_refinements(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+) -> list[RelationshipKnowledgeSuggestion]:
+    return session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
+        ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
+    ).all()
+
+
+def _load_couple_wishlist_item_or_404(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+    wishlist_item_id: UUID,
+) -> WishlistItem:
+    row = session.get(WishlistItem, wishlist_item_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這個 Shared Future 片段")
+
+    uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
+    row_uid1, row_uid2 = _pair_scope_ids(row.user_id, row.partner_id)
+    if (row_uid1, row_uid2) != (uid1, uid2):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這個 Shared Future 片段")
+    return row
+
+
+def _normalize_shared_future_refinement_key(
+    *,
+    wishlist_item_id: UUID,
+    proposed_notes: str,
+    refinement_kind: str,
+) -> str:
+    normalized_notes = " ".join((proposed_notes or "").strip().lower().split())
+    return f"wishlist:{wishlist_item_id}:{refinement_kind}:{normalized_notes}"
+
+
+def _extract_shared_future_prefixed_lines(notes: str, *, prefix: str) -> list[str]:
+    lines: list[str] = []
+    for raw_line in (notes or "").splitlines():
+        stripped = raw_line.strip()
+        if not stripped.startswith(prefix):
+            continue
+        content = stripped.removeprefix(prefix).strip()
+        if content:
+            lines.append(content)
+    return lines
+
+
+def _extract_shared_future_next_step_lines(notes: str) -> list[str]:
+    return _extract_shared_future_prefixed_lines(notes, prefix="下一步：")
+
+
+def _extract_shared_future_cadence_lines(notes: str) -> list[str]:
+    return _extract_shared_future_prefixed_lines(notes, prefix="節奏：")
+
+
+def _shared_future_refinement_line_prefix(generator_version: str) -> str:
+    if generator_version == SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1:
+        return "節奏："
+    return "下一步："
+
+
+def _log_shared_future_near_duplicate_filtered(
+    *,
+    flow: str,
+    candidate_text: str,
+    matched_text: str,
+    matched_source: str,
+) -> None:
+    logger.info(
+        "shared_future_near_duplicate_filtered: flow=%s matched_source=%s similarity_ratio=%.3f candidate_text=%s matched_text=%s",
+        flow,
+        matched_source,
+        shared_future_similarity_ratio(candidate_text, matched_text),
+        candidate_text,
+        matched_text,
+    )
+
+
+def _find_shared_future_title_near_duplicate_match(
+    *,
+    candidate_text: str,
+    comparison_rows: list[tuple[str, str]],
+) -> tuple[str, str] | None:
+    for existing_text, matched_source in comparison_rows:
+        if not existing_text.strip():
+            continue
+        if is_shared_future_title_near_duplicate(candidate_text, existing_text):
+            return existing_text, matched_source
+    return None
+
+
+def _find_shared_future_refinement_near_duplicate_match(
+    *,
+    candidate_text: str,
+    comparison_rows: list[tuple[str, str]],
+) -> tuple[str, str] | None:
+    for existing_text, matched_source in comparison_rows:
+        if not existing_text.strip():
+            continue
+        if is_shared_future_refinement_near_duplicate(candidate_text, existing_text):
+            return existing_text, matched_source
+    return None
+
+
 def _build_shared_future_generation_sources(
     *,
     session,
     current_user: CurrentUser,
     partner_id: UUID,
-) -> tuple[list[dict[str, str]], list[str], set[str]]:
+) -> tuple[list[dict[str, str]], list[str], set[str], list[str]]:
     evidence_catalog: list[dict[str, str]] = []
 
     journal_rows = session.exec(
@@ -309,18 +434,24 @@ def _build_shared_future_generation_sources(
         for row in _pair_wishlist_rows(session=session, user_id=current_user.id, partner_id=partner_id)
         if row.title.strip()
     ]
+    suggestion_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE,
+        )
+    ).all()
     blocked_dedupe_keys = {
         row.dedupe_key
-        for row in session.exec(
-            select(RelationshipKnowledgeSuggestion).where(
-                RelationshipKnowledgeSuggestion.user_id == current_user.id,
-                RelationshipKnowledgeSuggestion.partner_id == partner_id,
-                RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE,
-            )
-        ).all()
+        for row in suggestion_rows
         if row.dedupe_key.strip()
     }
-    return evidence_catalog, existing_wishlist_titles, blocked_dedupe_keys
+    handled_titles = [
+        row.proposed_title
+        for row in suggestion_rows
+        if row.proposed_title.strip()
+    ]
+    return evidence_catalog, existing_wishlist_titles, blocked_dedupe_keys, handled_titles
 
 
 @router.get("/cards", response_model=LoveMapCardsResponse)
@@ -519,7 +650,7 @@ async def generate_shared_future_review_suggestions(
     if pending_rows:
         return [_to_suggestion_public(row) for row in pending_rows]
 
-    evidence_catalog, existing_titles, blocked_dedupe_keys = _build_shared_future_generation_sources(
+    evidence_catalog, existing_titles, blocked_dedupe_keys, handled_titles = _build_shared_future_generation_sources(
         session=session,
         current_user=current_user,
         partner_id=partner_id,
@@ -540,9 +671,29 @@ async def generate_shared_future_review_suggestions(
         ) from exc
 
     created_rows: list[RelationshipKnowledgeSuggestion] = []
+    comparison_rows: list[tuple[str, str]] = [
+        *((title, "wishlist_title") for title in existing_titles if title.strip()),
+        *((title, "handled_suggestion") for title in handled_titles if title.strip()),
+    ]
     for generated in generated_rows:
-        dedupe_key = normalize_shared_future_suggestion_key(str(generated.get("dedupe_key") or generated.get("proposed_title") or ""))
-        if not dedupe_key or dedupe_key in blocked_dedupe_keys:
+        title = _truncate_preview(str(generated.get("proposed_title") or ""), 500)
+        dedupe_key = normalize_shared_future_suggestion_key(
+            str(generated.get("dedupe_key") or title or "")
+        )
+        if not title or not dedupe_key or dedupe_key in blocked_dedupe_keys:
+            continue
+        near_duplicate_match = _find_shared_future_title_near_duplicate_match(
+            candidate_text=title,
+            comparison_rows=comparison_rows,
+        )
+        if near_duplicate_match:
+            matched_text, matched_source = near_duplicate_match
+            _log_shared_future_near_duplicate_filtered(
+                flow=SUGGESTION_SECTION_SHARED_FUTURE,
+                candidate_text=title,
+                matched_text=matched_text,
+                matched_source=matched_source,
+            )
             continue
         row = RelationshipKnowledgeSuggestion(
             user_id=current_user.id,
@@ -550,7 +701,7 @@ async def generate_shared_future_review_suggestions(
             section=SUGGESTION_SECTION_SHARED_FUTURE,
             status=SUGGESTION_STATUS_PENDING,
             generator_version=SUGGESTION_GENERATOR_SHARED_FUTURE_V1,
-            proposed_title=_truncate_preview(str(generated.get("proposed_title") or ""), 500),
+            proposed_title=title,
             proposed_notes=_truncate_preview(str(generated.get("proposed_notes") or ""), 2000),
             evidence_json=[
                 item
@@ -562,6 +713,7 @@ async def generate_shared_future_review_suggestions(
         session.add(row)
         created_rows.append(row)
         blocked_dedupe_keys.add(dedupe_key)
+        comparison_rows.append((title, "generated_sibling"))
         if len(created_rows) >= 2:
             break
 
@@ -575,6 +727,327 @@ async def generate_shared_future_review_suggestions(
     for row in created_rows:
         session.refresh(row)
     return [_to_suggestion_public(row) for row in created_rows]
+
+
+@router.get(
+    "/suggestions/shared-future/refinements",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+def list_shared_future_refinement_suggestions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        return []
+    rows = _load_shared_future_pending_refinements(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    return [_to_suggestion_public(row) for row in rows]
+
+
+@router.post(
+    "/suggestions/shared-future/refinements/{wishlist_item_id}/generate",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+async def generate_shared_future_refinement_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    wishlist_item_id: UUID,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    wishlist_row = _load_couple_wishlist_item_or_404(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+        wishlist_item_id=wishlist_item_id,
+    )
+
+    pending_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+        ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
+    ).all()
+    if pending_rows:
+        return [_to_suggestion_public(row) for row in pending_rows]
+
+    latest_dismissed_row = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_DISMISSED,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+            RelationshipKnowledgeSuggestion.generator_version
+            == SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1,
+        ).order_by(RelationshipKnowledgeSuggestion.reviewed_at.desc())
+    ).first()
+    if (
+        latest_dismissed_row
+        and latest_dismissed_row.reviewed_at
+        and latest_dismissed_row.reviewed_at >= utcnow() - REFINEMENT_DISMISS_COOLDOWN
+    ):
+        return []
+
+    refinement_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+        )
+    ).all()
+    blocked_dedupe_keys = {
+        row.dedupe_key
+        for row in refinement_rows
+        if row.dedupe_key.strip()
+    }
+    comparison_rows: list[tuple[str, str]] = [
+        *((line, "wishlist_next_step") for line in _extract_shared_future_next_step_lines(wishlist_row.notes)),
+        *(
+            (row.proposed_notes, "handled_refinement")
+            for row in refinement_rows
+            if row.proposed_notes.strip()
+            and row.generator_version == SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1
+        ),
+    ]
+
+    try:
+        generated = await generate_shared_future_refinement_next_step(
+            title=wishlist_row.title,
+            notes=wishlist_row.notes,
+            created_at=wishlist_row.created_at.isoformat() + "Z",
+        )
+    except (HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError) as exc:
+        logger.warning(
+            "shared_future_refinement_generate_failed: reason=%s",
+            getattr(exc, "reason", type(exc).__name__),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 建議暫時無法使用，請稍後再試。",
+        ) from exc
+
+    if not generated:
+        return []
+
+    proposed_notes = _truncate_preview(str(generated.get("proposed_notes") or ""), 240)
+    dedupe_key = _normalize_shared_future_refinement_key(
+        wishlist_item_id=wishlist_row.id,
+        proposed_notes=proposed_notes,
+        refinement_kind="next-step",
+    )
+    if not proposed_notes or dedupe_key in blocked_dedupe_keys:
+        return []
+    near_duplicate_match = _find_shared_future_refinement_near_duplicate_match(
+        candidate_text=proposed_notes,
+        comparison_rows=comparison_rows,
+    )
+    if near_duplicate_match:
+        matched_text, matched_source = near_duplicate_match
+        _log_shared_future_near_duplicate_filtered(
+            flow=SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            candidate_text=proposed_notes,
+            matched_text=matched_text,
+            matched_source=matched_source,
+        )
+        return []
+
+    excerpt_parts = [wishlist_row.title.strip()]
+    if wishlist_row.notes.strip():
+        excerpt_parts.append(wishlist_row.notes.strip())
+    row = RelationshipKnowledgeSuggestion(
+        user_id=current_user.id,
+        partner_id=partner_id,
+        section=SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+        status=SUGGESTION_STATUS_PENDING,
+        generator_version=SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1,
+        proposed_title="",
+        proposed_notes=proposed_notes,
+        evidence_json=[
+            {
+                "source_kind": "shared_future_item",
+                "source_id": str(wishlist_row.id),
+                "label": "目前的 Shared Future",
+                "excerpt": _truncate_preview("｜".join(excerpt_parts), 280),
+            }
+        ],
+        dedupe_key=dedupe_key,
+        target_wishlist_item_id=wishlist_row.id,
+    )
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Generate shared future refinement suggestion",
+        conflict_detail="儲存 refinement 建議時發生衝突，請稍後再試。",
+        failure_detail="儲存 refinement 建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return [_to_suggestion_public(row)]
+
+
+@router.post(
+    "/suggestions/shared-future/refinements/{wishlist_item_id}/generate-cadence",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+async def generate_shared_future_cadence_refinement_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    wishlist_item_id: UUID,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    wishlist_row = _load_couple_wishlist_item_or_404(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+        wishlist_item_id=wishlist_item_id,
+    )
+    if not supports_shared_future_cadence_refinement(wishlist_row.title, wishlist_row.notes):
+        return []
+
+    pending_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+        ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
+    ).all()
+    if pending_rows:
+        return [_to_suggestion_public(row) for row in pending_rows]
+
+    latest_dismissed_row = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_DISMISSED,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+            RelationshipKnowledgeSuggestion.generator_version
+            == SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1,
+        ).order_by(RelationshipKnowledgeSuggestion.reviewed_at.desc())
+    ).first()
+    if (
+        latest_dismissed_row
+        and latest_dismissed_row.reviewed_at
+        and latest_dismissed_row.reviewed_at >= utcnow() - REFINEMENT_DISMISS_COOLDOWN
+    ):
+        return []
+
+    refinement_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.target_wishlist_item_id == wishlist_item_id,
+        )
+    ).all()
+    blocked_dedupe_keys = {
+        row.dedupe_key
+        for row in refinement_rows
+        if row.dedupe_key.strip()
+    }
+    comparison_rows: list[tuple[str, str]] = [
+        *((line, "wishlist_cadence") for line in _extract_shared_future_cadence_lines(wishlist_row.notes)),
+        *((line, "wishlist_next_step") for line in _extract_shared_future_next_step_lines(wishlist_row.notes)),
+        *(
+            (row.proposed_notes, "handled_cadence")
+            for row in refinement_rows
+            if row.proposed_notes.strip()
+            and row.generator_version == SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1
+        ),
+    ]
+
+    try:
+        generated = await generate_shared_future_refinement_cadence(
+            title=wishlist_row.title,
+            notes=wishlist_row.notes,
+            created_at=wishlist_row.created_at.isoformat() + "Z",
+        )
+    except (HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError) as exc:
+        logger.warning(
+            "shared_future_refinement_cadence_generate_failed: reason=%s",
+            getattr(exc, "reason", type(exc).__name__),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 建議暫時無法使用，請稍後再試。",
+        ) from exc
+
+    if not generated:
+        return []
+
+    proposed_notes = _truncate_preview(str(generated.get("proposed_notes") or ""), 240)
+    dedupe_key = _normalize_shared_future_refinement_key(
+        wishlist_item_id=wishlist_row.id,
+        proposed_notes=proposed_notes,
+        refinement_kind="cadence",
+    )
+    if not proposed_notes or dedupe_key in blocked_dedupe_keys:
+        return []
+    near_duplicate_match = _find_shared_future_refinement_near_duplicate_match(
+        candidate_text=proposed_notes,
+        comparison_rows=comparison_rows,
+    )
+    if near_duplicate_match:
+        matched_text, matched_source = near_duplicate_match
+        _log_shared_future_near_duplicate_filtered(
+            flow=SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            candidate_text=proposed_notes,
+            matched_text=matched_text,
+            matched_source=matched_source,
+        )
+        return []
+
+    excerpt_parts = [wishlist_row.title.strip()]
+    if wishlist_row.notes.strip():
+        excerpt_parts.append(wishlist_row.notes.strip())
+    row = RelationshipKnowledgeSuggestion(
+        user_id=current_user.id,
+        partner_id=partner_id,
+        section=SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+        status=SUGGESTION_STATUS_PENDING,
+        generator_version=SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1,
+        proposed_title="",
+        proposed_notes=proposed_notes,
+        evidence_json=[
+            {
+                "source_kind": "shared_future_item",
+                "source_id": str(wishlist_row.id),
+                "label": "目前的 Shared Future",
+                "excerpt": _truncate_preview("｜".join(excerpt_parts), 280),
+            }
+        ],
+        dedupe_key=dedupe_key,
+        target_wishlist_item_id=wishlist_row.id,
+    )
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Generate shared future cadence refinement suggestion",
+        conflict_detail="儲存 cadence 建議時發生衝突，請稍後再試。",
+        failure_detail="儲存 cadence 建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return [_to_suggestion_public(row)]
 
 
 @router.post(
@@ -592,28 +1065,54 @@ def accept_relationship_knowledge_suggestion(
         current_user=current_user,
         suggestion_id=suggestion_id,
     )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_SHARED_FUTURE:
+    if row.status != SUGGESTION_STATUS_PENDING or row.section not in {
+        SUGGESTION_SECTION_SHARED_FUTURE,
+        SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+    }:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not active_partner_id or active_partner_id != row.partner_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
 
-    wishlist_row = WishlistItem(
-        user_id=current_user.id,
-        partner_id=row.partner_id,
-        title=row.proposed_title,
-        notes=row.proposed_notes,
-    )
-    session.add(wishlist_row)
-    commit_with_error_handling(
-        session,
-        logger=logger,
-        action="Accept shared future suggestion",
-        conflict_detail="接受建議時發生衝突，請稍後再試。",
-        failure_detail="接受建議失敗，請稍後再試。",
-    )
-    session.refresh(wishlist_row)
+    if row.section == SUGGESTION_SECTION_SHARED_FUTURE:
+        wishlist_row = WishlistItem(
+            user_id=current_user.id,
+            partner_id=row.partner_id,
+            title=row.proposed_title,
+            notes=row.proposed_notes,
+        )
+        session.add(wishlist_row)
+        commit_with_error_handling(
+            session,
+            logger=logger,
+            action="Accept shared future suggestion",
+            conflict_detail="接受建議時發生衝突，請稍後再試。",
+            failure_detail="接受建議失敗，請稍後再試。",
+        )
+        session.refresh(wishlist_row)
+    else:
+        if not row.target_wishlist_item_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+        wishlist_row = _load_couple_wishlist_item_or_404(
+            session=session,
+            current_user=current_user,
+            partner_id=active_partner_id,
+            wishlist_item_id=row.target_wishlist_item_id,
+        )
+        note_line = f"{_shared_future_refinement_line_prefix(row.generator_version)}{row.proposed_notes.strip()}"
+        existing_notes = wishlist_row.notes.strip()
+        if note_line not in existing_notes:
+            wishlist_row.notes = note_line if not existing_notes else f"{existing_notes}\n\n{note_line}"
+            session.add(wishlist_row)
+            commit_with_error_handling(
+                session,
+                logger=logger,
+                action="Accept shared future refinement suggestion",
+                conflict_detail="接受 refinement 建議時發生衝突，請稍後再試。",
+                failure_detail="接受 refinement 建議失敗，請稍後再試。",
+            )
+            session.refresh(wishlist_row)
 
     row.status = SUGGESTION_STATUS_ACCEPTED
     row.accepted_wishlist_item_id = wishlist_row.id
@@ -645,7 +1144,10 @@ def dismiss_relationship_knowledge_suggestion(
         current_user=current_user,
         suggestion_id=suggestion_id,
     )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_SHARED_FUTURE:
+    if row.status != SUGGESTION_STATUS_PENDING or row.section not in {
+        SUGGESTION_SECTION_SHARED_FUTURE,
+        SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+    }:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     row.status = SUGGESTION_STATUS_DISMISSED

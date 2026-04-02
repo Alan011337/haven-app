@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import Input, { Textarea } from '@/components/ui/Input';
 import {
   useLoveMapCards,
+  useLoveMapSharedFutureRefinements,
   useLoveMapSharedFutureSuggestions,
   useLoveMapSystem,
 } from '@/hooks/queries';
@@ -21,8 +22,11 @@ import {
   addBlueprintItem,
   createOrUpdateLoveMapNote,
   dismissLoveMapSharedFutureSuggestion,
+  generateLoveMapSharedFutureCadenceRefinement,
+  generateLoveMapSharedFutureRefinement,
   generateLoveMapSharedFutureSuggestions,
   type LoveMapCardSummary,
+  type RelationshipKnowledgeSuggestionPublic,
 } from '@/services/api-client';
 import {
   BASELINE_DIMENSIONS,
@@ -33,6 +37,7 @@ import LoveMapSkeleton from './LoveMapSkeleton';
 import {
   LoveMapFutureComposer,
   LoveMapPromptCard,
+  LoveMapRefinementSuggestionCard,
   LoveMapReflectionStudio,
   LoveMapSection,
   LoveMapSuggestedUpdateCard,
@@ -73,6 +78,8 @@ const GOAL_OPTIONS = [
   { value: 'more_trust', label: '更多信任', description: '把安全感和可依靠感慢慢養厚。' },
   { value: 'other', label: '其他', description: '先訂一個方向，之後再細化。' },
 ] as const;
+
+type SharedFutureRefinementKind = 'next_step' | 'cadence';
 
 const LAYER_META: Record<
   LoveMapLayer,
@@ -158,6 +165,44 @@ function getGoalLabel(goalSlug?: string | null) {
   return GOAL_OPTIONS.find((option) => option.value === goalSlug)?.label ?? '尚未設定';
 }
 
+function normalizeCadenceEligibilityText(value: string) {
+  return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function supportsCadenceRefinement(title: string, notes: string) {
+  const normalized = normalizeCadenceEligibilityText(`${title} ${notes}`);
+  if (!normalized) return false;
+
+  const recurrenceCues = [
+    '每個月',
+    '每月',
+    '每週',
+    '每周',
+    '每年',
+    '每百天',
+    '每天',
+    '每日',
+    '固定',
+    '定期',
+    '習慣',
+    '儀式',
+    '節奏',
+    '週末',
+    '周末',
+    '衝突後',
+    '爭執後',
+    '吵架後',
+    '摩擦後',
+    '修復',
+  ];
+
+  return recurrenceCues.some((cue) => normalized.includes(cue));
+}
+
+function getRefinementKind(generatorVersion: string): SharedFutureRefinementKind {
+  return generatorVersion === 'shared_future_refinement_cadence_v1' ? 'cadence' : 'next_step';
+}
+
 function scoreLabel(score?: number | null) {
   if (!score) return '未填寫';
   return `${score} / 5`;
@@ -171,12 +216,19 @@ export default function LoveMapPageContent() {
   const suggestionQuery = useLoveMapSharedFutureSuggestions({
     enabled: Boolean(systemQuery.data?.has_partner),
   });
+  const refinementQuery = useLoveMapSharedFutureRefinements({
+    enabled: Boolean(systemQuery.data?.has_partner),
+  });
 
   const [savingLayer, setSavingLayer] = useState<LoveMapLayer | null>(null);
   const [savingBaseline, setSavingBaseline] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingWishlist, setSavingWishlist] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [generatingRefinement, setGeneratingRefinement] = useState<{
+    itemId: string;
+    kind: SharedFutureRefinementKind;
+  } | null>(null);
   const [reviewingSuggestionId, setReviewingSuggestionId] = useState<string | null>(null);
   const [reviewingAction, setReviewingAction] = useState<'accept' | 'dismiss' | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<LoveMapLayer, string>>({
@@ -229,6 +281,7 @@ export default function LoveMapPageContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSystem() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapNotes() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.blueprint() }),
       queryClient.invalidateQueries({ queryKey: ['settings', 'relationship'] }),
     ]);
@@ -318,13 +371,52 @@ export default function LoveMapPageContent() {
     }
   };
 
-  const handleAcceptSuggestion = async (suggestionId: string) => {
-    setReviewingSuggestionId(suggestionId);
+  const handleGenerateRefinement = async (
+    wishlistItemId: string,
+    kind: SharedFutureRefinementKind,
+  ) => {
+    setGeneratingRefinement({ itemId: wishlistItemId, kind });
+    try {
+      const suggestions =
+        kind === 'cadence'
+          ? await generateLoveMapSharedFutureCadenceRefinement(wishlistItemId)
+          : await generateLoveMapSharedFutureRefinement(wishlistItemId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() });
+      if (suggestions.length === 0) {
+        showToast(
+          kind === 'cadence' ? '目前還沒有足夠清楚的節奏建議。' : '目前還沒有足夠清楚的下一步建議。',
+          'info',
+        );
+        return;
+      }
+      showToast(
+        kind === 'cadence'
+          ? 'Haven 已替這個未來片段補上一個可審核的節奏。'
+          : 'Haven 已替這個未來片段補上一個可審核的下一步。',
+        'success',
+      );
+    } catch (error) {
+      logClientError('love-map-shared-future-refinement-generate-failed', error);
+      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+    } finally {
+      setGeneratingRefinement(null);
+    }
+  };
+
+  const handleAcceptSuggestion = async (suggestion: RelationshipKnowledgeSuggestionPublic) => {
+    setReviewingSuggestionId(suggestion.id);
     setReviewingAction('accept');
     try {
-      await acceptLoveMapSharedFutureSuggestion(suggestionId);
+      await acceptLoveMapSharedFutureSuggestion(suggestion.id);
       await invalidateRelationshipViews();
-      showToast('建議已接受，現在已進入 Shared Future。', 'success');
+      showToast(
+        suggestion.section === 'shared_future_refinement'
+          ? getRefinementKind(suggestion.generator_version) === 'cadence'
+            ? '節奏已加入這個 Shared Future 片段。'
+            : '下一步已加入這個 Shared Future 片段。'
+          : '建議已接受，現在已進入 Shared Future。',
+        'success',
+      );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-accept-failed', error);
       showToast('接受建議失敗，請稍後再試。', 'error');
@@ -334,13 +426,21 @@ export default function LoveMapPageContent() {
     }
   };
 
-  const handleDismissSuggestion = async (suggestionId: string) => {
-    setReviewingSuggestionId(suggestionId);
+  const handleDismissSuggestion = async (suggestion: RelationshipKnowledgeSuggestionPublic) => {
+    setReviewingSuggestionId(suggestion.id);
     setReviewingAction('dismiss');
     try {
-      await dismissLoveMapSharedFutureSuggestion(suggestionId);
+      await dismissLoveMapSharedFutureSuggestion(suggestion.id);
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
-      showToast('這則建議已略過。', 'success');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() });
+      showToast(
+        suggestion.section === 'shared_future_refinement'
+          ? getRefinementKind(suggestion.generator_version) === 'cadence'
+            ? '這則節奏建議已略過。'
+            : '這則 refinement 建議已略過。'
+          : '這則建議已略過。',
+        'success',
+      );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-dismiss-failed', error);
       showToast('略過建議失敗，請稍後再試。', 'error');
@@ -373,6 +473,13 @@ export default function LoveMapPageContent() {
   const storyAnchorCount = system.story?.moments.length ?? 0;
   const storyHasCapsule = Boolean(system.story?.time_capsule);
   const pendingSuggestions = Array.isArray(suggestionQuery.data) ? suggestionQuery.data : [];
+  const pendingRefinements = Array.isArray(refinementQuery.data) ? refinementQuery.data : [];
+  const refinementByItemId = new Map(
+    pendingRefinements
+      .filter((suggestion) => suggestion.target_wishlist_item_id)
+      .map((suggestion) => [suggestion.target_wishlist_item_id as string, suggestion]),
+  );
+  const aiPendingCount = system.has_partner ? pendingSuggestions.length + pendingRefinements.length : 0;
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
@@ -859,7 +966,7 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">AI pending</p>
               <p className="mt-2 type-section-title text-card-foreground">
-                {system.has_partner ? pendingSuggestions.length : 0}
+                {aiPendingCount}
               </p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -937,10 +1044,10 @@ export default function LoveMapPageContent() {
                         accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
                         dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
                         onAccept={() => {
-                          void handleAcceptSuggestion(suggestion.id);
+                          void handleAcceptSuggestion(suggestion);
                         }}
                         onDismiss={() => {
-                          void handleDismissSuggestion(suggestion.id);
+                          void handleDismissSuggestion(suggestion);
                         }}
                       />
                     ))
@@ -972,29 +1079,86 @@ export default function LoveMapPageContent() {
                   tone="quiet"
                 />
               ) : (
-                system.wishlist_items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-[1.9rem] border border-white/58 bg-white/80 p-5 shadow-soft"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <p className="type-section-title text-card-foreground">{item.title}</p>
+                system.wishlist_items.map((item) => {
+                  const refinementSuggestion = refinementByItemId.get(item.id);
+                  const cadenceEligible = supportsCadenceRefinement(item.title, item.notes ?? '');
+                  const isGeneratingAnyRefinement = generatingRefinement?.itemId === item.id;
+                  const isGeneratingNextStep =
+                    generatingRefinement?.itemId === item.id && generatingRefinement.kind === 'next_step';
+                  const isGeneratingCadence =
+                    generatingRefinement?.itemId === item.id && generatingRefinement.kind === 'cadence';
+                  return (
+                    <div
+                      key={item.id}
+                      data-shared-future-item-id={item.id}
+                      className="space-y-4 rounded-[1.9rem] border border-white/58 bg-white/80 p-5 shadow-soft"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <p className="type-section-title text-card-foreground">{item.title}</p>
+                          <p className="type-caption text-muted-foreground">
+                            {item.added_by_me ? '由你放進共同藍圖' : '由伴侶放進共同藍圖'} ・ {formatShortDateTime(item.created_at) ?? '剛剛'}
+                          </p>
+                        </div>
+                        <Badge variant={item.added_by_me ? 'status' : 'metadata'} size="sm">
+                          {item.added_by_me ? 'My contribution' : 'Partner contribution'}
+                        </Badge>
+                      </div>
+                      {item.notes ? (
+                        <div className="rounded-[1.4rem] border border-primary/10 bg-primary/8 px-4 py-4">
+                          <p className="type-body whitespace-pre-line text-card-foreground">{item.notes}</p>
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                         <p className="type-caption text-muted-foreground">
-                          {item.added_by_me ? '由你放進共同藍圖' : '由伴侶放進共同藍圖'} ・ {formatShortDateTime(item.created_at) ?? '剛剛'}
+                          這個片段已經是 shared truth。Haven 只能先提出下一步或節奏建議，不能直接改寫它。
                         </p>
+                        <div className="flex flex-wrap gap-3">
+                          <Button
+                            variant="secondary"
+                            loading={isGeneratingNextStep}
+                            disabled={isGeneratingAnyRefinement || Boolean(refinementSuggestion)}
+                            onClick={() => {
+                              void handleGenerateRefinement(item.id, 'next_step');
+                            }}
+                          >
+                            {refinementSuggestion ? '已生成 refinement' : '讓 Haven 幫這個片段補下一步'}
+                          </Button>
+                          {cadenceEligible ? (
+                            <Button
+                              variant="secondary"
+                              loading={isGeneratingCadence}
+                              disabled={isGeneratingAnyRefinement || Boolean(refinementSuggestion)}
+                              onClick={() => {
+                                void handleGenerateRefinement(item.id, 'cadence');
+                              }}
+                            >
+                              {refinementSuggestion ? '已生成 refinement' : '讓 Haven 幫這個片段補節奏'}
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
-                      <Badge variant={item.added_by_me ? 'status' : 'metadata'} size="sm">
-                        {item.added_by_me ? 'My contribution' : 'Partner contribution'}
-                      </Badge>
+
+                      {refinementSuggestion ? (
+                        <LoveMapRefinementSuggestionCard
+                          targetTitle={item.title}
+                          refinementKind={getRefinementKind(refinementSuggestion.generator_version)}
+                          proposedNotes={refinementSuggestion.proposed_notes}
+                          evidence={refinementSuggestion.evidence}
+                          accepting={reviewingSuggestionId === refinementSuggestion.id && reviewingAction === 'accept'}
+                          dismissing={reviewingSuggestionId === refinementSuggestion.id && reviewingAction === 'dismiss'}
+                          onAccept={() => {
+                            void handleAcceptSuggestion(refinementSuggestion);
+                          }}
+                          onDismiss={() => {
+                            void handleDismissSuggestion(refinementSuggestion);
+                          }}
+                        />
+                      ) : null}
                     </div>
-                    {item.notes ? (
-                      <div className="mt-4 rounded-[1.4rem] border border-primary/10 bg-primary/8 px-4 py-4">
-                        <p className="type-body text-card-foreground">{item.notes}</p>
-                      </div>
-                    ) : null}
-                  </div>
-                ))
+                  );
+                })
               )}
 
               <Link

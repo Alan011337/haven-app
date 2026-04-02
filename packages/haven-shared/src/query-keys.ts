@@ -28,6 +28,7 @@ export const queryKeys = {
   loveMapNotes: () => ['loveMapNotes'] as const,
   loveMapSystem: () => ['loveMapSystem'] as const,
   loveMapSharedFutureSuggestions: () => ['loveMapSharedFutureSuggestions'] as const,
+  loveMapSharedFutureRefinements: () => ['loveMapSharedFutureRefinements'] as const,
   mediationStatus: () => ['mediationStatus'] as const,
   blueprint: () => ['blueprint'] as const,
   cooldownStatus: () => ['cooldownStatus'] as const,

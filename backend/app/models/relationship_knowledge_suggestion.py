@@ -41,6 +41,11 @@ class RelationshipKnowledgeSuggestion(SQLModel, table=True):
         default_factory=list,
     )
     dedupe_key: str = Field(max_length=255, index=True)
+    target_wishlist_item_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="wishlist_items.id",
+        index=True,
+    )
     accepted_wishlist_item_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="wishlist_items.id",

@@ -63,6 +63,7 @@ CRITICAL_READ_KEYS = frozenset(
         (READ_METHOD, "/api/love-map/cards"),
         (READ_METHOD, "/api/love-map/notes"),
         (READ_METHOD, "/api/love-map/suggestions/shared-future"),
+        (READ_METHOD, "/api/love-map/suggestions/shared-future/refinements"),
         (READ_METHOD, "/api/blueprint/"),
         (READ_METHOD, "/api/blueprint/date-suggestions"),
         (READ_METHOD, "/api/reports/weekly"),

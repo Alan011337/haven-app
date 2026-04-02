@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query-keys';
 import {
   fetchLoveMapCards,
   fetchLoveMapNotes,
+  fetchLoveMapSharedFutureRefinements,
   fetchLoveMapSharedFutureSuggestions,
   fetchLoveMapSystem,
 } from '@/services/api-client';
@@ -37,6 +38,15 @@ export function useLoveMapSharedFutureSuggestions(options?: { enabled?: boolean 
   return useQuery({
     queryKey: queryKeys.loveMapSharedFutureSuggestions(),
     queryFn: fetchLoveMapSharedFutureSuggestions,
+    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+export function useLoveMapSharedFutureRefinements(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.loveMapSharedFutureRefinements(),
+    queryFn: fetchLoveMapSharedFutureRefinements,
     staleTime: 30_000,
     enabled: options?.enabled ?? true,
   });

@@ -364,6 +364,7 @@ export interface RelationshipKnowledgeSuggestionPublic {
   evidence: RelationshipKnowledgeSuggestionEvidencePublic[];
   created_at: string;
   reviewed_at: string | null;
+  target_wishlist_item_id: string | null;
   accepted_wishlist_item_id: string | null;
 }
 
@@ -383,8 +384,28 @@ export const fetchLoveMapSharedFutureSuggestions = async (): Promise<Relationshi
   return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future');
 };
 
+export const fetchLoveMapSharedFutureRefinements = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/refinements');
+};
+
 export const generateLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
   return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/generate');
+};
+
+export const generateLoveMapSharedFutureRefinement = async (
+  wishlistItemId: string,
+): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic[]>(
+    `/love-map/suggestions/shared-future/refinements/${wishlistItemId}/generate`,
+  );
+};
+
+export const generateLoveMapSharedFutureCadenceRefinement = async (
+  wishlistItemId: string,
+): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic[]>(
+    `/love-map/suggestions/shared-future/refinements/${wishlistItemId}/generate-cadence`,
+  );
 };
 
 export const acceptLoveMapSharedFutureSuggestion = async (
@@ -430,14 +451,14 @@ export interface DateSuggestionPublic {
 }
 
 export const fetchBlueprint = async (): Promise<WishlistItemPublic[]> => {
-  return apiGet<WishlistItemPublic[]>('/blueprint');
+  return apiGet<WishlistItemPublic[]>('/blueprint/');
 };
 
 export const addBlueprintItem = async (
   title: string,
   notes?: string
 ): Promise<WishlistItemPublic> => {
-  return apiPost<WishlistItemPublic>('/blueprint', { title, notes: notes ?? '' });
+  return apiPost<WishlistItemPublic>('/blueprint/', { title, notes: notes ?? '' });
 };
 
 export const fetchDateSuggestions = async (

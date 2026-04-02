@@ -2,12 +2,14 @@
 # AI Do/Don't contract: docs/ai-safety/ai-guardrails.md (tone rewrite, repair templates, no judgment/diagnosis/manipulation)
 
 import asyncio
+import difflib
 import json
+import logging
+import unicodedata
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
 import httpx
-import logging
 from pydantic import BaseModel, Field
 from app.core.config import settings
 # 引入必要的 Schema 和 Enum
@@ -713,8 +715,116 @@ class SharedFutureSuggestionDraftBundle(BaseModel):
     suggestions: list[SharedFutureSuggestionDraft] = Field(default_factory=list, max_length=2)
 
 
+class SharedFutureRefinementNextStepDraft(BaseModel):
+    proposed_notes: str = Field(default="", max_length=240)
+
+
 def normalize_shared_future_suggestion_key(title: str) -> str:
     return " ".join((title or "").strip().lower().split())
+
+
+def normalize_shared_future_similarity_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value or "").lower().strip()
+    if not normalized:
+        return ""
+
+    folded_chars: list[str] = []
+    for char in normalized:
+        if char.isspace():
+            folded_chars.append(" ")
+            continue
+
+        category = unicodedata.category(char)
+        if category.startswith(("P", "S")):
+            folded_chars.append(" ")
+            continue
+
+        folded_chars.append(char)
+
+    return " ".join("".join(folded_chars).split())
+
+
+def shared_future_similarity_ratio(a: str, b: str) -> float:
+    normalized_a = normalize_shared_future_similarity_text(a)
+    normalized_b = normalize_shared_future_similarity_text(b)
+    if not normalized_a or not normalized_b:
+        return 0.0
+    return difflib.SequenceMatcher(a=normalized_a, b=normalized_b).ratio()
+
+
+def _shared_future_character_overlap_ratio(a: str, b: str) -> float:
+    characters_a = {char for char in a if not char.isspace()}
+    characters_b = {char for char in b if not char.isspace()}
+    if not characters_a or not characters_b:
+        return 0.0
+    return len(characters_a & characters_b) / min(len(characters_a), len(characters_b))
+
+
+def _has_similarity_containment(*, a: str, b: str, min_length: int) -> bool:
+    shorter, longer = sorted((a, b), key=len)
+    return len(shorter) >= min_length and shorter in longer
+
+
+def is_shared_future_title_near_duplicate(candidate: str, existing: str) -> bool:
+    normalized_candidate = normalize_shared_future_similarity_text(candidate)
+    normalized_existing = normalize_shared_future_similarity_text(existing)
+    if not normalized_candidate or not normalized_existing:
+        return False
+    if normalized_candidate == normalized_existing:
+        return True
+    if _has_similarity_containment(a=normalized_candidate, b=normalized_existing, min_length=4):
+        return True
+    ratio = difflib.SequenceMatcher(a=normalized_candidate, b=normalized_existing).ratio()
+    if ratio >= 0.62:
+        return True
+    return ratio >= 0.58 and _shared_future_character_overlap_ratio(
+        normalized_candidate,
+        normalized_existing,
+    ) >= 0.8
+
+
+def is_shared_future_refinement_near_duplicate(candidate: str, existing: str) -> bool:
+    normalized_candidate = normalize_shared_future_similarity_text(candidate)
+    normalized_existing = normalize_shared_future_similarity_text(existing)
+    if not normalized_candidate or not normalized_existing:
+        return False
+    if normalized_candidate == normalized_existing:
+        return True
+    if _has_similarity_containment(a=normalized_candidate, b=normalized_existing, min_length=6):
+        return True
+    return difflib.SequenceMatcher(a=normalized_candidate, b=normalized_existing).ratio() >= 0.74
+
+
+def supports_shared_future_cadence_refinement(title: str, notes: str) -> bool:
+    normalized_text = normalize_shared_future_similarity_text(f"{title} {notes}")
+    if not normalized_text:
+        return False
+
+    recurring_cues = (
+        "每個月",
+        "每月",
+        "每週",
+        "每周",
+        "每年",
+        "每百天",
+        "每天",
+        "每日",
+        "固定",
+        "定期",
+        "習慣",
+        "儀式",
+        "節奏",
+        "週末",
+        "周末",
+    )
+    event_trigger_cues = (
+        "衝突後",
+        "爭執後",
+        "吵架後",
+        "摩擦後",
+        "修復",
+    )
+    return any(cue in normalized_text for cue in (*recurring_cues, *event_trigger_cues))
 
 
 def _truncate_text(value: str, limit: int) -> str:
@@ -764,6 +874,7 @@ async def generate_shared_future_suggestions(
         "Only use the supplied evidence catalog. Never invent facts, partner traits, diagnoses, or therapy advice. "
         "Only suggest concrete future rituals, plans, or habits the couple could intentionally choose. "
         "Return an empty list when evidence is weak or duplicates an existing wish. "
+        "Do not paraphrase or lightly rewrite ideas that are already represented in existing or previously handled wishes. "
         "Each suggestion must include 1 to 3 evidence_ids from the catalog. "
         "Keep titles concise and human. Notes should explain the future fragment in one or two calm sentences."
     )
@@ -856,6 +967,173 @@ async def generate_shared_future_suggestions(
             break
 
     return suggestions
+
+
+async def generate_shared_future_refinement_next_step(
+    *,
+    title: str,
+    notes: str,
+    created_at: str | None = None,
+) -> dict[str, str] | None:
+    normalized_title = _truncate_text(title, 500)
+    normalized_notes = _truncate_text(notes, 2000)
+    if not normalized_title:
+        return None
+
+    client = _get_openai_client()
+    if client is None or not (settings.OPENAI_API_KEY or "").strip():
+        raise HavenAIProviderError(
+            reason="shared_future_refinement_provider_unavailable",
+            retryable=True,
+            provider="openai",
+        )
+
+    system_prompt = (
+        "You review one accepted relationship Shared Future item and propose at most one bounded next step. "
+        "Do not rewrite the title. Do not change the core meaning. "
+        "Only suggest one calm, concrete next step sentence that would make the future fragment more actionable. "
+        "Return an empty string if the item is already concrete enough or if only a paraphrase of an existing next step is available. "
+        "Never infer partner traits, never diagnose, never give therapy advice."
+    )
+    user_prompt = json.dumps(
+        {
+            "task": "shared_future_refinement_next_step_v1",
+            "target_item": {
+                "title": normalized_title,
+                "notes": normalized_notes,
+                "created_at": created_at or "",
+            },
+        },
+        ensure_ascii=False,
+    )
+
+    try:
+        with trace_span("ai.generate_shared_future_refinement_next_step"):
+            completion = await client.beta.chat.completions.parse(
+                model=ANALYSIS_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=SharedFutureRefinementNextStepDraft,
+                temperature=0.2,
+                max_tokens=300,
+            )
+    except Exception as exc:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc):
+            raise HavenAITimeoutError(
+                reason="shared_future_refinement_timeout",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        if _is_openai_status_error(exc):
+            raise HavenAIProviderError(
+                reason="shared_future_refinement_provider_error",
+                retryable=_get_openai_status_code(exc) != 400,
+                provider="openai",
+            ) from exc
+        raise HavenAIProviderError(
+            reason="shared_future_refinement_failed",
+            retryable=True,
+            provider="openai",
+        ) from exc
+
+    parsed = completion.choices[0].message.parsed
+    if not parsed:
+        raise HavenAISchemaError(
+            reason="shared_future_refinement_empty",
+            retryable=True,
+            provider="openai",
+        )
+
+    proposed_notes = _truncate_text(parsed.proposed_notes, 240)
+    if not proposed_notes:
+        return None
+    return {"proposed_notes": proposed_notes}
+
+
+async def generate_shared_future_refinement_cadence(
+    *,
+    title: str,
+    notes: str,
+    created_at: str | None = None,
+) -> dict[str, str] | None:
+    normalized_title = _truncate_text(title, 500)
+    normalized_notes = _truncate_text(notes, 2000)
+    if not normalized_title or not supports_shared_future_cadence_refinement(normalized_title, normalized_notes):
+        return None
+
+    client = _get_openai_client()
+    if client is None or not (settings.OPENAI_API_KEY or "").strip():
+        raise HavenAIProviderError(
+            reason="shared_future_refinement_cadence_provider_unavailable",
+            retryable=True,
+            provider="openai",
+        )
+
+    system_prompt = (
+        "You review one accepted relationship Shared Future item and propose at most one bounded cadence suggestion. "
+        "Only do this when the item clearly implies a recurring rhythm, ritual, or repeatable repair pattern. "
+        "Do not rewrite the title. Do not change the core meaning. "
+        "Only suggest one calm, concrete cadence sentence that would make the future fragment more sustainable or repeatable. "
+        "Return an empty string if the item is one-off, already concrete enough, or if only a paraphrase of an existing cadence is available. "
+        "Never infer partner traits, never diagnose, never give therapy advice."
+    )
+    user_prompt = json.dumps(
+        {
+            "task": "shared_future_refinement_cadence_v1",
+            "target_item": {
+                "title": normalized_title,
+                "notes": normalized_notes,
+                "created_at": created_at or "",
+            },
+        },
+        ensure_ascii=False,
+    )
+
+    try:
+        with trace_span("ai.generate_shared_future_refinement_cadence"):
+            completion = await client.beta.chat.completions.parse(
+                model=ANALYSIS_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=SharedFutureRefinementNextStepDraft,
+                temperature=0.2,
+                max_tokens=300,
+            )
+    except Exception as exc:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc):
+            raise HavenAITimeoutError(
+                reason="shared_future_refinement_cadence_timeout",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        if _is_openai_status_error(exc):
+            raise HavenAIProviderError(
+                reason="shared_future_refinement_cadence_provider_error",
+                retryable=_get_openai_status_code(exc) != 400,
+                provider="openai",
+            ) from exc
+        raise HavenAIProviderError(
+            reason="shared_future_refinement_cadence_failed",
+            retryable=True,
+            provider="openai",
+        ) from exc
+
+    parsed = completion.choices[0].message.parsed
+    if not parsed:
+        raise HavenAISchemaError(
+            reason="shared_future_refinement_cadence_empty",
+            retryable=True,
+            provider="openai",
+        )
+
+    proposed_notes = _truncate_text(parsed.proposed_notes, 240)
+    if not proposed_notes:
+        return None
+    return {"proposed_notes": proposed_notes}
 
 
 _moderation_failure_count = 0

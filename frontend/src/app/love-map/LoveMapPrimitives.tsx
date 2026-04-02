@@ -573,3 +573,108 @@ export function LoveMapSuggestedUpdateCard({
     </GlassCard>
   );
 }
+
+interface LoveMapRefinementSuggestionCardProps {
+  targetTitle: string;
+  refinementKind?: 'next_step' | 'cadence';
+  proposedNotes: string;
+  evidence: Array<{
+    source_kind: string;
+    label: string;
+    excerpt: string;
+  }>;
+  onAccept: () => void;
+  onDismiss: () => void;
+  accepting?: boolean;
+  dismissing?: boolean;
+}
+
+export function LoveMapRefinementSuggestionCard({
+  targetTitle,
+  refinementKind = 'next_step',
+  proposedNotes,
+  evidence,
+  onAccept,
+  onDismiss,
+  accepting = false,
+  dismissing = false,
+}: LoveMapRefinementSuggestionCardProps) {
+  const suggestionLabel = refinementKind === 'cadence' ? '建議補上的節奏：' : '建議補上的下一步：';
+  const acceptedNoteLabel = refinementKind === 'cadence' ? '節奏' : '下一步';
+  return (
+    <GlassCard className="overflow-hidden rounded-[1.9rem] border-primary/12 bg-[linear-gradient(180deg,rgba(255,251,246,0.94),rgba(247,242,234,0.9))] p-4 shadow-soft backdrop-blur-md md:p-5">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/10 px-3 py-1.5 shadow-soft">
+              <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+              <span className="type-micro uppercase text-primary/80">Refinement suggestion</span>
+            </div>
+            <p className="type-section-title text-card-foreground">{targetTitle}</p>
+            <p className="type-body-muted text-muted-foreground">
+              {suggestionLabel}
+              {proposedNotes}
+            </p>
+          </div>
+
+          <Badge variant="metadata" size="sm">
+            Personal review only
+          </Badge>
+        </div>
+
+        <div className="rounded-[1.45rem] border border-white/58 bg-white/76 px-4 py-4 shadow-soft">
+          <p className="type-caption text-muted-foreground">
+            只有你看得到；接受前不會改動這個 Shared Future 片段。
+          </p>
+        </div>
+
+        {evidence.length > 0 ? (
+          <div className="space-y-3">
+            <p className="type-caption text-card-foreground/82">What this builds on</p>
+            <div className="grid gap-3">
+              {evidence.map((item, index) => (
+                <div
+                  key={`${item.source_kind}-${item.label}-${index}`}
+                  className="rounded-[1.35rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="status" size="sm">
+                      {item.source_kind}
+                    </Badge>
+                    <span className="type-caption text-card-foreground">{item.label}</span>
+                  </div>
+                  <p className="mt-2 type-body-muted text-muted-foreground">{item.excerpt}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="type-caption text-muted-foreground">
+            接受後只會把這句{acceptedNoteLabel}補進這個片段的 notes；略過後它不會立刻又回來。
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              loading={dismissing}
+              disabled={accepting || dismissing}
+              leftIcon={<X className="h-4 w-4" aria-hidden />}
+              onClick={onDismiss}
+            >
+              略過
+            </Button>
+            <Button
+              loading={accepting}
+              disabled={accepting || dismissing}
+              leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              onClick={onAccept}
+            >
+              接受
+            </Button>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
