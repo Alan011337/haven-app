@@ -48,7 +48,7 @@ export default function JournalInput({
             Journal Entry
           </span>
           <span className="inline-flex items-center rounded-full border border-border/80 bg-white/70 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            先帶進 Studio
+            Reflective Writing
           </span>
         </div>
         <p className="font-mono text-xs tabular-nums text-muted-foreground/70">
@@ -91,9 +91,9 @@ export default function JournalInput({
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl space-y-1.5">
-          <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Studio Handoff</p>
+          <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Reflective Writing</p>
           <p className="text-sm leading-7 text-muted-foreground">
-            Home 現在只負責把你送進 Journal Studio。你可以先帶著這段進去，也可以直接開一頁空白 draft，先插圖再慢慢寫。
+            Home 先替你收住今天的第一句；真正更完整的反思寫作，會在 Journal 書房裡慢慢長成一頁。你可以先帶著這段進去，也可以直接開一頁空白 draft，先插圖再慢慢寫。
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export default function JournalInput({
             href="/journal?compose=1"
             className="inline-flex items-center justify-center gap-2 rounded-full border border-white/58 bg-white/82 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
           >
-            直接打開書房
+            進入 Journal 書房
           </Link>
           <button
             type="submit"
@@ -121,20 +121,20 @@ export default function JournalInput({
         <div className="space-y-1">
           <p className="text-[0.72rem] uppercase tracking-[0.34em] text-primary/80">Cover Story</p>
           <h3 className="font-art text-[1.9rem] leading-tight text-card-foreground md:text-[2.25rem]">
-            首頁現在只負責把今天送進真正的 Journal Studio。
+            Home 先收住今天，再把它送進 Journal 書房。
           </h3>
         </div>
         <div className="rounded-full border border-white/50 bg-white/66 px-3 py-2 text-[0.68rem] uppercase tracking-[0.28em] text-primary/75 shadow-soft">
-          handoff mode
+          writing surface
         </div>
       </div>
       {form}
     </div>
   ) : (
     <HomeComposerStage
-      eyebrow="Composer Stage"
-      title="先留下今天最想帶進書房的那幾句。"
-      description="這裡不再直接發布，而是把你平順地送進新版 Journal Studio。"
+      eyebrow="Reflective Writing"
+      title="先留下今天最想帶進 Journal 的那幾句。"
+      description="Home 先保留開頭；更完整的反思寫作，會在 Journal 書房裡慢慢完成。"
       className={className}
     >
       {form}

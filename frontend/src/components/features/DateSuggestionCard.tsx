@@ -74,7 +74,7 @@ export default function DateSuggestionCard({ className }: { className?: string }
             本週約會提案
           </h3>
           <p className="text-sm text-muted-foreground/80 leading-relaxed">
-            提案資料還在同步，剛剛這次沒有成功載入。這不代表目前沒有可用提案。
+            提案資料還在同步，剛剛這次沒有成功載入。這不代表目前沒有可用提案；你仍然可以先去 Blueprint 看完整 Shared Future。
           </p>
           <button
             type="button"
@@ -101,14 +101,14 @@ export default function DateSuggestionCard({ className }: { className?: string }
           本週約會提案
         </h3>
         <p className="text-sm text-muted-foreground/70 leading-relaxed">
-          暫無新提案，繼續寫下你們的心願，系統會在合適的時機送上靈感。
+          暫無新提案，繼續寫下你們的心願；Blueprint 會在 Shared Future 裡替你們保留更完整的未來片段。
         </p>
         <Link
           href="/blueprint"
           className="inline-flex items-center gap-1.5 mt-3 text-sm text-primary/80 hover:text-primary transition-colors duration-haven"
-          aria-label="前往藍圖與願望清單"
+          aria-label="進入 Blueprint（完整 Shared Future）"
         >
-          看看願望清單 <span aria-hidden>&rarr;</span>
+          進入 Blueprint（完整 Shared Future） <span aria-hidden>&rarr;</span>
         </Link>
       </GlassCard>
     );
@@ -143,9 +143,9 @@ export default function DateSuggestionCard({ className }: { className?: string }
       <Link
         href="/blueprint"
         className="inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground px-6 py-2.5 text-body font-semibold border-t border-t-white/30 shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-haven ease-haven focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="前往藍圖與願望清單"
+        aria-label="進入 Blueprint（完整 Shared Future）"
       >
-        看看願望清單
+        進入 Blueprint（完整 Shared Future）
       </Link>
     </GlassCard>
   );

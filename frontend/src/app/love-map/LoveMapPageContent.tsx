@@ -761,7 +761,7 @@ export default function LoveMapPageContent() {
         id="story"
         eyebrow="Story"
         title="把真正被留下來的 shared memory，放回你們的關係故事裡。"
-        description="Story 不是 scrapbook，也不是 AI 替你們寫的總結。它只指向 Haven 已經真的看見、而且值得你們回來重看的那些記憶錨點。"
+        description="Story 不是 scrapbook，也不是 AI 替你們寫的總結。它是 Relationship System 裡的結構化故事層，只會指向 Haven 已經真的看見、而且值得你們回到 Memory 裡重新打開的那些記憶錨點。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -858,7 +858,7 @@ export default function LoveMapPageContent() {
               href="/memory"
               className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
             >
-              去 Memory 看完整 shared archive
+              進入 Memory（完整 shared archive）
               <Sparkles className="h-4 w-4" aria-hidden />
             </Link>
           </div>
@@ -869,7 +869,7 @@ export default function LoveMapPageContent() {
         id="inner-landscape"
         eyebrow="Inner Landscape"
         title="把你的 relationship reflections 留成可回讀的內在地圖。"
-        description="Love Map notes 不是共享檔案，也不是 Haven 自動替兩個人下的結論。它們是你願意留下的理解，會幫 Haven 之後更誠實地知道什麼是 shared truth、什麼只是個人反思。"
+        description="Love Map notes 不是共享檔案，也不是 Haven 自動替兩個人下的結論。它們是你願意留下的結構化反思，會幫 Haven 之後更誠實地知道什麼是 shared truth、什麼只是個人理解；如果你想寫成更完整的一頁，則去 Journal 這個反思書房。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -940,64 +940,74 @@ export default function LoveMapPageContent() {
             )}
           </div>
         ) : (
-          LAYERS.map((layer) => (
-            <div key={layer} className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)]">
-              <LoveMapReflectionStudio
-                eyebrow={LAYER_META[layer].eyebrow}
-                title={LAYER_META[layer].title}
-                description={LAYER_META[layer].description}
-                textareaId={`love-map-note-${layer}`}
-                textareaLabel={`${LAYER_META[layer].label} 筆記`}
-                value={noteDrafts[layer]}
-                onChange={(value) =>
-                  setNoteDrafts((current) => ({
-                    ...current,
-                    [layer]: value,
-                  }))
-                }
-                onSave={() => {
-                  void handleSaveLayer(layer);
-                }}
-                saving={savingLayer === layer}
-                helperText={LAYER_META[layer].helperText}
-                placeholder={LAYER_META[layer].placeholder}
-                lastUpdated={formatShortDateTime(system.notes.find((note) => note.layer === layer)?.updated_at)}
-                badgeText={`${cardsByLayer[layer].length} 個 prompts`}
-              />
+          <div className="space-y-4">
+            {LAYERS.map((layer) => (
+              <div key={layer} className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)]">
+                <LoveMapReflectionStudio
+                  eyebrow={LAYER_META[layer].eyebrow}
+                  title={LAYER_META[layer].title}
+                  description={LAYER_META[layer].description}
+                  textareaId={`love-map-note-${layer}`}
+                  textareaLabel={`${LAYER_META[layer].label} 筆記`}
+                  value={noteDrafts[layer]}
+                  onChange={(value) =>
+                    setNoteDrafts((current) => ({
+                      ...current,
+                      [layer]: value,
+                    }))
+                  }
+                  onSave={() => {
+                    void handleSaveLayer(layer);
+                  }}
+                  saving={savingLayer === layer}
+                  helperText={LAYER_META[layer].helperText}
+                  placeholder={LAYER_META[layer].placeholder}
+                  lastUpdated={formatShortDateTime(system.notes.find((note) => note.layer === layer)?.updated_at)}
+                  badgeText={`${cardsByLayer[layer].length} 個 prompts`}
+                />
 
-              <div className="space-y-4">
-                {cardsQuery.isError ? (
-                  <LoveMapStatePanel
-                    eyebrow={`${LAYER_META[layer].label} prompts`}
-                    title="這一層的 prompts 沒有順利載入"
-                    description="Relationship System 本身仍可使用，但這一層的 conversation support 需要重新讀取。"
-                    tone="quiet"
-                    actionLabel="重讀 prompts"
-                    onAction={() => {
-                      void cardsQuery.refetch();
-                    }}
-                  />
-                ) : cardsByLayer[layer].length === 0 ? (
-                  <LoveMapStatePanel
-                    eyebrow={`${LAYER_META[layer].label} prompts`}
-                    title="這一層今天沒有新的 prompts。"
-                    description="也沒關係，真正重要的是你們留下了什麼理解，而不是系統今天提出了多少問題。"
-                    tone="quiet"
-                  />
-                ) : (
-                  cardsByLayer[layer].slice(0, 3).map((card, index) => (
-                    <LoveMapPromptCard
-                      key={card.id}
-                      index={index + 1}
-                      title={card.title}
-                      description={card.description}
-                      question={card.question}
+                <div className="space-y-4">
+                  {cardsQuery.isError ? (
+                    <LoveMapStatePanel
+                      eyebrow={`${LAYER_META[layer].label} prompts`}
+                      title="這一層的 prompts 沒有順利載入"
+                      description="Relationship System 本身仍可使用，但這一層的 conversation support 需要重新讀取。"
+                      tone="quiet"
+                      actionLabel="重讀 prompts"
+                      onAction={() => {
+                        void cardsQuery.refetch();
+                      }}
                     />
-                  ))
-                )}
+                  ) : cardsByLayer[layer].length === 0 ? (
+                    <LoveMapStatePanel
+                      eyebrow={`${LAYER_META[layer].label} prompts`}
+                      title="這一層今天沒有新的 prompts。"
+                      description="也沒關係，真正重要的是你們留下了什麼理解，而不是系統今天提出了多少問題。"
+                      tone="quiet"
+                    />
+                  ) : (
+                    cardsByLayer[layer].slice(0, 3).map((card, index) => (
+                      <LoveMapPromptCard
+                        key={card.id}
+                        index={index + 1}
+                        title={card.title}
+                        description={card.description}
+                        question={card.question}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+
+            <Link
+              href="/journal"
+              className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+            >
+              進入 Journal（完整反思書房）
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
         )}
       </LoveMapSection>
 
@@ -1005,7 +1015,7 @@ export default function LoveMapPageContent() {
         id="shared-future"
         eyebrow="Shared Future"
         title="把你們想一起靠近的生活，放進同一張藍圖裡。"
-        description="Relationship System 會在這裡整理已經成立的共同未來與正在審核的提案；完整 Shared Future 清單與新增入口仍保留在 Blueprint。"
+        description="Relationship System 會在這裡保留 Shared Future 的摘要與 AI 提案審核；如果你想看完整片段、備註與新增入口，則往下走進 Blueprint 這個完整工作台。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -1020,7 +1030,7 @@ export default function LoveMapPageContent() {
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">完整 Shared Future</p>
-              <p className="mt-2 type-caption text-muted-foreground">Relationship System 在這裡只顯示摘要；完整片段與整理仍保留在 Blueprint。</p>
+              <p className="mt-2 type-caption text-muted-foreground">這裡是摘要與審核層；完整 Shared Future 工作台、備註與整理入口仍在 Blueprint。</p>
             </div>
           </div>
         }
@@ -1211,7 +1221,7 @@ export default function LoveMapPageContent() {
                 href="/blueprint"
                 className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
               >
-                前往 Blueprint（完整 Shared Future）
+                進入 Blueprint（完整 Shared Future）
                 <Sparkles className="h-4 w-4" aria-hidden />
               </Link>
             </div>
@@ -1223,7 +1233,7 @@ export default function LoveMapPageContent() {
               footer={
                 <div className="rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                   <p className="type-caption text-muted-foreground">
-                    Relationship System 在這裡只保留高價值摘要；完整 Shared Future 清單仍在 Blueprint。
+                    Relationship System 會把高價值摘要留在這裡；若要整理完整 Shared Future 片段、備註與新增入口，請進到 Blueprint。
                   </p>
                 </div>
               }

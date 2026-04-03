@@ -62,8 +62,8 @@ export default function BlueprintPageContent() {
 
   const pulse =
     items.length > 0
-      ? `這裡已經收進 ${items.length} 個 Shared Future 片段。Relationship System 會整理其中最重要的摘要，而完整輪廓仍保留在這裡。`
-      : '還沒有任何 Shared Future 片段也沒關係。真正重要的是，這裡開始替你們的未來留出一個可以被想像的位置。';
+      ? `這裡已經收進 ${items.length} 個 Shared Future 片段。Relationship System 會整理其中最重要的摘要與提案審核，而完整輪廓、備註與整理入口仍保留在這裡。`
+      : '還沒有任何 Shared Future 片段也沒關係。Relationship System 會先保留系統摘要；而 Blueprint 會在你們準備好時，替共同未來留出完整工作台。';
 
   const primaryActionLabel =
     items.length > 0 ? '再放進一個想一起實現的願望' : '寫下第一個未來片段';
@@ -101,7 +101,7 @@ export default function BlueprintPageContent() {
       <BlueprintCover
         eyebrow="Shared Future / Blueprint"
         title="把你們想一起靠近的日子，放進 Shared Future 的完整藍圖。"
-        description="Relationship System 會整理高價值的 Shared Future 摘要；Blueprint 則保留完整片段、備註與新增入口。這裡不是待辦清單，而是你們共同未來的完整工作台。"
+        description="Blueprint 是 Shared Future 的完整工作台，保留完整片段、備註與新增入口；Relationship System 則負責系統摘要與 AI 提案審核。這裡不是待辦清單，而是你們共同未來的完整工作台。"
         pulse={pulse}
         primaryActionHref="#wish-studio"
         primaryActionLabel={primaryActionLabel}
@@ -156,7 +156,7 @@ export default function BlueprintPageContent() {
             <BlueprintOverviewCard
               eyebrow="Shared Future"
               title="這張藍圖正在慢慢成形。"
-              description="Relationship System 會引用這裡最重要的片段，讓共同未來同時是摘要，也是完整藍圖。"
+              description="想整理完整 Shared Future 片段時留在這裡；想回看系統摘要、當前脈動與 AI 提案審核時，回到 Relationship System。"
             >
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                 <div className="rounded-[1.6rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">

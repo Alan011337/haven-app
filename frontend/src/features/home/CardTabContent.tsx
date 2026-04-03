@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { MoonStar, Sparkles, Stars } from 'lucide-react';
 import DailyCard from '@/components/features/DailyCard';
 import { HomeCoverStage } from '@/features/home/HomePrimitives';
@@ -38,6 +39,20 @@ export default function CardTabContent() {
 
         <div className="home-surface-ritual relative mx-auto w-full max-w-[980px] rounded-[2.8rem] p-4 md:p-7">
           <DailyCard />
+        </div>
+
+        <div className="mx-auto mt-4 max-w-[980px] rounded-[1.75rem] border border-white/48 bg-white/68 px-5 py-4 shadow-soft backdrop-blur-xl">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm leading-7 text-muted-foreground">
+              今天的 ritual 先留在這裡；如果某個節奏值得留下更久，就帶去 Relationship System。
+            </p>
+            <Link
+              href="/love-map"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-white/58 bg-white/82 px-5 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+            >
+              進入 Relationship System
+            </Link>
+          </div>
         </div>
       </div>
     </HomeCoverStage>

@@ -1,7 +1,18 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ArrowRight, BookHeart, Flame, Heart, Sparkles, User } from 'lucide-react';
+import {
+  ArrowRight,
+  BookHeart,
+  BookMarked,
+  BookOpen,
+  Flame,
+  Heart,
+  ListTodo,
+  Sparkles,
+  User,
+} from 'lucide-react';
 import type {
   FirstDelightResponse,
   GamificationSummaryResponse,
@@ -10,6 +21,7 @@ import type {
 } from '@/services/api-client';
 import Button from '@/components/ui/Button';
 import {
+  EditorialActionStrip,
   EditorialPaperCard,
   HomeRailNav,
 } from '@/features/home/HomePrimitives';
@@ -39,6 +51,33 @@ interface HomeHeaderProps {
 type GreetingCopy = {
   title: string;
 };
+
+const CORE_SURFACES = [
+  {
+    href: '/journal',
+    label: 'Journal 書房',
+    detail: '完整反思寫作',
+    icon: BookOpen,
+  },
+  {
+    href: '/love-map',
+    label: 'Relationship System',
+    detail: '結構化關係理解',
+    icon: Heart,
+  },
+  {
+    href: '/memory',
+    label: 'Memory',
+    detail: 'shared archive',
+    icon: BookMarked,
+  },
+  {
+    href: '/blueprint',
+    label: 'Blueprint',
+    detail: '完整 Shared Future',
+    icon: ListTodo,
+  },
+] as const;
 
 function NoticeCard({
   eyebrow,
@@ -314,6 +353,37 @@ export default function HomeHeader({
             <NoticeCard {...headerNotice} />
           </div>
         ) : null}
+
+        <div
+          className="max-w-[980px] space-y-3 animate-slide-up-fade-3"
+          data-testid="home-core-surfaces-guide"
+        >
+          <p className="px-1 text-sm leading-7 text-muted-foreground">
+            Home 先安靜整理今天，再把你送進更深的 Haven surfaces。
+          </p>
+          <EditorialActionStrip className="rounded-[2rem] border-white/48 bg-white/66 p-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {CORE_SURFACES.map((surface) => {
+                const Icon = surface.icon;
+                return (
+                  <Link
+                    key={surface.href}
+                    href={surface.href}
+                    className="group flex items-center gap-3 rounded-[1.4rem] border border-white/50 bg-white/72 px-4 py-3 shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:border-primary/16 hover:bg-white/84 hover:shadow-lift focus-ring-premium"
+                  >
+                    <span className="icon-badge !h-9 !w-9 border border-white/55 bg-white/78 transition-transform duration-haven ease-haven group-hover:scale-[1.04]">
+                      <Icon className="h-4 w-4 text-primary" aria-hidden />
+                    </span>
+                    <span className="min-w-0 space-y-0.5">
+                      <span className="block text-sm font-medium text-card-foreground">{surface.label}</span>
+                      <span className="block text-xs text-muted-foreground">{surface.detail}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </EditorialActionStrip>
+        </div>
       </div>
     </header>
   );

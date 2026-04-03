@@ -391,7 +391,7 @@ export default function MemoryPageContent() {
       <MemoryCover
         eyebrow="Memory Lane"
         title="把你們一起活過的日子，放進一個值得慢慢回來、重新看見、重新被觸動的回憶畫廊。"
-        description="這裡不是檔案庫，也不是只是把內容排好。它更像一條共同生活的長廊，讓那些寫下的、回答過的、拍下的瞬間，在對的時候重新向你們走近。"
+        description="這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 shared archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。"
         pulse={
           timeCapsuleAvailable
             ? '今天最珍貴的那一段，不一定是最新的，而是剛好回來敲門的那一段。'
@@ -477,7 +477,7 @@ export default function MemoryPageContent() {
             <MemoryOverviewCard
               eyebrow="Gallery Overview"
               title="這次回來，哪些片段正在被重新翻開。"
-              description="現在展開的不是全部回憶，而是這一刻剛好被翻到眼前、值得重新停留的那一些。"
+              description="想看更完整的 shared archive，就留在 Memory；想回到被整理過的故事層與關係脈動，則回到 Relationship System。"
             >
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                 <div className="rounded-[1.7rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">

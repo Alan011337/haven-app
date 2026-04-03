@@ -769,6 +769,9 @@ test.describe('Relationship System naming and IA polish', () => {
       }),
     ).toBeVisible();
     await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Shared Future 工作台' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '進入 Memory（完整 shared archive）' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '進入 Journal（完整反思書房）' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把真正被留下來的 shared memory，放回你們的關係故事裡。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把你的 relationship reflections 留成可回讀的內在地圖。' })).toBeVisible();
@@ -917,13 +920,18 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(kyotoCard.getByText('想慢慢走巷子和神社。')).toBeVisible();
     await expect(kyotoCard.getByText('補充', { exact: true })).toHaveCount(0);
     await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: '前往 Blueprint（完整 Shared Future）' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' })).toBeVisible();
 
-    await page.goto('/blueprint');
+    await page.getByRole('link', { name: 'Shared Future 工作台' }).click();
+    await expect(page).toHaveURL(/\/blueprint$/);
     await expect(page.getByText('Shared Future Blueprint', { exact: true })).toBeVisible();
     await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Relationship System 摘要' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: '把你們想一起靠近的日子，放進 Shared Future 的完整藍圖。' })).toBeVisible();
-    await expect(page.getByText('Relationship System 會整理高價值的 Shared Future 摘要；Blueprint 則保留完整片段、備註與新增入口。')).toBeVisible();
+    await expect(page.getByText('Blueprint 是 Shared Future 的完整工作台，保留完整片段、備註與新增入口；Relationship System 則負責系統摘要與 AI 提案審核。')).toBeVisible();
+    await page.getByRole('link', { name: 'Relationship System 摘要' }).click();
+    await expect(page).toHaveURL(/\/love-map$/);
+    await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
 
   });
 
@@ -1048,8 +1056,14 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(
       page.getByText('把月份裡的一天打開來看，不只是知道那天有痕跡，而是真的看見那天留下了什麼。'),
     ).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Relationship System 故事摘要' })).toBeVisible();
+    await expect(
+      page.getByText('這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 shared archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。'),
+    ).toBeVisible();
     const focusedAppreciationCard = await expectFocusedMemoryCardInViewport(page, 'appreciation');
     await expect(focusedAppreciationCard).toContainText(appreciationMoment!.description);
+    await page.getByRole('link', { name: 'Relationship System 故事摘要' }).click();
+    await expect(page).toHaveURL(/\/love-map#story$/);
 
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
     const cardHref = memoryStoryHref(cardMoment!);
@@ -1079,11 +1093,29 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(focusedCardMemory).toContainText('雙方都回答了');
 
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: '進入 Journal（完整反思書房）' }).click();
+    await expect(page).toHaveURL(/\/journal$/);
+    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
+    await expect(
+      page.getByText('Journal 是 Haven 裡更完整的反思書房：Relationship System 的 Inner Landscape 會保留結構化的個人理解，而這裡則讓你把那些感受、語氣、圖像與分享邊界寫成真正可重讀的一頁。'),
+    ).toBeVisible();
+    const journalLibraryLink = page.locator('a[href^="/journal/"]').first();
+    await expect(journalLibraryLink).toBeVisible();
+    await journalLibraryLink.click();
+    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
+    await expect(
+      page.getByText('Journal 會保留更完整的反思寫作；Relationship System 只留下結構化摘要，不會把這一頁直接變成 shared truth。'),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Relationship System 反思摘要' }).first().click();
+    await expect(page).toHaveURL(/\/love-map#inner-landscape$/);
+
+    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
     const journalLink = page.locator(`a[href="/journal/${journalMoment!.source_id}"]`);
     await expect(journalLink).toBeVisible();
     await journalLink.evaluate((node) => {
       window.location.assign((node as HTMLAnchorElement).href);
     });
     await expect(page).toHaveURL(new RegExp(`/journal/${journalMoment!.source_id}$`));
+    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
   });
 });

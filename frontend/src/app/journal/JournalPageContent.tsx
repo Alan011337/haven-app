@@ -1057,12 +1057,20 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   if (!showStudio) {
     return (
       <div className="space-y-8">
-        <JournalBackLink href="/" />
+        <div className="flex flex-wrap items-center gap-3">
+          <JournalBackLink href="/" />
+          <Link
+            href="/love-map#inner-landscape"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/58 bg-white/82 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
+          >
+            Relationship System 反思摘要
+          </Link>
+        </div>
 
         <JournalStudioHero
           eyebrow="Journal Library"
           title="把值得留下來的心事，寫成真正可重讀的一頁。"
-          description="Home 還是最好的第一筆，但 Journal V3 現在是一個真正的 writing studio。你可以在這裡整理標題、節奏、圖像、分享邊界，讓一頁日記慢慢長成作品。"
+          description="Journal 是 Haven 裡更完整的反思書房：Relationship System 的 Inner Landscape 會保留結構化的個人理解，而這裡則讓你把那些感受、語氣、圖像與分享邊界寫成真正可重讀的一頁。"
           actions={
             <>
               <Button
@@ -1072,10 +1080,10 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 開始新的一頁
               </Button>
               <Link
-                href="/"
+                href="/love-map#inner-landscape"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white/58 bg-white/82 px-5 py-3 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
               >
-                回 Home quick capture
+                回 Relationship System 反思摘要
               </Link>
             </>
           }
@@ -1114,7 +1122,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 最近寫下的頁面
               </h2>
               <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                這裡是一個真正的書房，不再只是 Home timeline 的延伸。打開任何一頁，都會進入沉浸式 writing studio。
+                這裡是更完整的反思書房，而不是只留摘要的地方。打開任何一頁，都會進入沉浸式 writing studio。
               </p>
             </div>
 
@@ -1144,7 +1152,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             </div>
           ) : (
             <div className="mt-6 rounded-[1.8rem] border border-dashed border-border/80 bg-white/62 px-5 py-8 text-sm leading-7 text-muted-foreground">
-              這裡還沒有任何頁面。你可以先從 Home 留下第一段，或直接在這裡開始新的一頁。
+              這裡還沒有任何頁面。你可以直接在這裡開始新的一頁，或先回到 Relationship System 的 Inner Landscape 留下結構化反思。
             </div>
           )}
         </section>
@@ -1162,6 +1170,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3.5 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:bg-white/86 focus-ring-premium"
             >
               返回
+            </Link>
+            <Link
+              href="/love-map#inner-landscape"
+              className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3.5 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:bg-white/86 focus-ring-premium"
+            >
+              Relationship System 反思摘要
             </Link>
             <JournalSavePill
               state={saveState}
@@ -1338,8 +1352,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
 
           <p className="max-w-[34rem] text-sm leading-7 text-muted-foreground">
             {currentJournalId
-              ? '先把內容寫順，再決定要不要共享。工具會退到後面，讓這一頁自己長出節奏。'
-              : '你可以先留下文字，也可以先放進圖片。這裡先幫你建立草稿，之後再慢慢把這一頁寫完整。'}
+              ? 'Journal 會保留更完整的反思寫作；Relationship System 只留下結構化摘要，不會把這一頁直接變成 shared truth。'
+              : '你可以先留下文字，也可以先放進圖片。這裡會先幫你建立草稿，慢慢把這一頁寫完整，而 Relationship System 只會保留你願意留下的結構化反思。'}
           </p>
         </section>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Feather, RefreshCw, Sparkles } from 'lucide-react';
 import JournalCard from '@/components/features/JournalCard';
@@ -125,7 +126,7 @@ export default function MineTabContent({
       <HomeCoverStage
         eyebrow="私人手記"
         title="今天這一頁，先只留給你自己。"
-        description="先把今天帶進 Journal Studio，標題、圖片、分享邊界都在同一個書房裡慢慢完成。"
+        description="Home 先收住今天最前面的幾句；如果你想把感受、圖片與分享邊界寫得更完整，下一步就進 Journal 書房。"
         pulse={pulseLine}
       >
         <JournalInput
@@ -217,7 +218,20 @@ export default function MineTabContent({
       <EditorialTimelineColumn
         eyebrow="回憶廊道"
         title="寫下的東西，在這裡慢慢長出重量。"
-        aside={<Badge variant="metadata" size="md" className="bg-white/72 text-primary/72">{myJournals.length} 篇日記</Badge>}
+        description="Home 先保留最近幾頁；想回到更完整的共同生活 archive，再去 Memory。"
+        aside={
+          <div className="flex flex-col items-start gap-3">
+            <Badge variant="metadata" size="md" className="bg-white/72 text-primary/72">
+              {myJournals.length} 篇日記
+            </Badge>
+            <Link
+              href="/memory"
+              className="inline-flex items-center gap-2 rounded-full border border-white/56 bg-white/78 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+            >
+              進入 Memory（完整 shared archive）
+            </Link>
+          </div>
+        }
         className="bg-[linear-gradient(180deg,rgba(255,254,251,0.96),rgba(249,245,239,0.9))]"
       >
         {timelineStage === 'loading' ? (

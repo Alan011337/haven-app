@@ -110,10 +110,10 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
   const navItems = [
     { name: '首頁', href: '/', icon: Home },
     { name: '牌組圖書館', href: '/decks', icon: Library },
-    { name: '愛情地圖', href: '/love-map', icon: Heart },
+    { name: 'Relationship System', href: '/love-map', icon: Heart },
     { name: '調解模式', href: '/mediation', icon: HandHeart },
-    { name: '藍圖與願望', href: '/blueprint', icon: ListTodo },
-    { name: '回憶長廊', href: '/memory', icon: BookMarked },
+    { name: 'Blueprint', href: '/blueprint', icon: ListTodo },
+    { name: 'Memory', href: '/memory', icon: BookMarked },
     { name: '通知中心', href: '/notifications', icon: Bell },
     { name: '情緒分析', href: '/analysis', icon: BarChart2, badge: 'Coming Soon' },
     { name: '伴侶連結 / 設定', href: '/settings', icon: Settings },
@@ -198,7 +198,7 @@ export default function Sidebar({ variant = 'default' }: SidebarProps) {
               </p>
               <p className="mt-2 text-xs leading-6 text-muted-foreground">
                 {isHomeVariant
-                  ? '首頁這一版刻意放低導航音量，讓內容區成為主舞台。'
+                  ? 'Home 先安靜整理今天，再把你送進更深的 Haven surfaces。'
                   : '首頁現在先服務你們今天真正重要的情緒與儀式。'}
               </p>
             </div>

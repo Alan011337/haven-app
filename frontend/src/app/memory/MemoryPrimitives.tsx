@@ -108,14 +108,23 @@ export function MemoryShell({ children }: MemoryShellProps) {
 
       <div className="relative z-10 mx-auto max-w-[1540px] space-y-[clamp(1.5rem,3vw,2.75rem)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-full border border-white/54 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft backdrop-blur-xl transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
-            aria-label="返回首頁"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            回首頁
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-white/54 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft backdrop-blur-xl transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+              aria-label="返回首頁"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+              回首頁
+            </Link>
+            <Link
+              href="/love-map#story"
+              className="inline-flex items-center gap-2 rounded-full border border-white/52 bg-white/64 px-4 py-2.5 text-sm font-medium text-card-foreground/88 shadow-soft backdrop-blur-xl transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-white/74 hover:text-card-foreground hover:shadow-lift focus-ring-premium"
+            >
+              Relationship System 故事摘要
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
 
           <Badge
             variant="metadata"
