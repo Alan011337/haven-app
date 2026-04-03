@@ -40,6 +40,7 @@ import {
   LoveMapRefinementSuggestionCard,
   LoveMapReflectionStudio,
   LoveMapSection,
+  LoveMapSharedFutureNotesPanel,
   LoveMapSuggestedUpdateCard,
   LoveMapStoryCapsuleCard,
   LoveMapStoryMomentCard,
@@ -1104,11 +1105,7 @@ export default function LoveMapPageContent() {
                           {item.added_by_me ? 'My contribution' : 'Partner contribution'}
                         </Badge>
                       </div>
-                      {item.notes ? (
-                        <div className="rounded-[1.4rem] border border-primary/10 bg-primary/8 px-4 py-4">
-                          <p className="type-body whitespace-pre-line text-card-foreground">{item.notes}</p>
-                        </div>
-                      ) : null}
+                      {item.notes ? <LoveMapSharedFutureNotesPanel notes={item.notes} /> : null}
 
                       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                         <p className="type-caption text-muted-foreground">

@@ -365,6 +365,11 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (normalizedPath.endsWith('/blueprint') && method === 'GET') {
+      await fulfillJson(route, system.wishlist_items);
+      return;
+    }
+
     if (path.endsWith('/love-map/suggestions/shared-future/generate') && method === 'POST') {
       generatedSuggestionCalls.push({});
       if (generatedSuggestionCalls.length === 1) {
@@ -697,6 +702,7 @@ test.describe('Love Map / Relationship System v1', () => {
   test.use({ bypassCSP: true });
 
   test('renders real relationship sections and saves structured edits', async ({ page }) => {
+    test.setTimeout(60_000);
     test.skip(
       process.env.LOVE_MAP_LIVE_E2E === '1',
       'Live localhost mode skips the mocked Love Map spec.',
@@ -801,6 +807,15 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect(page.getByText('建議補上的下一步：先一起挑一個想看的楓葉週，再把機票提醒設進行事曆。')).not.toBeVisible();
 
     const monthlyCard = page.locator('[data-shared-future-item-id="wish-1"]');
+    await monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補下一步' }).click();
+    await expect.poll(() => apiState.generatedRefinementCalls.includes('wish-1')).toBe(true);
+    await expect(page.getByText('建議補上的下一步：先把每月第二個週五晚上固定留給彼此。')).toBeVisible();
+    await page.getByRole('button', { name: '接受' }).last().click();
+    await expect.poll(() => apiState.acceptedRefinementIds.length).toBe(1);
+    await expect(monthlyCard.getByText('補充', { exact: true })).toBeVisible();
+    await expect(monthlyCard.getByText('下一步', { exact: true })).toBeVisible();
+    await expect(monthlyCard.getByText('先把每月第二個週五晚上固定留給彼此。')).toBeVisible();
+    await expect(monthlyCard.getByText('先把那一晚留給散步和晚餐。')).toBeVisible();
     await expect(monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' })).toBeVisible();
     await monthlyCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' }).click();
     await expect.poll(() => apiState.generatedCadenceRefinementCalls.includes('wish-1')).toBe(true);
@@ -819,8 +834,14 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect.poll(() => apiState.generatedCadenceRefinementCalls.includes('wish-3')).toBe(true);
     await expect(page.getByText('建議補上的節奏：每次明顯爭執後 24 小時內安排一次短暫復盤。')).toBeVisible();
     await page.getByRole('button', { name: '接受' }).last().click();
-    await expect.poll(() => apiState.acceptedRefinementIds.length).toBe(1);
-    await expect(page.getByText('節奏：每次明顯爭執後 24 小時內安排一次短暫復盤。')).toBeVisible();
+    await expect.poll(() => apiState.acceptedRefinementIds.length).toBe(2);
+    await expect(repairCard.getByText('補充', { exact: true })).toBeVisible();
+    await expect(repairCard.getByText('節奏', { exact: true })).toBeVisible();
+    await expect(repairCard.getByText('每次明顯爭執後 24 小時內安排一次短暫復盤。')).toBeVisible();
+    await expect(repairCard.getByText('希望每次明顯爭執後，都能慢慢回到同一邊。')).toBeVisible();
+    await expect(kyotoCard.getByText('想慢慢走巷子和神社。')).toBeVisible();
+    await expect(kyotoCard.getByText('補充', { exact: true })).toHaveCount(0);
+
   });
 
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {

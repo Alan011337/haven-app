@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Compass, Sparkles } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
+import { parseSharedFutureNotes } from '@/lib/shared-future-read-model';
 import { cn } from '@/lib/utils';
 
 type BlueprintStateTone = 'default' | 'quiet' | 'error';
@@ -189,6 +190,98 @@ interface BlueprintFeaturedWishProps {
   spotlight: string;
 }
 
+function BlueprintStructuredWishSection({
+  label,
+  entries,
+  compact = false,
+}: {
+  label: string;
+  entries: string[];
+  compact?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="type-micro uppercase text-primary/80">{label}</p>
+      <div className="space-y-2">
+        {entries.map((entry, index) => (
+          <div
+            key={`${label}-${index}-${entry}`}
+            className={cn(
+              'rounded-[1.2rem] border border-white/58 bg-white/72 shadow-soft',
+              compact ? 'px-3 py-2.5' : 'px-4 py-3',
+            )}
+          >
+            <p className={cn(compact ? 'type-caption leading-6 text-card-foreground' : 'type-body-muted text-card-foreground')}>
+              {entry}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BlueprintSharedFutureNotesPanel({
+  notes,
+  emptyText,
+  compact = false,
+}: {
+  notes?: string;
+  emptyText: string;
+  compact?: boolean;
+}) {
+  const readModel = parseSharedFutureNotes(notes);
+
+  if (!notes) {
+    return (
+      <p
+        className={cn(
+          compact ? 'type-caption leading-6 text-muted-foreground' : 'type-body-muted leading-7 text-card-foreground/88',
+        )}
+      >
+        {emptyText}
+      </p>
+    );
+  }
+
+  if (!readModel.hasStructuredRefinements) {
+    return (
+      <p
+        className={cn(
+          compact ? 'type-caption leading-6 text-muted-foreground' : 'type-body-muted leading-7 text-card-foreground/88',
+        )}
+      >
+        {notes}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {readModel.baseNote ? (
+        <div className="space-y-2">
+          <p className="type-micro uppercase text-primary/80">補充</p>
+          <p
+            className={cn(
+              compact ? 'type-caption leading-6 text-muted-foreground' : 'type-body-muted leading-7 text-card-foreground/88',
+            )}
+          >
+            {readModel.baseNote}
+          </p>
+        </div>
+      ) : null}
+
+      {readModel.nextSteps.length > 0 ? (
+        <BlueprintStructuredWishSection label="下一步" entries={readModel.nextSteps} compact={compact} />
+      ) : null}
+
+      {readModel.cadences.length > 0 ? (
+        <BlueprintStructuredWishSection label="節奏" entries={readModel.cadences} compact={compact} />
+      ) : null}
+    </div>
+  );
+}
+
 export function BlueprintFeaturedWish({
   title,
   notes,
@@ -211,9 +304,12 @@ export function BlueprintFeaturedWish({
 
           <div className="space-y-3">
             <h3 className="type-h2 text-card-foreground">{title}</h3>
-            <p className="max-w-4xl type-body-muted leading-7 text-card-foreground/88">
-              {notes || '這個願望暫時還沒有寫下更多細節。留白本身也是一種想像，等你們下次一起補上它。'}
-            </p>
+            <div className="max-w-4xl">
+              <BlueprintSharedFutureNotesPanel
+                notes={notes}
+                emptyText="這個願望暫時還沒有寫下更多細節。留白本身也是一種想像，等你們下次一起補上它。"
+              />
+            </div>
           </div>
         </div>
 
@@ -273,9 +369,10 @@ export function BlueprintCompanionWish({
 
         <div className="space-y-3">
           <h3 className="type-h3 text-card-foreground">{title}</h3>
-          <p className="type-body-muted text-muted-foreground">
-            {notes || '這個願望還保留著更多留白，等下一次一起補上更具體的想像。'}
-          </p>
+          <BlueprintSharedFutureNotesPanel
+            notes={notes}
+            emptyText="這個願望還保留著更多留白，等下一次一起補上更具體的想像。"
+          />
         </div>
 
         <p className="type-caption text-card-foreground/76">{createdLabel}</p>
@@ -311,9 +408,11 @@ export function BlueprintShelfWish({
 
         <div className="space-y-2.5">
           <h3 className="type-section-title text-card-foreground">{title}</h3>
-          <p className="type-caption leading-6 text-muted-foreground">
-            {notes || '先讓它留在這裡，等你們哪天回來時，再決定要替它補上哪一種細節。'}
-          </p>
+          <BlueprintSharedFutureNotesPanel
+            notes={notes}
+            emptyText="先讓它留在這裡，等你們哪天回來時，再決定要替它補上哪一種細節。"
+            compact
+          />
         </div>
 
         <p className="type-caption text-card-foreground/72">{createdLabel}</p>

@@ -7,6 +7,7 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
+import { parseSharedFutureNotes } from '@/lib/shared-future-read-model';
 import { cn } from '@/lib/utils';
 
 type StateTone = 'default' | 'quiet' | 'error';
@@ -475,6 +476,65 @@ export function LoveMapFutureComposer({
         {footer}
       </div>
     </GlassCard>
+  );
+}
+
+function LoveMapStructuredNoteGroup({
+  label,
+  entries,
+}: {
+  label: string;
+  entries: string[];
+}) {
+  return (
+    <div className="space-y-2.5">
+      <p className="type-micro uppercase text-primary/80">{label}</p>
+      <div className="space-y-2">
+        {entries.map((entry, index) => (
+          <div
+            key={`${label}-${index}-${entry}`}
+            className="rounded-[1.2rem] border border-white/58 bg-white/76 px-4 py-3 shadow-soft"
+          >
+            <p className="type-body text-card-foreground">{entry}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function LoveMapSharedFutureNotesPanel({ notes }: { notes?: string | null }) {
+  const readModel = parseSharedFutureNotes(notes);
+
+  if (!notes) {
+    return null;
+  }
+
+  if (!readModel.hasStructuredRefinements) {
+    return (
+      <div className="rounded-[1.4rem] border border-primary/10 bg-primary/8 px-4 py-4">
+        <p className="type-body whitespace-pre-line text-card-foreground">{notes}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 rounded-[1.4rem] border border-primary/10 bg-primary/8 px-4 py-4">
+      {readModel.baseNote ? (
+        <div className="space-y-2">
+          <p className="type-micro uppercase text-primary/80">補充</p>
+          <p className="type-body whitespace-pre-line text-card-foreground">{readModel.baseNote}</p>
+        </div>
+      ) : null}
+
+      {readModel.nextSteps.length > 0 ? (
+        <LoveMapStructuredNoteGroup label="下一步" entries={readModel.nextSteps} />
+      ) : null}
+
+      {readModel.cadences.length > 0 ? (
+        <LoveMapStructuredNoteGroup label="節奏" entries={readModel.cadences} />
+      ) : null}
+    </div>
   );
 }
 
