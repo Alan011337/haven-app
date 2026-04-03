@@ -884,6 +884,20 @@
     {
       "auth_policy": "authenticated",
       "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.generate_story_adjacent_ritual_suggestion",
+      "method": "POST",
+      "name": "generate_story_adjacent_ritual_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/shared-future/generate-story-ritual",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_map.list_shared_future_refinement_suggestions",
       "method": "GET",
       "name": "list_shared_future_refinement_suggestions",

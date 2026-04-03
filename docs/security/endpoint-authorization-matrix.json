@@ -285,6 +285,15 @@
       "idempotency_policy": "required",
       "method": "POST",
       "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/shared-future/generate-story-ritual",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
       "path": "/api/love-map/suggestions/shared-future/refinements/{wishlist_item_id}/generate",
       "subject_scope": "current_user",
       "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"

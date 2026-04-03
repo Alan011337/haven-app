@@ -40,6 +40,7 @@ from app.schemas.love_map import (
     RelationshipKnowledgeSuggestionPublic,
 )
 from app.services.ai import (
+    generate_shared_future_story_adjacent_ritual,
     generate_shared_future_refinement_cadence,
     generate_shared_future_refinement_next_step,
     generate_shared_future_suggestions,
@@ -50,7 +51,7 @@ from app.services.ai import (
     supports_shared_future_cadence_refinement,
 )
 from app.services.ai_errors import HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError
-from app.services.memory_archive import get_relationship_story_slice
+from app.services.memory_archive import get_relationship_story_slice, get_relationship_story_time_capsule
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["love-map"])
@@ -61,6 +62,7 @@ SUGGESTION_STATUS_PENDING = "pending"
 SUGGESTION_STATUS_ACCEPTED = "accepted"
 SUGGESTION_STATUS_DISMISSED = "dismissed"
 SUGGESTION_GENERATOR_SHARED_FUTURE_V1 = "shared_future_v1"
+SUGGESTION_GENERATOR_SHARED_FUTURE_STORY_RITUAL_V1 = "shared_future_story_ritual_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1 = "shared_future_refinement_next_step_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1 = "shared_future_refinement_cadence_v1"
 REFINEMENT_DISMISS_COOLDOWN = timedelta(hours=24)
@@ -454,6 +456,61 @@ def _build_shared_future_generation_sources(
     return evidence_catalog, existing_wishlist_titles, blocked_dedupe_keys, handled_titles
 
 
+def _story_time_capsule_item_label(source_kind: str) -> str:
+    if source_kind == "journal":
+        return "Time Capsule · 日記"
+    if source_kind == "card":
+        return "Time Capsule · 共同卡片"
+    if source_kind == "appreciation":
+        return "Time Capsule · 感恩"
+    return "Time Capsule · 記憶片段"
+
+
+def _build_story_ritual_evidence_catalog(
+    *,
+    time_capsule: dict[str, object],
+) -> list[dict[str, str]]:
+    from_date = str(time_capsule.get("from_date") or "").strip()
+    to_date = str(time_capsule.get("to_date") or "").strip()
+    summary_text = _truncate_preview(str(time_capsule.get("summary_text") or ""), 280)
+    evidence_catalog: list[dict[str, str]] = []
+
+    if from_date and to_date and summary_text:
+        evidence_catalog.append(
+            {
+                "evidence_id": f"time-capsule:{from_date}:{to_date}",
+                "source_kind": "story_time_capsule",
+                "source_id": f"{from_date}:{to_date}",
+                "label": "Story Time Capsule",
+                "excerpt": summary_text,
+            }
+        )
+
+    items = time_capsule.get("items")
+    if not isinstance(items, list):
+        return evidence_catalog
+
+    for item in items[:2]:
+        if not isinstance(item, dict):
+            continue
+        source_kind = str(item.get("type") or "").strip().lower()
+        source_id = str(item.get("source_id") or "").strip()
+        preview_text = _truncate_preview(str(item.get("preview_text") or ""), 280)
+        if not source_kind or not source_id or not preview_text:
+            continue
+        evidence_catalog.append(
+            {
+                "evidence_id": f"time-capsule-item:{source_kind}:{source_id}",
+                "source_kind": "time_capsule_item",
+                "source_id": source_id,
+                "label": _story_time_capsule_item_label(source_kind),
+                "excerpt": preview_text,
+            }
+        )
+
+    return evidence_catalog
+
+
 @router.get("/cards", response_model=LoveMapCardsResponse)
 def get_love_map_cards(
     *,
@@ -727,6 +784,132 @@ async def generate_shared_future_review_suggestions(
     for row in created_rows:
         session.refresh(row)
     return [_to_suggestion_public(row) for row in created_rows]
+
+
+@router.post(
+    "/suggestions/shared-future/generate-story-ritual",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+async def generate_story_adjacent_ritual_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    pending_rows = _load_shared_future_pending_suggestions(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    pending_story_rows = [
+        row
+        for row in pending_rows
+        if row.generator_version == SUGGESTION_GENERATOR_SHARED_FUTURE_STORY_RITUAL_V1
+    ]
+    if pending_story_rows:
+        return [_to_suggestion_public(row) for row in pending_story_rows]
+    if pending_rows:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "shared_future_pending_queue_not_empty")
+        return []
+
+    time_capsule = get_relationship_story_time_capsule(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    if not time_capsule:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "story_time_capsule_unavailable")
+        return []
+
+    total_content_count = sum(
+        int(time_capsule.get(key) or 0)
+        for key in ("journals_count", "cards_count", "appreciations_count")
+    )
+    if total_content_count < 2:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "insufficient_story_signal")
+        return []
+
+    evidence_catalog = _build_story_ritual_evidence_catalog(time_capsule=time_capsule)
+    if len(evidence_catalog) < 2:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "insufficient_time_capsule_evidence")
+        return []
+
+    _, existing_titles, blocked_dedupe_keys, handled_titles = _build_shared_future_generation_sources(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+
+    try:
+        generated = await generate_shared_future_story_adjacent_ritual(
+            evidence_catalog=evidence_catalog,
+            existing_titles=existing_titles,
+            handled_titles=handled_titles,
+        )
+    except (HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError) as exc:
+        logger.warning(
+            "shared_future_story_ritual_generate_failed: reason=%s",
+            getattr(exc, "reason", type(exc).__name__),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 建議暫時無法使用，請稍後再試。",
+        ) from exc
+
+    if not generated:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "ai_returned_empty")
+        return []
+
+    title = _truncate_preview(str(generated.get("proposed_title") or ""), 500)
+    dedupe_key = normalize_shared_future_suggestion_key(
+        str(generated.get("dedupe_key") or title or "")
+    )
+    if not title or not dedupe_key or dedupe_key in blocked_dedupe_keys:
+        logger.info("shared_future_story_ritual_skipped: reason=%s", "dedupe_key_blocked")
+        return []
+
+    comparison_rows: list[tuple[str, str]] = [
+        *((existing_title, "wishlist_title") for existing_title in existing_titles if existing_title.strip()),
+        *((handled_title, "handled_suggestion") for handled_title in handled_titles if handled_title.strip()),
+    ]
+    near_duplicate_match = _find_shared_future_title_near_duplicate_match(
+        candidate_text=title,
+        comparison_rows=comparison_rows,
+    )
+    if near_duplicate_match:
+        matched_text, matched_source = near_duplicate_match
+        _log_shared_future_near_duplicate_filtered(
+            flow=SUGGESTION_SECTION_SHARED_FUTURE,
+            candidate_text=title,
+            matched_text=matched_text,
+            matched_source=matched_source,
+        )
+        return []
+
+    row = RelationshipKnowledgeSuggestion(
+        user_id=current_user.id,
+        partner_id=partner_id,
+        section=SUGGESTION_SECTION_SHARED_FUTURE,
+        status=SUGGESTION_STATUS_PENDING,
+        generator_version=SUGGESTION_GENERATOR_SHARED_FUTURE_STORY_RITUAL_V1,
+        proposed_title=title,
+        proposed_notes=_truncate_preview(str(generated.get("proposed_notes") or ""), 2000),
+        evidence_json=evidence_catalog,
+        dedupe_key=dedupe_key,
+    )
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Generate story-adjacent ritual suggestion",
+        conflict_detail="儲存 Story ritual 建議時發生衝突，請稍後再試。",
+        failure_detail="儲存 Story ritual 建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return [_to_suggestion_public(row)]
 
 
 @router.get(

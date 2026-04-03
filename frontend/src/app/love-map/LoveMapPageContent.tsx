@@ -24,6 +24,7 @@ import {
   dismissLoveMapSharedFutureSuggestion,
   generateLoveMapSharedFutureCadenceRefinement,
   generateLoveMapSharedFutureRefinement,
+  generateLoveMapStoryAdjacentRitualSuggestion,
   generateLoveMapSharedFutureSuggestions,
   type LoveMapCardSummary,
   type RelationshipKnowledgeSuggestionPublic,
@@ -204,6 +205,10 @@ function getRefinementKind(generatorVersion: string): SharedFutureRefinementKind
   return generatorVersion === 'shared_future_refinement_cadence_v1' ? 'cadence' : 'next_step';
 }
 
+function getSharedFutureSuggestionVariant(generatorVersion: string): 'default' | 'story_ritual' {
+  return generatorVersion === 'shared_future_story_ritual_v1' ? 'story_ritual' : 'default';
+}
+
 function scoreLabel(score?: number | null) {
   if (!score) return '未填寫';
   return `${score} / 5`;
@@ -226,6 +231,7 @@ export default function LoveMapPageContent() {
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingWishlist, setSavingWishlist] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [generatingStoryRitual, setGeneratingStoryRitual] = useState(false);
   const [generatingRefinement, setGeneratingRefinement] = useState<{
     itemId: string;
     kind: SharedFutureRefinementKind;
@@ -372,6 +378,24 @@ export default function LoveMapPageContent() {
     }
   };
 
+  const handleGenerateStoryRitualSuggestion = async () => {
+    setGeneratingStoryRitual(true);
+    try {
+      const suggestions = await generateLoveMapStoryAdjacentRitualSuggestion();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
+      if (suggestions.length === 0) {
+        showToast('這段故事目前還沒有足夠清楚的 ritual 建議。', 'info');
+        return;
+      }
+      showToast('Haven 已把這段故事的 ritual 提案放進你的 Shared Future review queue。', 'success');
+    } catch (error) {
+      logClientError('love-map-story-ritual-suggestion-generate-failed', error);
+      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+    } finally {
+      setGeneratingStoryRitual(false);
+    }
+  };
+
   const handleGenerateRefinement = async (
     wishlistItemId: string,
     kind: SharedFutureRefinementKind,
@@ -481,17 +505,19 @@ export default function LoveMapPageContent() {
       .map((suggestion) => [suggestion.target_wishlist_item_id as string, suggestion]),
   );
   const aiPendingCount = system.has_partner ? pendingSuggestions.length + pendingRefinements.length : 0;
+  const storyRitualActionDisabled =
+    generatingStoryRitual || suggestionQuery.isLoading || refinementQuery.isLoading || aiPendingCount > 0;
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
       <LoveMapSystemCover
-        eyebrow="Love Map / Relationship System"
-        title="把 Haven 已經知道、仍在學、以及你們想一起走向的未來，放回同一個地方。"
-        description="這裡不是抽象的感情頁，也不是單純的提示卡牆。它應該誠實地告訴你們：目前的關係方向是什麼、你留下了哪些內在地圖、以及你們正一起把什麼未來放進生活裡。"
+        eyebrow="Relationship System"
+        title="把你們現在的關係狀態、被記住的故事、私人反思與共同未來，放進同一個地方。"
+        description="這裡不是另一個功能頁，也不是一組零散卡片。它是 Haven 的關係系統首頁，誠實呈現現在的共同狀態、被留下的故事、你的私人理解，以及你們正在一起靠近的未來。"
         pulse={
           system.has_partner
-            ? `Haven 目前把你們的關係理解放成四塊：共同方向、被記住的故事、你的內在地圖，以及一起靠近的未來。現在有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層心內地圖，Shared Future 收著 ${system.stats.wishlist_count} 個片段。`
-            : '你還沒有完成雙向伴侶連結，所以 Haven 只能先保留你的單邊脈動。完成連結後，這裡才會變成真正的 shared relationship system。'
+            ? `Haven 目前把你們的關係理解整理成四層：Relationship Pulse、Story、Inner Landscape 與 Shared Future。現在有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層私人反思、${system.stats.wishlist_count} 個共同未來片段；AI 提案審核則另外留在你的個人 review queue。`
+            : '你還沒有完成雙向伴侶連結，所以 Haven 目前只能先保留你的單邊脈動。完成連結後，這裡才會變成真正的 Relationship System。'
         }
         primaryHref={system.has_partner ? '#relationship-pulse' : '/settings#settings-relationship'}
         primaryLabel={system.has_partner ? '先看目前的共同方向' : '先完成伴侶連結'}
@@ -502,7 +528,7 @@ export default function LoveMapPageContent() {
               <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
                 {system.baseline.mine ? '已建立' : '待開始'}
               </p>
-              <p className="mt-2 type-caption text-muted-foreground">目前的五維脈動與共同方向會在這裡對齊。</p>
+              <p className="mt-2 type-caption text-muted-foreground">目前的共同狀態與北極星方向會在這裡對齊。</p>
             </div>
 
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
@@ -511,25 +537,25 @@ export default function LoveMapPageContent() {
                 {filledLayerCount}
                 <span className="ml-1 text-lg text-muted-foreground">/ 3</span>
               </p>
-              <p className="mt-2 type-caption text-muted-foreground">這些是你留下的理解筆記，不會被自動當成共享真相。</p>
+              <p className="mt-2 type-caption text-muted-foreground">這些是你留下的私人理解，不會被自動當成共享真相。</p>
             </div>
 
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/78">Shared Future</p>
               <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">{system.stats.wishlist_count}</p>
-              <p className="mt-2 type-caption text-muted-foreground">已被放進共同藍圖、值得反覆回來看的未來片段。</p>
+              <p className="mt-2 type-caption text-muted-foreground">這裡只放已被接受、值得反覆回來看的共同未來片段。</p>
             </div>
           </div>
         }
         aside={
           <>
             <LoveMapSnapshotCard
-              eyebrow="What Haven knows"
+              eyebrow="已被支持的關係知識"
               title={system.partner?.partner_name ? `${system.me.full_name || '你'} × ${system.partner.partner_name}` : '尚未完成共享配對'}
               description={
                 system.has_partner
-                  ? '這一頁只展示目前真的有資料支持的關係知識。沒有被看見的部分，Haven 不會假裝自己已經知道。'
-                  : '完成伴侶連結後，Haven 才能把這裡從單邊筆記，變成真正的 shared relationship system。'
+                  ? '這一頁只展示目前真的有資料支持的關係知識。還沒有被看見的部分，Haven 不會假裝自己已經知道。'
+                  : '完成伴侶連結後，Haven 才能把這裡從單邊筆記，變成真正的 Relationship System。'
               }
             >
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -545,26 +571,30 @@ export default function LoveMapPageContent() {
             </LoveMapSnapshotCard>
 
             <LoveMapSnapshotCard
-              eyebrow="Trust boundary"
-              title="共識、反思、未來，分開呈現。"
-              description="Relationship Pulse 與 Shared Future 是共享知識；Inner Landscape 是你自己的理解地圖。這個邊界會讓 Haven 比較值得相信。"
+              eyebrow="信任邊界"
+              title="共享真相、私人反思與 AI 提案審核，分開呈現。"
+              description="Relationship Pulse 與 Shared Future 是共享知識；Story 只引用已留下的 shared memory；Inner Landscape 與 AI 提案審核只屬於你。這個邊界會讓 Haven 更值得相信。"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
-                  <span className="type-section-title text-card-foreground">共同方向</span>
+                  <span className="type-section-title text-card-foreground">Relationship Pulse</span>
                   <Badge variant="success" size="sm">Shared truth</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
-                  <span className="type-section-title text-card-foreground">故事切片</span>
+                  <span className="type-section-title text-card-foreground">Story</span>
                   <Badge variant="metadata" size="sm">Memory-backed</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
-                  <span className="type-section-title text-card-foreground">你的內在地圖</span>
+                  <span className="type-section-title text-card-foreground">Inner Landscape</span>
                   <Badge variant="metadata" size="sm">Personal reflection</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
-                  <span className="type-section-title text-card-foreground">共同藍圖</span>
-                  <Badge variant="success" size="sm">Shared future</Badge>
+                  <span className="type-section-title text-card-foreground">Shared Future</span>
+                  <Badge variant="success" size="sm">Shared truth</Badge>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
+                  <span className="type-section-title text-card-foreground">AI 提案審核</span>
+                  <Badge variant="metadata" size="sm">Personal review</Badge>
                 </div>
               </div>
             </LoveMapSnapshotCard>
@@ -576,7 +606,7 @@ export default function LoveMapPageContent() {
         id="relationship-pulse"
         eyebrow="Relationship Pulse"
         title="先把目前的共同方向看清楚。"
-        description="Love Map v1 不再只是問題卡頁。它先用最有限但真實的資料，回答目前的關係脈動與北極星方向。"
+        description="Relationship System 不靠想像補完；它先用最有限但真實的資料，回答目前的關係脈動與北極星方向。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -806,6 +836,24 @@ export default function LoveMapPageContent() {
               </div>
             ) : null}
 
+            {system.story.time_capsule ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.55rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
+                <p className="type-caption text-muted-foreground">
+                  如果這段回聲已經足夠清楚，Haven 可以先提出一個貼著這段故事的 ritual，然後再由你決定要不要把它放進 Shared Future。
+                </p>
+                <Button
+                  variant="secondary"
+                  loading={generatingStoryRitual}
+                  disabled={storyRitualActionDisabled}
+                  onClick={() => {
+                    void handleGenerateStoryRitualSuggestion();
+                  }}
+                >
+                  讓 Haven 從這段故事提出 ritual
+                </Button>
+              </div>
+            ) : null}
+
             <Link
               href="/memory"
               className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
@@ -957,22 +1005,22 @@ export default function LoveMapPageContent() {
         id="shared-future"
         eyebrow="Shared Future"
         title="把你們想一起靠近的生活，放進同一張藍圖裡。"
-        description="Blueprint 不該孤零零地放在另一個頁面。Love Map v1 會把共同未來帶進關係系統裡，讓 Haven 不只記得你們怎麼想，也記得你們想一起走去哪裡。"
+        description="Relationship System 會在這裡整理已經成立的共同未來與正在審核的提案；完整 Shared Future 清單與新增入口仍保留在 Blueprint。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Wishlist count</p>
+              <p className="type-micro uppercase text-primary/80">Shared Future 片段</p>
               <p className="mt-2 type-section-title text-card-foreground">{system.stats.wishlist_count}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">AI pending</p>
+              <p className="type-micro uppercase text-primary/80">待審核提案</p>
               <p className="mt-2 type-section-title text-card-foreground">
                 {aiPendingCount}
               </p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Blueprint</p>
-              <p className="mt-2 type-caption text-muted-foreground">Love Map 在這裡只顯示高價值摘要，完整 future shelf 仍保留在 Blueprint。</p>
+              <p className="type-micro uppercase text-primary/80">完整 Shared Future</p>
+              <p className="mt-2 type-caption text-muted-foreground">Relationship System 在這裡只顯示摘要；完整片段與整理仍保留在 Blueprint。</p>
             </div>
           </div>
         }
@@ -994,13 +1042,13 @@ export default function LoveMapPageContent() {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
             <div className="grid gap-4">
               <LoveMapFutureComposer
-                eyebrow="AI Suggested Updates"
-                title="先讓 Haven 提案，再由你決定什麼值得變成 shared truth。"
-                description="這些建議只會出現在你的個人 review queue。接受前，它們都不是共同真相；接受後，才會寫進 Shared Future。"
+                eyebrow="AI 提案審核"
+                title="先由 Haven 提案，再由你決定什麼能進入 Shared Future。"
+                description="這一層是你的 personal review queue，不是 shared truth。只有接受後，提案才會寫進 Shared Future。"
                 footer={
                   <div className="rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                     <p className="type-caption text-muted-foreground">
-                      Pending AI suggestions 只對你可見，伴侶只會看到你接受之後真正放進 Shared Future 的項目。
+                      AI 提案審核只對你可見；伴侶只會看到你接受之後真正進入 Shared Future 的內容。
                     </p>
                   </div>
                 }
@@ -1008,29 +1056,29 @@ export default function LoveMapPageContent() {
                 <div className="space-y-4">
                   {suggestionQuery.isError ? (
                     <LoveMapStatePanel
-                      eyebrow="AI suggestions"
-                      title="建議佇列暫時沒有順利載入。"
-                      description="目前的 Shared Future 仍然可用，但這一層 AI review queue 需要重新讀取。"
+                      eyebrow="AI 提案審核"
+                      title="提案審核佇列暫時沒有順利載入。"
+                      description="目前的 Shared Future 仍然可用，但這一層 personal review queue 需要重新讀取。"
                       tone="quiet"
-                      actionLabel="重新讀取建議"
+                      actionLabel="重新讀取提案"
                       onAction={() => {
                         void suggestionQuery.refetch();
                       }}
                     />
                   ) : suggestionQuery.isLoading ? (
                     <LoveMapStatePanel
-                      eyebrow="AI suggestions"
-                      title="Haven 正在讀取你的 review queue。"
-                      description="如果這裡有待審核的 Shared Future 建議，它們會在幾秒內出現。"
+                      eyebrow="AI 提案審核"
+                      title="Haven 正在讀取你的提案審核佇列。"
+                      description="如果這裡有待審核的 Shared Future 提案，它們會在幾秒內出現。"
                       tone="quiet"
                     />
                   ) : pendingSuggestions.length === 0 ? (
                     <LoveMapStatePanel
-                      eyebrow="AI suggestions"
-                      title="目前沒有待你審核的 Shared Future 建議。"
-                      description="當 Haven 能從你留下的 journals、共同卡片與 appreciation 裡看到足夠清楚的方向時，它才會提出建議。"
+                      eyebrow="AI 提案審核"
+                      title="目前沒有待你審核的 Shared Future 提案。"
+                      description="當 Haven 能從你留下的 journals、共同卡片與 appreciation 裡看到足夠清楚的方向時，它才會提出提案。"
                       tone="quiet"
-                      actionLabel="讓 Haven 提出 Shared Future 建議"
+                      actionLabel="讓 Haven 提出 Shared Future 提案"
                       onAction={() => {
                         void handleGenerateSuggestions();
                       }}
@@ -1041,6 +1089,7 @@ export default function LoveMapPageContent() {
                         key={suggestion.id}
                         title={suggestion.proposed_title}
                         notes={suggestion.proposed_notes}
+                        variant={getSharedFutureSuggestionVariant(suggestion.generator_version)}
                         evidence={suggestion.evidence}
                         accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
                         dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
@@ -1056,7 +1105,7 @@ export default function LoveMapPageContent() {
 
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                     <p className="type-caption text-muted-foreground">
-                      Haven 只會在 evidence 足夠清楚時提出建議，並且不會直接寫進 shared truth。
+                      Haven 只會在 evidence 足夠清楚時提出提案，並且不會直接寫進 shared truth。
                     </p>
                     <Button
                       variant="secondary"
@@ -1066,7 +1115,7 @@ export default function LoveMapPageContent() {
                         void handleGenerateSuggestions();
                       }}
                     >
-                      {pendingSuggestions.length > 0 ? '重新整理建議' : '讓 Haven 提案'}
+                      {pendingSuggestions.length > 0 ? '重新整理提案' : '讓 Haven 提案'}
                     </Button>
                   </div>
                 </div>
@@ -1162,19 +1211,19 @@ export default function LoveMapPageContent() {
                 href="/blueprint"
                 className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
               >
-                前往完整 Blueprint
+                前往 Blueprint（完整 Shared Future）
                 <Sparkles className="h-4 w-4" aria-hidden />
               </Link>
             </div>
 
             <LoveMapFutureComposer
-              eyebrow="Add a future fragment"
+              eyebrow="新增未來片段"
               title="把下一個想一起變成真的片段，放進這張圖裡。"
               description="不需要很大，可以只是一種生活感、一個儀式、一段季節裡想一起完成的畫面。"
               footer={
                 <div className="rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                   <p className="type-caption text-muted-foreground">
-                    Shared Future 會保留在 Love Map 裡當作關係知識摘要，而完整清單仍在 Blueprint。
+                    Relationship System 在這裡只保留高價值摘要；完整 Shared Future 清單仍在 Blueprint。
                   </p>
                 </div>
               }

@@ -45,6 +45,7 @@ async function mockLoveMapApi(page: Page) {
   const notePayloads: Array<Record<string, unknown>> = [];
   const wishlistPayloads: Array<Record<string, unknown>> = [];
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
+  const generatedStoryRitualCalls: Array<Record<string, unknown>> = [];
   const generatedRefinementCalls: string[] = [];
   const generatedCadenceRefinementCalls: string[] = [];
   const generatedRefinementCallCounts: Record<string, number> = {};
@@ -306,7 +307,15 @@ async function mockLoveMapApi(page: Page) {
     }
 
     if (path.endsWith('/baseline') && method === 'POST') {
-      const payload = route.request().postDataJSON() as { scores: Record<string, number> };
+      const payload = route.request().postDataJSON() as {
+        scores: {
+          intimacy: number;
+          conflict: number;
+          trust: number;
+          communication: number;
+          commitment: number;
+        };
+      };
       baselinePayloads.push(payload);
       system.baseline.mine = {
         ...system.baseline.mine,
@@ -431,6 +440,47 @@ async function mockLoveMapApi(page: Page) {
         pendingSuggestions = [];
       }
       await fulfillJson(route, pendingSuggestions);
+      return;
+    }
+
+    if (path.endsWith('/love-map/suggestions/shared-future/generate-story-ritual') && method === 'POST') {
+      generatedStoryRitualCalls.push({});
+      const existingPendingStoryRitual = pendingSuggestions.filter(
+        (item) => item.generator_version === 'shared_future_story_ritual_v1',
+      );
+      if (existingPendingStoryRitual.length > 0) {
+        await fulfillJson(route, existingPendingStoryRitual);
+        return;
+      }
+
+      const storySuggestion = {
+        id: `story-ritual-${generatedStoryRitualCalls.length}`,
+        section: 'shared_future',
+        status: 'pending',
+        generator_version: 'shared_future_story_ritual_v1',
+        proposed_title: '每逢紀念日一起重看一則回憶',
+        proposed_notes: '在接近這段回聲的日子裡，一起重看一則回憶，交換現在的感受。',
+        evidence: [
+          {
+            source_kind: 'story_time_capsule',
+            source_id: '2025-03-21:2025-03-27',
+            label: 'Story Time Capsule',
+            excerpt: '一年前的這幾天（3/21 – 3/27）：1 則日記、1 則共同卡片回憶、1 則感恩。',
+          },
+          {
+            source_kind: 'time_capsule_item',
+            source_id: 'journal-1',
+            label: 'Time Capsule · 日記',
+            excerpt: '一年前的今天，我們第一次一起去了那間隱藏在巷子裡的咖啡廳。',
+          },
+        ],
+        created_at: new Date().toISOString(),
+        reviewed_at: null,
+        target_wishlist_item_id: null,
+        accepted_wishlist_item_id: null,
+      };
+      pendingSuggestions = [storySuggestion, ...pendingSuggestions];
+      await fulfillJson(route, [storySuggestion]);
       return;
     }
 
@@ -666,6 +716,7 @@ async function mockLoveMapApi(page: Page) {
     notePayloads,
     acceptedSuggestionIds,
     dismissedSuggestionIds,
+    generatedStoryRitualCalls,
     generatedRefinementCalls,
     generatedCadenceRefinementCalls,
     acceptedRefinementIds,
@@ -698,7 +749,7 @@ async function expectFocusedMemoryCardInViewport(page: Page, kind: 'appreciation
   return focusedCard;
 }
 
-test.describe('Love Map / Relationship System v1', () => {
+test.describe('Relationship System naming and IA polish', () => {
   test.use({ bypassCSP: true });
 
   test('renders real relationship sections and saves structured edits', async ({ page }) => {
@@ -714,9 +765,10 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '把 Haven 已經知道、仍在學、以及你們想一起走向的未來，放回同一個地方。',
+        name: '把你們現在的關係狀態、被記住的故事、私人反思與共同未來，放進同一個地方。',
       }),
     ).toBeVisible();
+    await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把真正被留下來的 shared memory，放回你們的關係故事裡。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把你的 relationship reflections 留成可回讀的內在地圖。' })).toBeVisible();
@@ -724,7 +776,10 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect(page.getByText('目前的關係脈動與北極星方向')).toBeVisible();
     await expect(page.getByText('謝謝你每天早上幫我準備咖啡')).toBeVisible();
     await expect(page.getByText('一年前的這幾天（3/21 – 3/27）：1 則日記、1 則共同卡片回憶、1 則感恩。')).toBeVisible();
-    await expect(page.getByText('目前沒有待你審核的 Shared Future 建議。')).toBeVisible();
+    await expect(page.getByText('共享真相、私人反思與 AI 提案審核，分開呈現。')).toBeVisible();
+    await expect(page.getByText('Personal review', { exact: true })).toBeVisible();
+    await expect(page.getByText('目前沒有待你審核的 Shared Future 提案。')).toBeVisible();
+    await expect(page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' })).toBeVisible();
 
     const intimacySelect = page.locator('#love-map-baseline-intimacy');
     await intimacySelect.evaluate((node) => {
@@ -772,23 +827,43 @@ test.describe('Love Map / Relationship System v1', () => {
     });
     await expect(page.getByText('一起把週日早晨留給散步')).toBeVisible();
 
-    await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 建議' }).click();
+    await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
+    await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(1);
+    await expect(page.getByText('Story-adjacent ritual suggestion')).toBeVisible();
+    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+    await expect(page.getByText('What in your story this builds on')).toBeVisible();
+    await expect(page.getByText('Story Time Capsule')).toBeVisible();
+    await expect(page.getByText('Time Capsule · 日記')).toBeVisible();
+
+    await page.getByRole('button', { name: '略過' }).first().click();
+    await expect.poll(() => apiState.dismissedSuggestionIds.length).toBe(1);
+    await expect(page.getByText('每逢紀念日一起重看一則回憶')).not.toBeVisible();
+
+    await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
+    await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(2);
+    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+    await page.getByRole('button', { name: '接受' }).first().click();
+    await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
+    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+
+    await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
     await expect(page.getByText('每一百天留一個小慶祝')).toBeVisible();
     await expect(page.getByText('一起存旅行基金')).toBeVisible();
     await expect(page.getByText('只有你看得到，按下接受前不會變成 shared truth。')).toHaveCount(2);
+    await expect(page.getByText('AI 提案審核只對你可見；伴侶只會看到你接受之後真正進入 Shared Future 的內容。')).toBeVisible();
 
     await page.getByRole('button', { name: '略過' }).first().click();
-    await expect.poll(() => apiState.dismissedSuggestionIds.length).toBe(1);
+    await expect.poll(() => apiState.dismissedSuggestionIds.length).toBe(2);
     await expect(page.getByText('每一百天留一個小慶祝')).not.toBeVisible();
 
     await page.getByRole('button', { name: '接受' }).first().click();
-    await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
+    await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(2);
     await expect(page.getByText('一起存旅行基金')).toBeVisible();
 
-    await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 建議' }).click();
+    await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(2);
-    await expect(page.getByText('目前沒有待你審核的 Shared Future 建議。')).toBeVisible();
+    await expect(page.getByText('目前沒有待你審核的 Shared Future 提案。')).toBeVisible();
     await expect(page.getByText('每一百天留一個小慶祝')).not.toBeVisible();
 
     const kyotoCard = page.locator('[data-shared-future-item-id="wish-2"]');
@@ -841,6 +916,14 @@ test.describe('Love Map / Relationship System v1', () => {
     await expect(repairCard.getByText('希望每次明顯爭執後，都能慢慢回到同一邊。')).toBeVisible();
     await expect(kyotoCard.getByText('想慢慢走巷子和神社。')).toBeVisible();
     await expect(kyotoCard.getByText('補充', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: '前往 Blueprint（完整 Shared Future）' })).toBeVisible();
+
+    await page.goto('/blueprint');
+    await expect(page.getByText('Shared Future Blueprint', { exact: true })).toBeVisible();
+    await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: '把你們想一起靠近的日子，放進 Shared Future 的完整藍圖。' })).toBeVisible();
+    await expect(page.getByText('Relationship System 會整理高價值的 Shared Future 摘要；Blueprint 則保留完整片段、備註與新增入口。')).toBeVisible();
 
   });
 

@@ -47,7 +47,7 @@ export function LoveMapShell({ children }: { children: ReactNode }) {
           </Link>
 
           <Badge variant="metadata" size="md" className="border-white/50 bg-white/72 text-primary/78 shadow-soft">
-            Relationship System v1
+            Relationship System
           </Badge>
         </div>
 
@@ -541,6 +541,7 @@ export function LoveMapSharedFutureNotesPanel({ notes }: { notes?: string | null
 interface LoveMapSuggestedUpdateCardProps {
   title: string;
   notes: string;
+  variant?: 'default' | 'story_ritual';
   evidence: Array<{
     source_kind: string;
     label: string;
@@ -555,12 +556,21 @@ interface LoveMapSuggestedUpdateCardProps {
 export function LoveMapSuggestedUpdateCard({
   title,
   notes,
+  variant = 'default',
   evidence,
   onAccept,
   onDismiss,
   accepting = false,
   dismissing = false,
 }: LoveMapSuggestedUpdateCardProps) {
+  const badgeLabel = variant === 'story_ritual' ? 'Story-adjacent ritual suggestion' : 'AI suggestion';
+  const trustCopy =
+    variant === 'story_ritual'
+      ? '這是 Haven 根據你們已經被留下的 Story memory 提出的 ritual 建議。只有你看得到，按下接受前不會變成 shared truth。'
+      : '這是 Haven 根據已留下的活動提出的建議。只有你看得到，按下接受前不會變成 shared truth。';
+  const evidenceHeading =
+    variant === 'story_ritual' ? 'What in your story this builds on' : 'Why Haven suggested this';
+
   return (
     <GlassCard className="overflow-hidden rounded-[2.2rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(249,243,234,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6">
       <div className="space-y-5">
@@ -568,7 +578,7 @@ export function LoveMapSuggestedUpdateCard({
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/10 px-3 py-1.5 shadow-soft">
               <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-              <span className="type-micro uppercase text-primary/80">AI suggestion</span>
+              <span className="type-micro uppercase text-primary/80">{badgeLabel}</span>
             </div>
             <h3 className="type-h3 text-card-foreground">{title}</h3>
             {notes ? <p className="max-w-2xl type-body-muted text-muted-foreground">{notes}</p> : null}
@@ -581,12 +591,12 @@ export function LoveMapSuggestedUpdateCard({
 
         <div className="rounded-[1.55rem] border border-white/58 bg-white/76 px-4 py-4 shadow-soft">
           <p className="type-caption text-muted-foreground">
-            這是 Haven 根據已留下的活動提出的建議。只有你看得到，按下接受前不會變成 shared truth。
+            {trustCopy}
           </p>
         </div>
 
         <div className="space-y-3">
-          <p className="type-caption text-card-foreground/82">Why Haven suggested this</p>
+          <p className="type-caption text-card-foreground/82">{evidenceHeading}</p>
           <div className="grid gap-3">
             {evidence.map((item, index) => (
               <div

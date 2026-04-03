@@ -969,6 +969,131 @@ async def generate_shared_future_suggestions(
     return suggestions
 
 
+async def generate_shared_future_story_adjacent_ritual(
+    *,
+    evidence_catalog: list[dict[str, str]],
+    existing_titles: list[str],
+    handled_titles: list[str] | None = None,
+) -> dict[str, object] | None:
+    if len(evidence_catalog) < 2:
+        return None
+
+    client = _get_openai_client()
+    if client is None or not (settings.OPENAI_API_KEY or "").strip():
+        raise HavenAIProviderError(
+            reason="shared_future_story_ritual_provider_unavailable",
+            retryable=True,
+            provider="openai",
+        )
+
+    catalog_models = [SharedFutureSuggestionEvidenceInput.model_validate(item) for item in evidence_catalog]
+    blocked_title_keys = {
+        normalize_shared_future_suggestion_key(title)
+        for title in existing_titles
+        if normalize_shared_future_suggestion_key(title)
+    }
+    handled_title_keys = {
+        normalize_shared_future_suggestion_key(title)
+        for title in (handled_titles or [])
+        if normalize_shared_future_suggestion_key(title)
+    }
+
+    system_prompt = (
+        "You propose at most one story-adjacent ritual as a new relationship Shared Future suggestion. "
+        "Only use the supplied Story time-capsule evidence. "
+        "Suggest a calm, concrete ritual, anniversary-style revisit, or memory-linked connection practice the couple could intentionally choose. "
+        "Do not invent facts, partner traits, diagnoses, symbolism, or deep identity claims. "
+        "Do not write vague AI insights. "
+        "Return an empty list when evidence is weak or when the best idea would duplicate an existing or previously handled wish. "
+        "Keep the title concise and human. Notes should explain the ritual in one or two calm sentences. "
+        "Each suggestion must include 1 to 3 evidence_ids from the catalog."
+    )
+    user_prompt = json.dumps(
+        {
+            "task": "shared_future_story_ritual_v1",
+            "existing_wishlist_titles": existing_titles,
+            "blocked_title_keys": sorted(blocked_title_keys),
+            "handled_wishlist_titles": handled_titles or [],
+            "handled_title_keys": sorted(handled_title_keys),
+            "evidence_catalog": [item.model_dump() for item in catalog_models],
+        },
+        ensure_ascii=False,
+    )
+
+    try:
+        with trace_span("ai.generate_shared_future_story_adjacent_ritual"):
+            completion = await client.beta.chat.completions.parse(
+                model=ANALYSIS_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=SharedFutureSuggestionDraftBundle,
+                temperature=0.2,
+                max_tokens=700,
+            )
+    except Exception as exc:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc):
+            raise HavenAITimeoutError(
+                reason="shared_future_story_ritual_timeout",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        if _is_openai_status_error(exc):
+            raise HavenAIProviderError(
+                reason="shared_future_story_ritual_provider_error",
+                retryable=_get_openai_status_code(exc) != 400,
+                provider="openai",
+            ) from exc
+        raise HavenAIProviderError(
+            reason="shared_future_story_ritual_failed",
+            retryable=True,
+            provider="openai",
+        ) from exc
+
+    parsed = completion.choices[0].message.parsed
+    if not parsed:
+        raise HavenAISchemaError(
+            reason="shared_future_story_ritual_empty",
+            retryable=True,
+            provider="openai",
+        )
+
+    evidence_index = {item.evidence_id: item for item in catalog_models}
+
+    for draft in parsed.suggestions:
+        title = _truncate_text(draft.proposed_title, 500)
+        notes = _truncate_text(draft.proposed_notes, 2000)
+        title_key = normalize_shared_future_suggestion_key(title)
+        if not title or not title_key or title_key in blocked_title_keys or title_key in handled_title_keys:
+            continue
+
+        evidence_rows: list[dict[str, str]] = []
+        for evidence_id in _ordered_unique(draft.evidence_ids)[:3]:
+            source = evidence_index.get(evidence_id)
+            if not source:
+                continue
+            evidence_rows.append(
+                {
+                    "source_kind": source.source_kind,
+                    "source_id": source.source_id,
+                    "label": _truncate_text(source.label, 120),
+                    "excerpt": _truncate_text(source.excerpt, 280),
+                }
+            )
+        if not evidence_rows:
+            continue
+
+        return {
+            "proposed_title": title,
+            "proposed_notes": notes,
+            "dedupe_key": title_key,
+            "evidence": evidence_rows,
+        }
+
+    return None
+
+
 async def generate_shared_future_refinement_next_step(
     *,
     title: str,

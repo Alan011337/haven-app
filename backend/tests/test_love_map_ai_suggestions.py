@@ -10,6 +10,7 @@ from __future__ import annotations
 import sys
 import unittest
 import uuid
+from datetime import timedelta
 from pathlib import Path
 from typing import Generator
 
@@ -151,12 +152,71 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
             )
             session.commit()
 
+            historical_time = utcnow() - timedelta(days=365)
+            time_capsule_journal = Journal(
+                user_id=alice.id,
+                content="一年前的今天，我們又回到那間咖啡廳，坐在窗邊聊了一個下午。",
+                created_at=historical_time,
+                updated_at=historical_time,
+            )
+            time_capsule_appreciation = Appreciation(
+                user_id=alice.id,
+                partner_id=bob.id,
+                body_text="謝謝你那天下午陪我去咖啡廳，讓那個午後一直留在我心裡。",
+                created_at=historical_time,
+            )
+            session.add(time_capsule_journal)
+            session.add(time_capsule_appreciation)
+            session.commit()
+            session.refresh(time_capsule_journal)
+            session.refresh(time_capsule_appreciation)
+
+            time_capsule_session = CardSession(
+                creator_id=alice.id,
+                partner_id=bob.id,
+                card_id=self.card.id,
+                category=self.card.category.value,
+                mode=CardSessionMode.DAILY_RITUAL,
+                status=CardSessionStatus.COMPLETED,
+                created_at=historical_time,
+            )
+            session.add(time_capsule_session)
+            session.commit()
+            session.refresh(time_capsule_session)
+
+            session.add(
+                CardResponse(
+                    card_id=self.card.id,
+                    user_id=alice.id,
+                    session_id=time_capsule_session.id,
+                    content="我想把這種慢慢聊天的午後留下來，當成我們會回來看的記憶。",
+                    status=ResponseStatus.REVEALED,
+                    is_initiator=True,
+                    created_at=historical_time,
+                )
+            )
+            session.add(
+                CardResponse(
+                    card_id=self.card.id,
+                    user_id=bob.id,
+                    session_id=time_capsule_session.id,
+                    content="如果可以，我想偶爾再回到這種慢一點的節奏裡。",
+                    status=ResponseStatus.REVEALED,
+                    is_initiator=False,
+                    created_at=historical_time,
+                )
+            )
+            session.commit()
+
             self.alice_id = alice.id
             self.bob_id = bob.id
             self.outsider_id = outsider.id
             self.journal_id = journal.id
             self.appreciation_id = appreciation.id
             self.card_session_id = card_session.id
+            self.time_capsule_journal_id = time_capsule_journal.id
+            self.time_capsule_appreciation_id = time_capsule_appreciation.id
+            self.time_capsule_session_id = time_capsule_session.id
 
     def tearDown(self) -> None:
         self.client.close()
@@ -385,6 +445,151 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
             )
         finally:
             love_map.generate_shared_future_suggestions = original
+
+    def test_generate_story_ritual_persists_story_grounded_pending_suggestion(self) -> None:
+        self.current_user_id = self.alice_id
+        calls = {"count": 0}
+        original = love_map.generate_shared_future_story_adjacent_ritual
+
+        async def fake_generate_shared_future_story_adjacent_ritual(*, evidence_catalog, existing_titles, handled_titles):
+            calls["count"] += 1
+            self.assertEqual(existing_titles, [])
+            self.assertEqual(handled_titles, [])
+            self.assertGreaterEqual(len(evidence_catalog), 2)
+            self.assertEqual(evidence_catalog[0]["source_kind"], "story_time_capsule")
+            self.assertIn("一年前", evidence_catalog[0]["excerpt"])
+            self.assertTrue(any(item["source_kind"] == "time_capsule_item" for item in evidence_catalog[1:]))
+            return {
+                "proposed_title": "每年一起回到那間咖啡廳",
+                "proposed_notes": "在接近這段回憶的日子裡，一起回去坐一個下午，交換現在的感受。",
+                "dedupe_key": "每年一起回到那間咖啡廳",
+                "evidence": [
+                    {
+                        "source_kind": "story_time_capsule",
+                        "source_id": "2025-03-31:2025-04-06",
+                        "label": "Story Time Capsule",
+                        "excerpt": "一年前這幾天：1 則日記、1 則共同卡片回憶、1 則感恩。",
+                    },
+                    {
+                        "source_kind": "time_capsule_item",
+                        "source_id": str(self.time_capsule_journal_id),
+                        "label": "Time Capsule · 日記",
+                        "excerpt": "一年前的今天，我們又回到那間咖啡廳，坐在窗邊聊了一個下午。",
+                    },
+                ],
+            }
+
+        love_map.generate_shared_future_story_adjacent_ritual = fake_generate_shared_future_story_adjacent_ritual
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate-story-ritual")
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(len(payload), 1)
+            self.assertEqual(calls["count"], 1)
+            self.assertEqual(payload[0]["generator_version"], "shared_future_story_ritual_v1")
+            self.assertEqual(payload[0]["proposed_title"], "每年一起回到那間咖啡廳")
+            self.assertEqual(payload[0]["status"], "pending")
+            self.assertEqual(payload[0]["section"], "shared_future")
+            self.assertEqual(payload[0]["evidence"][0]["source_kind"], "story_time_capsule")
+
+            with Session(self.engine) as session:
+                rows = session.exec(
+                    select(RelationshipKnowledgeSuggestion).where(
+                        RelationshipKnowledgeSuggestion.generator_version == "shared_future_story_ritual_v1",
+                    )
+                ).all()
+                self.assertEqual(len(rows), 1)
+                self.assertEqual(rows[0].status, "pending")
+        finally:
+            love_map.generate_shared_future_story_adjacent_ritual = original
+
+    def test_generate_story_ritual_returns_empty_without_time_capsule(self) -> None:
+        self.current_user_id = self.alice_id
+        original = love_map.get_relationship_story_time_capsule
+
+        def fake_get_relationship_story_time_capsule(*, session, user_id, partner_id):
+            return None
+
+        love_map.get_relationship_story_time_capsule = fake_get_relationship_story_time_capsule
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate-story-ritual")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), [])
+        finally:
+            love_map.get_relationship_story_time_capsule = original
+
+    def test_generate_story_ritual_filters_near_duplicate_titles_against_handled_shared_future_items(self) -> None:
+        self.current_user_id = self.alice_id
+        with Session(self.engine) as session:
+            session.add(
+                WishlistItem(
+                    user_id=self.alice_id,
+                    partner_id=self.bob_id,
+                    title="每年一起回到那間咖啡廳",
+                    notes="已經被接受成 shared future。",
+                    created_at=utcnow(),
+                )
+            )
+            session.add(
+                RelationshipKnowledgeSuggestion(
+                    user_id=self.alice_id,
+                    partner_id=self.bob_id,
+                    section="shared_future",
+                    status="dismissed",
+                    generator_version="shared_future_story_ritual_v1",
+                    proposed_title="每逢紀念日回到那間咖啡廳",
+                    proposed_notes="把那個午後重新走一遍。",
+                    evidence_json=[],
+                    dedupe_key="每逢紀念日回到那間咖啡廳",
+                    reviewed_at=utcnow(),
+                )
+            )
+            session.commit()
+
+        original = love_map.generate_shared_future_story_adjacent_ritual
+
+        async def fake_generate_shared_future_story_adjacent_ritual(*, evidence_catalog, existing_titles, handled_titles):
+            self.assertIn("每年一起回到那間咖啡廳", existing_titles)
+            self.assertIn("每逢紀念日回到那間咖啡廳", handled_titles)
+            return {
+                "proposed_title": "每年一起回到那間咖啡廳",
+                "proposed_notes": "在接近這段記憶的日子裡，一起回去坐一個下午。",
+                "dedupe_key": "每年一起回到那間咖啡廳",
+                "evidence": [
+                    {
+                        "source_kind": "story_time_capsule",
+                        "source_id": "story-capsule",
+                        "label": "Story Time Capsule",
+                        "excerpt": "一年前這幾天：1 則日記、1 則共同卡片回憶、1 則感恩。",
+                    }
+                ],
+            }
+
+        love_map.generate_shared_future_story_adjacent_ritual = fake_generate_shared_future_story_adjacent_ritual
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate-story-ritual")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), [])
+        finally:
+            love_map.generate_shared_future_story_adjacent_ritual = original
+
+    def test_generate_story_ritual_returns_503_when_ai_provider_fails(self) -> None:
+        self.current_user_id = self.alice_id
+        original = love_map.generate_shared_future_story_adjacent_ritual
+
+        async def fake_generate_shared_future_story_adjacent_ritual(*, evidence_catalog, existing_titles, handled_titles):
+            raise HavenAIProviderError(
+                reason="shared_future_story_ritual_provider_error",
+                retryable=True,
+                provider="openai",
+            )
+
+        love_map.generate_shared_future_story_adjacent_ritual = fake_generate_shared_future_story_adjacent_ritual
+        try:
+            response = self.client.post("/api/love-map/suggestions/shared-future/generate-story-ritual")
+            self.assertEqual(response.status_code, 503)
+        finally:
+            love_map.generate_shared_future_story_adjacent_ritual = original
 
     def test_accept_and_dismiss_are_owner_scoped_and_pending_queue_is_personal_only(self) -> None:
         with Session(self.engine) as session:

@@ -160,23 +160,11 @@ def get_relationship_story_slice(
         reverse=True,
     )[:3]
 
-    today = utcnow().date()
-    exact_date = today - timedelta(days=365)
-    capsule = get_time_capsule_memory(
+    capsule = get_relationship_story_time_capsule(
         session=session,
         user_id=user_id,
         partner_id=partner_id,
-        from_date=exact_date,
-        to_date=exact_date,
     )
-    if not capsule:
-        capsule = get_time_capsule_memory(
-            session=session,
-            user_id=user_id,
-            partner_id=partner_id,
-            from_date=exact_date - timedelta(days=3),
-            to_date=exact_date + timedelta(days=3),
-        )
 
     capsule_payload = None
     if capsule:
@@ -194,6 +182,36 @@ def get_relationship_story_slice(
         "moments": story_moments,
         "time_capsule": capsule_payload,
     }
+
+
+def get_relationship_story_time_capsule(
+    *,
+    session: Session,
+    user_id: UUID,
+    partner_id: Optional[UUID],
+) -> Optional[dict[str, Any]]:
+    if not partner_id:
+        return None
+
+    today = utcnow().date()
+    exact_date = today - timedelta(days=365)
+    capsule = get_time_capsule_memory(
+        session=session,
+        user_id=user_id,
+        partner_id=partner_id,
+        from_date=exact_date,
+        to_date=exact_date,
+    )
+    if capsule:
+        return capsule
+
+    return get_time_capsule_memory(
+        session=session,
+        user_id=user_id,
+        partner_id=partner_id,
+        from_date=exact_date - timedelta(days=3),
+        to_date=exact_date + timedelta(days=3),
+    )
 
 
 def _date_range_bounds(
@@ -830,15 +848,30 @@ def get_time_capsule_memory(
 
     # --- Build enriched items with content previews (capped at 5) ---
     journal_items = [
-        {"type": "journal", "preview_text": _truncate_text(r.content, max_length=80) or "日記", "created_at": r.created_at}
+        {
+            "type": "journal",
+            "source_id": str(r.id),
+            "preview_text": _truncate_text(r.content, max_length=80) or "日記",
+            "created_at": r.created_at,
+        }
         for r in journals
     ]
     card_items = [
-        {"type": "card", "preview_text": _truncate_text(r.title, max_length=80) or "卡片", "created_at": r.created_at}
+        {
+            "type": "card",
+            "source_id": str(r.id),
+            "preview_text": _truncate_text(r.title, max_length=80) or "卡片",
+            "created_at": r.created_at,
+        }
         for r in card_details
     ]
     appr_items = [
-        {"type": "appreciation", "preview_text": _truncate_text(r.body_text, max_length=80) or "感恩", "created_at": r.created_at}
+        {
+            "type": "appreciation",
+            "source_id": str(r.id),
+            "preview_text": _truncate_text(r.body_text, max_length=80) or "感恩",
+            "created_at": r.created_at,
+        }
         for r in appr_details
     ]
     all_items = journal_items + card_items + appr_items

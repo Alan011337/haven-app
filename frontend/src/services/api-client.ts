@@ -392,6 +392,10 @@ export const generateLoveMapSharedFutureSuggestions = async (): Promise<Relation
   return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/generate');
 };
 
+export const generateLoveMapStoryAdjacentRitualSuggestion = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/generate-story-ritual');
+};
+
 export const generateLoveMapSharedFutureRefinement = async (
   wishlistItemId: string,
 ): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
