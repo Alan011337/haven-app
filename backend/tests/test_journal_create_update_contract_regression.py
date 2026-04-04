@@ -107,11 +107,37 @@ class JournalCreateUpdateContractRegressionTests(unittest.TestCase):
         self.assertEqual(payload["content_format"], "markdown")
         self.assertFalse(payload["is_draft"])
         self.assertEqual(payload["partner_translation_status"], "READY")
+        self.assertNotIn("partner_translated_content", payload)
         with Session(self.engine) as session:
             journal = session.get(Journal, uuid.UUID(payload["id"]))
             assert journal is not None
             self.assertFalse(journal.is_draft)
             self.assertEqual(journal.partner_translated_content, "整理後的伴侶譯文。")
+
+    def test_create_journal_defaults_to_private_visibility(self) -> None:
+        with patch("app.api.journals.is_async_journal_analysis_enabled", return_value=False), patch(
+            "app.api.journals.analyze_journal",
+            new=AsyncMock(return_value={"parse_success": True, "mood_label": "calm"}),
+        ), patch(
+            "app.api.journals.translate_journal_for_partner",
+            new=AsyncMock(),
+        ) as translate_mock, patch("app.api.journals.queue_partner_notification") as notify_mock:
+            response = self.client.post(
+                "/api/journals/",
+                json={
+                    "title": "預設分享邊界",
+                    "content": "這一頁應該先維持私密。",
+                    "content_format": "markdown",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["visibility"], "PRIVATE")
+        self.assertEqual(payload["partner_translation_status"], "NOT_REQUESTED")
+        self.assertNotIn("partner_translated_content", payload)
+        translate_mock.assert_not_awaited()
+        notify_mock.assert_not_called()
 
     def test_create_draft_accepts_blank_content_and_skips_translation(self) -> None:
         with patch("app.api.journals.translate_journal_for_partner", new=AsyncMock()) as translate_mock, patch(
@@ -134,6 +160,7 @@ class JournalCreateUpdateContractRegressionTests(unittest.TestCase):
         self.assertEqual(payload["content"], "")
         self.assertTrue(payload["is_draft"])
         self.assertEqual(payload["partner_translation_status"], "NOT_REQUESTED")
+        self.assertNotIn("partner_translated_content", payload)
         translate_mock.assert_not_awaited()
         notify_mock.assert_not_called()
         with Session(self.engine) as session:
@@ -220,6 +247,7 @@ class JournalCreateUpdateContractRegressionTests(unittest.TestCase):
         self.assertEqual(payload["content_format"], "markdown")
         self.assertFalse(payload["is_draft"])
         self.assertEqual(payload["partner_translation_status"], "READY")
+        self.assertNotIn("partner_translated_content", payload)
         with Session(self.engine) as session:
             journal = session.get(Journal, journal_id)
             assert journal is not None

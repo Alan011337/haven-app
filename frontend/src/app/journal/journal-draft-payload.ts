@@ -8,7 +8,7 @@ interface JournalDraftFields {
   content: string;
   isDraft?: boolean;
   title: string;
-  visibility: JournalVisibility;
+  visibility?: JournalVisibility;
 }
 
 export function normalizeJournalDraftContent(content: string | null | undefined): string {
@@ -60,7 +60,7 @@ export function buildCreateJournalPayload({
     content_format: 'markdown',
     is_draft: isDraft,
     title: normalizeJournalDraftTitle(title),
-    visibility,
+    visibility: visibility ?? 'PRIVATE',
   };
 }
 
@@ -76,6 +76,6 @@ export function buildUpdateJournalPayload({
     is_draft: isDraft,
     request_analysis: requestAnalysis,
     title: normalizeJournalDraftTitle(title),
-    visibility,
+    ...(visibility ? { visibility } : {}),
   };
 }

@@ -159,6 +159,7 @@ class JournalAuthorizationMatrixTests(unittest.TestCase):
         self.assertEqual(payload["id"], str(self.journal_id))
         self.assertEqual(payload["title"], "Owner Draft")
         self.assertEqual(payload["visibility"], "PARTNER_TRANSLATED_ONLY")
+        self.assertNotIn("partner_translated_content", payload)
         self.assertEqual(len(payload["attachments"]), 1)
         self.assertEqual(payload["attachments"][0]["url"], "https://example.com/owner-photo.jpg")
 
@@ -302,6 +303,19 @@ class JournalAuthorizationMatrixTests(unittest.TestCase):
             self.assertEqual(len(journals), 3)
 
     def test_partner_feed_respects_visibility_and_translation_no_leak(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Journal(
+                    title="Legacy Private Local",
+                    content="這篇保留在本地私密模式。",
+                    user_id=self.user_a_id,
+                    visibility="PRIVATE_LOCAL",
+                    content_format="markdown",
+                    partner_translation_status="NOT_REQUESTED",
+                )
+            )
+            session.commit()
+
         self.current_user_id = self.user_b_id
         with patch("app.api.journals.journal_storage_enabled", return_value=True), patch(
             "app.api.journals.create_signed_journal_attachment_url",
@@ -315,12 +329,18 @@ class JournalAuthorizationMatrixTests(unittest.TestCase):
         self.assertIn("Owner Draft", titles)
         self.assertIn("Shared Original", titles)
         self.assertNotIn("Private Journal", titles)
+        self.assertNotIn("Legacy Private Local", titles)
 
         translated_item = next(item for item in payload if item["title"] == "Owner Draft")
         self.assertEqual(translated_item["visibility"], "PARTNER_TRANSLATED_ONLY")
         self.assertEqual(translated_item["content"], "")
         self.assertEqual(translated_item["partner_translated_content"], "這是一封已整理好的譯文。")
         self.assertNotIn("只有作者可以改。", str(translated_item))
+        self.assertEqual(translated_item["attachments"], [])
+        self.assertIsNone(translated_item["emotional_needs"])
+        self.assertIsNone(translated_item["action_for_partner"])
+        self.assertIsNone(translated_item["advice_for_partner"])
+        self.assertIsNone(translated_item["card_recommendation"])
 
         original_item = next(item for item in payload if item["title"] == "Shared Original")
         self.assertEqual(original_item["visibility"], "PARTNER_ORIGINAL")

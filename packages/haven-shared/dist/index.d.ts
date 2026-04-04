@@ -3,6 +3,7 @@
  * Used by both Next.js frontend and future React Native/Expo app.
  */
 type JournalVisibility = 'PRIVATE' | 'PRIVATE_LOCAL' | 'PARTNER_ORIGINAL' | 'PARTNER_TRANSLATED_ONLY' | 'PARTNER_ANALYSIS_ONLY';
+type JournalCurrentVisibility = 'PRIVATE' | 'PARTNER_ORIGINAL' | 'PARTNER_TRANSLATED_ONLY';
 type JournalContentFormat = 'markdown';
 type JournalTranslationStatus = 'FAILED' | 'NOT_REQUESTED' | 'PENDING' | 'READY';
 interface JournalAttachmentPublic {
@@ -289,4 +290,4 @@ interface HavenApiClient {
     }): Promise<DeckHistorySummary>;
 }
 
-export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type HavenEditorialTokens, type Journal, type JournalAttachmentPublic, type JournalContentFormat, type JournalDraftPayload, type JournalTranslationStatus, type JournalVisibility, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, havenEditorialTokens, queryKeys };
+export { type Card, CardCategory, type CardResponseData, type CardResponsePayload, type CardSession, type CreateJournalOptions, type CreateJournalResponse, type DeckHistoryEntry, type DeckHistorySummary, type DeckRespondResult, type HavenApiClient, type HavenEditorialTokens, type Journal, type JournalAttachmentPublic, type JournalContentFormat, type JournalCurrentVisibility, type JournalDraftPayload, type JournalTranslationStatus, type JournalVisibility, MAX_JOURNAL_CONTENT_LENGTH, type PartnerStatus, type RespondToDeckOptions, type User, havenEditorialTokens, queryKeys };

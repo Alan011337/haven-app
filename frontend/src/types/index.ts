@@ -7,6 +7,7 @@ export type {
   Journal,
   JournalAttachmentPublic,
   JournalContentFormat,
+  JournalCurrentVisibility,
   JournalTranslationStatus,
   JournalVisibility,
   User,

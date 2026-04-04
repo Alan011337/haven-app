@@ -10,6 +10,7 @@ import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
 } from '@lexical/list';
+import { INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
 import {
@@ -29,6 +30,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  Minus,
   Pilcrow,
   Quote,
 } from 'lucide-react';
@@ -40,6 +42,7 @@ type SlashActionId =
   | 'bullet-list'
   | 'ordered-list'
   | 'quote'
+  | 'divider'
   | 'code-block'
   | 'link'
   | 'image';
@@ -99,6 +102,13 @@ const ACTIONS: SlashAction[] = [
     description: '留下那句最想被聽懂的話。',
     aliases: ['quote', 'blockquote'],
     icon: <Quote className="h-4 w-4" aria-hidden />,
+  },
+  {
+    id: 'divider',
+    label: '分隔線',
+    description: '在兩段思緒之間，留一道安靜的間隔。',
+    aliases: ['divider', 'hr', 'line', 'rule', 'separator'],
+    icon: <Minus className="h-4 w-4" aria-hidden />,
   },
   {
     id: 'code-block',
@@ -196,6 +206,12 @@ export function JournalSlashMenu({
 
       if (action.id === 'ordered-list') {
         editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+        closeMenu();
+        return;
+      }
+
+      if (action.id === 'divider') {
+        editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
         closeMenu();
         return;
       }

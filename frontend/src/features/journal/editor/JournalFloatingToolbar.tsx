@@ -5,13 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { $findMatchingParent, $getSelection, $isRangeSelection, COMMAND_PRIORITY_LOW, FORMAT_TEXT_COMMAND, KEY_DOWN_COMMAND, SELECTION_CHANGE_COMMAND, type LexicalEditor } from 'lexical';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
-import { Bold, Code2, Italic, Link2 } from 'lucide-react';
+import { Bold, Code2, Italic, Link2, Strikethrough } from 'lucide-react';
 
 interface ToolbarState {
   activeFormats: {
     bold: boolean;
     code: boolean;
     italic: boolean;
+    strikethrough: boolean;
   };
   left: number;
   top: number;
@@ -69,7 +70,7 @@ function ToolbarButton({
 export function JournalFloatingToolbar() {
   const [editor] = useLexicalComposerContext();
   const [toolbarState, setToolbarState] = useState<ToolbarState>({
-    activeFormats: { bold: false, code: false, italic: false },
+    activeFormats: { bold: false, code: false, italic: false, strikethrough: false },
     left: 0,
     top: 0,
     visible: false,
@@ -103,6 +104,7 @@ export function JournalFloatingToolbar() {
           bold: selection.hasFormat('bold'),
           code: selection.hasFormat('code'),
           italic: selection.hasFormat('italic'),
+          strikethrough: selection.hasFormat('strikethrough'),
         },
         left: rect.left + rect.width / 2,
         top: Math.max(20, rect.top - 16),
@@ -188,6 +190,12 @@ export function JournalFloatingToolbar() {
           icon={<Italic className="h-4 w-4" aria-hidden />}
           label="斜體"
           onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic')}
+        />
+        <ToolbarButton
+          active={toolbarState.activeFormats.strikethrough}
+          icon={<Strikethrough className="h-4 w-4" aria-hidden />}
+          label="刪除線"
+          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough')}
         />
         <ToolbarButton
           active={toolbarState.activeFormats.code}

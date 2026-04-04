@@ -18,7 +18,12 @@ import {
   X,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import type { Journal, JournalAttachmentPublic, JournalVisibility } from '@/types';
+import type {
+  Journal,
+  JournalAttachmentPublic,
+  JournalCurrentVisibility,
+  JournalVisibility,
+} from '@/types';
 import { JournalRichMarkdown } from '@/lib/journal-markdown';
 import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
 import { cn } from '@/lib/utils';
@@ -224,38 +229,28 @@ export function JournalVisibilitySwitch({
   onChange,
   value,
 }: {
-  onChange: (value: JournalVisibility) => void;
+  onChange: (value: JournalCurrentVisibility) => void;
   value: JournalVisibility;
 }) {
   const options: Array<{
     description: string;
     label: string;
-    value: JournalVisibility;
+    value: JournalCurrentVisibility;
   }> = [
+    {
+      value: 'PRIVATE',
+      label: '私密保存',
+      description: '這一頁只留在你的 Journal 書房，伴侶看不到。',
+    },
     {
       value: 'PARTNER_ORIGINAL',
       label: '伴侶看原文',
-      description: '對方看到你寫下的文字，也能看到 AI 分析。',
+      description: '伴侶會看到你寫下的原文，也會看到同一組圖片。',
     },
     {
       value: 'PARTNER_TRANSLATED_ONLY',
       label: '伴侶看整理後的版本',
-      description: '對方看不到原文，只看到 Haven 為伴侶整理後的版本。',
-    },
-    {
-      value: 'PARTNER_ANALYSIS_ONLY',
-      label: '伴侶只看分析',
-      description: '對方看不到日記內容，只看到情緒分析與建議。',
-    },
-    {
-      value: 'PRIVATE',
-      label: '私密保存',
-      description: '不分享給伴侶，但 AI 仍會分析。',
-    },
-    {
-      value: 'PRIVATE_LOCAL',
-      label: '完全私密（不送 AI）',
-      description: '不分享、不送 AI 分析，只留在你的書房。',
+      description: '伴侶只會看到 Haven 整理後的版本，不會看到原文或圖片。',
     },
   ];
 
@@ -476,12 +471,12 @@ export function JournalLibraryCard({
     journal.visibility === 'PRIVATE'
       ? '私密保存'
       : journal.visibility === 'PRIVATE_LOCAL'
-        ? '完全私密'
+        ? '完全私密（舊版）'
         : journal.visibility === 'PARTNER_ORIGINAL'
           ? '伴侶看原文'
           : journal.visibility === 'PARTNER_ANALYSIS_ONLY'
-            ? '伴侶只看分析'
-            : '整理後版本';
+            ? '伴侶只看分析（舊版）'
+            : '伴侶看整理後的版本';
 
   return (
     <Link

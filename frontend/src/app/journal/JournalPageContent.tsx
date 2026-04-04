@@ -28,7 +28,10 @@ import {
 } from '@/hooks/queries';
 import { sortJournalsDesc } from '@/features/home/home-data-utils';
 import { useToast } from '@/hooks/useToast';
-import type { JournalAttachmentPublic, JournalVisibility } from '@/types';
+import type {
+  JournalAttachmentPublic,
+  JournalVisibility,
+} from '@/types';
 import { queryKeys } from '@/lib/query-keys';
 import { deriveJournalTitle } from '@/lib/journal-format';
 import { logClientError } from '@/lib/safe-error-log';
@@ -70,8 +73,12 @@ import {
   resolveJournalDraftContent,
 } from '@/app/journal/journal-draft-payload';
 
-const DEFAULT_VISIBILITY: JournalVisibility = 'PARTNER_TRANSLATED_ONLY';
+const DEFAULT_VISIBILITY: JournalVisibility = 'PRIVATE';
 const JOURNAL_HOME_SEED_STORAGE_KEY = 'haven_journal_home_seed_v1';
+const LEGACY_JOURNAL_VISIBILITIES = new Set<JournalVisibility>([
+  'PARTNER_ANALYSIS_ONLY',
+  'PRIVATE_LOCAL',
+]);
 const MOBILE_BLOCK_ACTIONS: Array<{ action: JournalEditorBlockAction; label: string; note: string }> = [
   { action: 'paragraph', label: '一般段落', note: '回到最自然的正文節奏。' },
   { action: 'heading-1', label: '主標題', note: '給這一段一個更明顯的重心。' },
@@ -120,6 +127,36 @@ interface PersistJournalDraftResult {
   journalId: string;
 }
 
+function isLegacyJournalVisibility(
+  visibility: JournalVisibility | null | undefined,
+): visibility is 'PARTNER_ANALYSIS_ONLY' | 'PRIVATE_LOCAL' {
+  return LEGACY_JOURNAL_VISIBILITIES.has((visibility ?? DEFAULT_VISIBILITY) as JournalVisibility);
+}
+
+function buildVisibilityLabel(visibility: JournalVisibility) {
+  return visibility === 'PRIVATE'
+    ? '私密保存'
+    : visibility === 'PRIVATE_LOCAL'
+      ? '完全私密（舊版）'
+      : visibility === 'PARTNER_ORIGINAL'
+        ? '伴侶看原文'
+        : visibility === 'PARTNER_ANALYSIS_ONLY'
+          ? '伴侶只看分析（舊版）'
+          : '伴侶看整理後的版本';
+}
+
+function buildPreviewContextMessage(visibility: JournalVisibility) {
+  return visibility === 'PRIVATE'
+    ? '這一頁只留在你的 Journal 書房裡，伴侶看不到。'
+    : visibility === 'PRIVATE_LOCAL'
+      ? '這一頁沿用舊版的完全私密設定：不分享，也不送 AI。'
+      : visibility === 'PARTNER_ORIGINAL'
+        ? '伴侶會看到你寫下的原文，也會看到同一組圖片。'
+        : visibility === 'PARTNER_ANALYSIS_ONLY'
+          ? '這一頁沿用舊版的分析分享設定：伴侶只會看到分析資訊。'
+          : '伴侶只會收到 Haven 為對方整理後的版本；原文和圖片仍只留在你的書房。';
+}
+
 export default function JournalPageContent({ journalId }: JournalPageContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -135,6 +172,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const titleRef = useRef('');
   const visibilityRef = useRef<JournalVisibility>(DEFAULT_VISIBILITY);
   const suppressBlankEditorSyncRef = useRef(false);
+  const hasExplicitVisibilitySelectionRef = useRef(false);
+  const persistedVisibilityRef = useRef<JournalVisibility>(DEFAULT_VISIBILITY);
   const homeSeedConsumedRef = useRef(false);
   const savedSnapshotRef = useRef(
     buildSnapshot({
@@ -170,6 +209,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const [saveError, setSaveError] = useState<string | null>(null);
   const [importWarning, setImportWarning] = useState<string | null>(null);
   const [studioMode, setStudioMode] = useState<JournalStudioMode>('write');
+  const [hasExplicitVisibilitySelection, setHasExplicitVisibilitySelection] = useState(false);
   const [canCompare, setCanCompare] = useState(false);
   const [desktopImagesOpen, setDesktopImagesOpen] = useState(false);
   const [desktopShareOpen, setDesktopShareOpen] = useState(false);
@@ -196,17 +236,16 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     month: 'long',
     day: 'numeric',
   });
-  const visibilityLabel =
-    visibility === 'PRIVATE'
-      ? '私密保存'
-      : visibility === 'PRIVATE_LOCAL'
-        ? '完全私密'
-        : visibility === 'PARTNER_ORIGINAL'
-          ? '伴侶看原文'
-          : visibility === 'PARTNER_ANALYSIS_ONLY'
-            ? '伴侶只看分析'
-            : '伴侶看整理後的版本';
+  const visibilityLabel = buildVisibilityLabel(visibility);
   const shouldAutoOpenDraft = searchParams.get('compose') === '1';
+  const showLegacyVisibilityNotice =
+    isLegacyJournalVisibility(persistedVisibilityRef.current) && !hasExplicitVisibilitySelection;
+  const legacyVisibilityMessage =
+    persistedVisibilityRef.current === 'PRIVATE_LOCAL'
+      ? '這一頁沿用較早的「完全私密」設定。只要你不改分享設定，它就會維持不分享、也不送 AI。'
+      : persistedVisibilityRef.current === 'PARTNER_ANALYSIS_ONLY'
+        ? '這一頁沿用較早的「伴侶只看分析」設定。只要你不改分享設定，它就會維持只分享分析資訊。'
+        : null;
 
   const commitContentState = useCallback((nextContent: string) => {
     contentRef.current = nextContent;
@@ -225,6 +264,10 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   useEffect(() => {
     visibilityRef.current = visibility;
   }, [visibility]);
+
+  useEffect(() => {
+    hasExplicitVisibilitySelectionRef.current = hasExplicitVisibilitySelection;
+  }, [hasExplicitVisibilitySelection]);
 
   useEffect(() => {
     if (journalId) {
@@ -267,6 +310,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     if (isSameJournal && hasLocalEditingState) return;
 
     hydratedJournalIdRef.current = activeJournal.id;
+    persistedVisibilityRef.current = nextVisibility;
     savedSnapshotRef.current = incomingSnapshot;
     suppressBlankEditorSyncRef.current = true;
     setDraftOpen(true);
@@ -277,6 +321,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     setAttachments(nextAttachments);
     setLastSavedAt(activeJournal.updated_at ?? activeJournal.created_at);
     setSaveState('saved');
+    setHasExplicitVisibilitySelection(false);
     setSaveError(null);
     setImportWarning(null);
     setEditorSeed((seed) => seed + 1);
@@ -293,10 +338,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
       visibility: DEFAULT_VISIBILITY,
     });
     suppressBlankEditorSyncRef.current = true;
+    persistedVisibilityRef.current = DEFAULT_VISIBILITY;
     commitTitleState('');
     commitContentState('');
     setIsDraft(false);
     setVisibility(DEFAULT_VISIBILITY);
+    setHasExplicitVisibilitySelection(false);
     setAttachments([]);
     setLastSavedAt(null);
     setSaveState('draft');
@@ -467,13 +514,20 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         setSaveState('saving');
         setSaveError(null);
 
+        const nextVisibilityForPersist =
+          currentJournalId &&
+          isLegacyJournalVisibility(persistedVisibilityRef.current) &&
+          !hasExplicitVisibilitySelectionRef.current
+            ? undefined
+            : visibilityRef.current;
+
         if (currentJournalId) {
           const payload = buildUpdateJournalPayload({
             content: currentContent,
             isDraft: targetIsDraft,
             requestAnalysis,
             title: currentTitle,
-            visibility: visibilityRef.current,
+            visibility: nextVisibilityForPersist,
           });
           const updated = await updateJournalMutation.mutateAsync({
             id: currentJournalId,
@@ -513,11 +567,13 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             title: resolvedTitle,
             visibility: resolvedVisibility,
           });
+          persistedVisibilityRef.current = resolvedVisibility;
           setAttachments(resolvedAttachments);
           commitContentState(nextContentState);
           setIsDraft(resolvedIsDraft);
           commitTitleState(nextTitleState);
           setVisibility(nextVisibilityState);
+          setHasExplicitVisibilitySelection(false);
           setLastSavedAt(updated.updated_at ?? updated.created_at);
           setSaveState(hasLocalEditsSinceSubmit ? 'dirty' : 'saved');
           if (requestAnalysis) {
@@ -567,12 +623,14 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           title: resolvedTitle,
           visibility: resolvedVisibility,
         });
+        persistedVisibilityRef.current = resolvedVisibility;
         queryClient.setQueryData(queryKeys.journalDetail(created.id), created);
         setAttachments(resolvedAttachments);
         commitContentState(nextContentState);
         setIsDraft(resolvedIsDraft);
         commitTitleState(nextTitleState);
         setVisibility(nextVisibilityState);
+        setHasExplicitVisibilitySelection(false);
         setLastSavedAt(created.updated_at ?? created.created_at);
         setSaveState(hasLocalEditsSinceSubmit ? 'dirty' : 'saved');
         setDraftOpen(true);
@@ -708,16 +766,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               : '草稿未保存'
             : '草稿';
 
-  const previewContextMessage =
-    visibility === 'PRIVATE'
-      ? '這一頁只留在你自己的書房裡。'
-      : visibility === 'PRIVATE_LOCAL'
-        ? '這一頁完全私密，不分享、不送 AI 分析。'
-        : visibility === 'PARTNER_ORIGINAL'
-          ? '伴侶會看到這份原文與同一組圖片。'
-          : visibility === 'PARTNER_ANALYSIS_ONLY'
-            ? '伴侶只會看到情緒分析與建議，看不到日記內容。'
-            : '伴侶只會收到 Haven 整理後的版本與同一組圖片。';
+  const previewContextMessage = buildPreviewContextMessage(visibility);
 
   const insertAttachmentIntoDraft = useCallback(
     ({
@@ -1107,7 +1156,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 <p className="text-[0.68rem] uppercase tracking-[0.26em] text-primary/80">Trust</p>
                 <p className="mt-3 font-art text-[1.7rem] text-card-foreground">分享邊界</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  原文共享、整理後版本、僅分析、私密保存——你決定伴侶能看到多少。
+                  私密保存、原文共享、整理後版本——你決定伴侶實際會看到哪一種內容。
                 </p>
               </div>
             </div>
@@ -1271,10 +1320,16 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                   <p className="text-sm font-medium text-card-foreground">分享邊界</p>
                   <p className="text-sm leading-7 text-muted-foreground">{previewContextMessage}</p>
                 </div>
+                {showLegacyVisibilityNotice && legacyVisibilityMessage ? (
+                  <div className="mt-4 rounded-[1.2rem] border border-primary/14 bg-primary/[0.05] px-4 py-3 text-sm leading-7 text-card-foreground">
+                    {legacyVisibilityMessage}
+                  </div>
+                ) : null}
                 <div className="mt-4">
                   <JournalVisibilitySwitch
                     value={visibility}
                     onChange={(nextVisibility) => {
+                      setHasExplicitVisibilitySelection(true);
                       setVisibility(nextVisibility);
                       markUnsaved({ nextVisibility, nextIsDraft: isDraft });
                     }}
@@ -1488,9 +1543,15 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         title="分享設定"
         description={previewContextMessage}
       >
+        {showLegacyVisibilityNotice && legacyVisibilityMessage ? (
+          <div className="mb-4 rounded-[1.2rem] border border-primary/14 bg-primary/[0.05] px-4 py-3 text-sm leading-7 text-card-foreground">
+            {legacyVisibilityMessage}
+          </div>
+        ) : null}
         <JournalVisibilitySwitch
                     value={visibility}
                     onChange={(nextVisibility) => {
+                      setHasExplicitVisibilitySelection(true);
                       setVisibility(nextVisibility);
                       markUnsaved({ nextVisibility, nextIsDraft: isDraft });
                       setMobileSheet(null);

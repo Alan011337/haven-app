@@ -4,7 +4,14 @@ from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 from datetime import datetime
 
-JOURNAL_VISIBILITIES = frozenset(
+JOURNAL_CURRENT_WRITE_VISIBILITIES = frozenset(
+    {
+        "PRIVATE",
+        "PARTNER_ORIGINAL",
+        "PARTNER_TRANSLATED_ONLY",
+    }
+)
+JOURNAL_READ_VISIBILITIES = frozenset(
     {
         "PRIVATE",
         "PRIVATE_LOCAL",
@@ -38,7 +45,7 @@ class JournalCreate(BaseModel):
     title: str | None = Field(default=None, max_length=120)
     content: str = Field(default="", max_length=12000)
     is_draft: bool = False
-    visibility: str = Field(default="PARTNER_TRANSLATED_ONLY")
+    visibility: str = Field(default="PRIVATE")
     content_format: str = Field(default="markdown")
     model_config = {"extra": "forbid"}
 
@@ -59,7 +66,7 @@ class JournalCreate(BaseModel):
     @classmethod
     def normalize_visibility(cls, value: str) -> str:
         cleaned = str(value or "").strip().upper()
-        if cleaned not in JOURNAL_VISIBILITIES:
+        if cleaned not in JOURNAL_CURRENT_WRITE_VISIBILITIES:
             raise ValueError("invalid visibility")
         return cleaned
 
@@ -101,7 +108,7 @@ class JournalUpdate(BaseModel):
         if value is None:
             return None
         cleaned = str(value or "").strip().upper()
-        if cleaned not in JOURNAL_VISIBILITIES:
+        if cleaned not in JOURNAL_CURRENT_WRITE_VISIBILITIES:
             raise ValueError("invalid visibility")
         return cleaned
 
@@ -131,7 +138,7 @@ class JournalRead(BaseModel):
     @classmethod
     def validate_read_visibility(cls, value: str) -> str:
         cleaned = str(value or "").strip().upper()
-        if cleaned not in JOURNAL_VISIBILITIES:
+        if cleaned not in JOURNAL_READ_VISIBILITIES:
             raise ValueError("invalid visibility")
         return cleaned
 

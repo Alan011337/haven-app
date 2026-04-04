@@ -40,6 +40,8 @@ import {
 import { logClientError } from '@/lib/safe-error-log';
 import type { JournalAttachmentPublic } from '@/types';
 import { cn } from '@/lib/utils';
+import { HorizontalRuleNode, INSERT_HORIZONTAL_RULE_COMMAND } from '@lexical/react/LexicalHorizontalRuleNode';
+import { HorizontalRulePlugin } from '@lexical/react/LexicalHorizontalRulePlugin';
 import { JournalFloatingToolbar } from '@/features/journal/editor/JournalFloatingToolbar';
 import {
   $createJournalImageNode,
@@ -77,8 +79,10 @@ const editorTheme = {
     bold: 'font-semibold text-card-foreground',
     code: 'rounded-md bg-[rgba(72,55,36,0.08)] px-1.5 py-0.5 font-mono text-[0.95em] text-card-foreground',
     italic: 'italic text-card-foreground',
+    strikethrough: 'line-through decoration-card-foreground/40',
     underline: 'underline underline-offset-4',
   },
+  hr: 'my-10 border-none h-px bg-primary/[0.14]',
 };
 
 export interface JournalLexicalComposerHandle {
@@ -92,6 +96,7 @@ export interface JournalLexicalComposerHandle {
 export type JournalEditorBlockAction =
   | 'bullet-list'
   | 'code-block'
+  | 'divider'
   | 'heading-1'
   | 'heading-2'
   | 'link'
@@ -99,7 +104,7 @@ export type JournalEditorBlockAction =
   | 'paragraph'
   | 'quote';
 
-export type JournalEditorInlineFormat = 'bold' | 'code' | 'italic';
+export type JournalEditorInlineFormat = 'bold' | 'code' | 'italic' | 'strikethrough';
 
 interface JournalLexicalComposerProps {
   attachments: JournalAttachmentPublic[];
@@ -136,6 +141,11 @@ function applyJournalBlockAction(editor: LexicalEditor, action: JournalEditorBlo
 
   if (action === 'ordered-list') {
     editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
+    return;
+  }
+
+  if (action === 'divider') {
+    editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
     return;
   }
 
@@ -345,7 +355,7 @@ const JournalLexicalComposer = forwardRef<
   const initialConfig = useMemo(
     () => ({
       namespace: 'haven-journal-v3',
-      nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, JournalImageNode],
+      nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, HorizontalRuleNode, JournalImageNode],
       onError: (error: Error) => {
         logClientError('journal_editor_runtime_failed', error);
         throw error;
@@ -422,6 +432,7 @@ const JournalLexicalComposer = forwardRef<
           <HistoryPlugin />
           <ListPlugin />
           <LinkPlugin />
+          <HorizontalRulePlugin />
           <MarkdownShortcutPlugin transformers={JOURNAL_MARKDOWN_TRANSFORMERS} />
           <OnChangePlugin
             onChange={(_, editorInstance) => {

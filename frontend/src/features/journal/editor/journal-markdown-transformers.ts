@@ -9,6 +9,11 @@ import {
 } from '@lexical/markdown';
 import { $createParagraphNode, $createTextNode, $getRoot, type LexicalEditor } from 'lexical';
 import {
+  $createHorizontalRuleNode,
+  $isHorizontalRuleNode,
+  HorizontalRuleNode,
+} from '@lexical/react/LexicalHorizontalRuleNode';
+import {
   $createJournalImageNode,
   $isJournalImageNode,
   JournalImageNode,
@@ -34,8 +39,22 @@ export const JOURNAL_IMAGE_TRANSFORMER: ElementTransformer = {
   type: 'element',
 };
 
+const HORIZONTAL_RULE_TRANSFORMER: ElementTransformer = {
+  dependencies: [HorizontalRuleNode],
+  export: (node) => {
+    if (!$isHorizontalRuleNode(node)) return null;
+    return '---';
+  },
+  regExp: /^(?:---|___|\*\*\*)$/,
+  replace: (parentNode) => {
+    parentNode.replace($createHorizontalRuleNode());
+  },
+  type: 'element',
+};
+
 export const JOURNAL_MARKDOWN_TRANSFORMERS: Array<Transformer> = [
   JOURNAL_IMAGE_TRANSFORMER,
+  HORIZONTAL_RULE_TRANSFORMER,
   ...TRANSFORMERS,
 ];
 

@@ -34,6 +34,13 @@ _RESTART_BASE_DELAY = 5.0
 _JOB_TIMEOUT_SECONDS = 120  # 2 minutes max per analysis job
 
 
+def _is_partner_shared_visibility(visibility: str | None) -> bool:
+    return str(visibility or "").strip().upper() in {
+        "PARTNER_ORIGINAL",
+        "PARTNER_TRANSLATED_ONLY",
+    }
+
+
 def _classify_job_exception(exc: Exception) -> str:
     if isinstance(exc, asyncio.TimeoutError):
         return "timeout"
@@ -282,7 +289,7 @@ async def run_analysis_job(payload_str: str) -> None:
                     if payload:
                         queue_partner_notification(action_type="mediation_invite", event_type="mediation_invite", **payload)
 
-    if str(journal.visibility or "").strip().upper() != "PRIVATE":
+    if _is_partner_shared_visibility(journal.visibility):
         enqueue_journal_notification(journal_id)
     logger.info("Analysis job completed journal_id=%s", journal_id)
 
@@ -308,7 +315,7 @@ def run_notification_job(payload_str: str) -> None:
         if not user:
             logger.warning("Notify job: user not found for journal_id=%s", journal_id)
             return
-        if str(journal.visibility or "").strip().upper() == "PRIVATE":
+        if not _is_partner_shared_visibility(journal.visibility):
             return
         payload_out = build_partner_notification_payload(
             session=session,

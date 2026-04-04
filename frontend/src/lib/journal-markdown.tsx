@@ -164,6 +164,14 @@ function buildMarkdownComponents(
         {children}
       </pre>
     ),
+    hr: () => (
+      <hr className="my-12 border-none h-px bg-primary/[0.12]" />
+    ),
+    del: ({ children }) => (
+      <del className="text-muted-foreground/70 decoration-muted-foreground/36">
+        {children}
+      </del>
+    ),
     img: ({ alt, src }) => {
       const resolvedSrc = resolveAttachmentUrl(src, attachments);
       if (!resolvedSrc) {

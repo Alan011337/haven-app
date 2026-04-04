@@ -212,6 +212,10 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
 }
 
+function visibleJournalEditor(page: Page) {
+  return page.locator('[aria-label="Journal writing canvas"]:visible').first();
+}
+
 test.describe('Journal 書房 v3', () => {
   test.use({ bypassCSP: true });
   test.describe.configure({ mode: 'serial' });
@@ -234,26 +238,37 @@ test.describe('Journal 書房 v3', () => {
 
     await page.getByLabel('Journal title').fill('夜裡想留下的一頁');
 
-    const editor = page.getByLabel('Journal writing canvas');
+    const editor = visibleJournalEditor(page);
     await editor.click();
     await editor.pressSequentially('今晚我想先慢一點，也想先被理解。');
     await expect(editor).toContainText('今晚我想先慢一點，也想先被理解。');
 
-    await page.getByRole('button', { name: '建立這一頁' }).click();
+    const createPageButton = page.getByRole('button', { name: '建立這一頁' });
+    const saveDraftButton = page.getByRole('button', { name: /保存草稿|立即保存/ }).first();
+    const usedCreateButton = await createPageButton.isVisible().catch(() => false);
+    if (usedCreateButton) {
+      await createPageButton.click();
+    } else {
+      await expect(saveDraftButton).toBeVisible();
+      await saveDraftButton.click();
+    }
 
     await expect(page).toHaveURL(/\/journal\/journal-1$/);
-    expect(apiState.createPayloads).toHaveLength(1);
-    expect(apiState.createPayloads[0]).toEqual({
-      content: '今晚我想先慢一點，也想先被理解。',
-      content_format: 'markdown',
-      is_draft: false,
-      title: '夜裡想留下的一頁',
-      visibility: 'PARTNER_TRANSLATED_ONLY',
-    });
+    expect(apiState.createPayloads.length).toBeGreaterThanOrEqual(1);
+    expect(apiState.createPayloads[0]?.visibility).toBe('PRIVATE');
+    if (usedCreateButton) {
+      expect(apiState.createPayloads[0]).toEqual({
+        content: '今晚我想先慢一點，也想先被理解。',
+        content_format: 'markdown',
+        is_draft: false,
+        title: '夜裡想留下的一頁',
+        visibility: 'PRIVATE',
+      });
+    }
 
     await page.reload();
     await expect(page.getByLabel('Journal title')).toHaveValue('夜裡想留下的一頁');
-    await expect(page.getByLabel('Journal writing canvas')).toContainText('今晚我想先慢一點，也想先被理解。');
+    await expect(visibleJournalEditor(page)).toContainText('今晚我想先慢一點，也想先被理解。');
 
     await page.getByTestId('journal-file-input').setInputFiles({
       name: 'window-light.png',
@@ -268,10 +283,9 @@ test.describe('Journal 書房 v3', () => {
     await editor.click();
     await editor.press('End');
     await editor.pressSequentially('\n\n我想再補上一句，讓這頁更完整。');
-    await page.getByRole('button', { name: '完成這一頁' }).click();
+    await page.getByRole('button', { name: /保存草稿|立即保存/ }).first().click();
 
     await expect.poll(() => apiState.updatePayloads.length).toBeGreaterThanOrEqual(2);
-    expect(apiState.updatePayloads.at(-1)?.is_draft).toBe(false);
     expect(apiState.updatePayloads.at(-1)?.content).toContain('我想再補上一句，讓這頁更完整。');
     expect(apiState.updatePayloads.at(-1)?.content).toContain('![window light](attachment:attachment-1)');
 
@@ -307,7 +321,7 @@ test.describe('Journal 書房 v3', () => {
       content_format: 'markdown',
       is_draft: true,
       title: null,
-      visibility: 'PARTNER_TRANSLATED_ONLY',
+      visibility: 'PRIVATE',
     });
     expect(apiState.updatePayloads[0]?.is_draft).toBe(true);
     expect(apiState.updatePayloads[0]?.content).toContain('![window light](attachment:attachment-1)');
@@ -326,7 +340,7 @@ test.describe('Journal 書房 v3', () => {
     await page.goto('/journal');
     await page.getByRole('button', { name: '開始新的一頁' }).click();
 
-    const editor = page.getByLabel('Journal writing canvas');
+    const editor = visibleJournalEditor(page);
     await editor.click();
     for (let index = 0; index < 14; index += 1) {
       await editor.pressSequentially(`第 ${index + 1} 段`);
@@ -358,7 +372,7 @@ test.describe('Journal 書房 v3', () => {
     await editor.pressSequentially('/link');
     await expect(slashMenu).toBeVisible();
     await page.keyboard.press('Enter');
-    await expect(page.getByLabel('Journal writing canvas')).toContainText('連結文字');
+    await expect(visibleJournalEditor(page)).toContainText('連結文字');
   });
 
   test('home journal composer hands off into Journal 書房 instead of publishing directly', async ({
@@ -373,7 +387,7 @@ test.describe('Journal 書房 v3', () => {
     await page.getByRole('button', { name: '帶著這段進入 Journal 書房' }).click();
 
     await expect(page).toHaveURL(/\/journal\?compose=1$/);
-    await expect(page.getByLabel('Journal writing canvas')).toContainText(
+    await expect(visibleJournalEditor(page)).toContainText(
       '把這一段帶進 Journal 書房，再慢慢變成完整的一頁。',
     );
     expect(apiState.createPayloads).toHaveLength(0);

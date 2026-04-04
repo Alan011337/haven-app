@@ -27,8 +27,9 @@ export default function PartnerJournalCard({
   const isSevere = safetyBand === 'severe';
   const isSafetyConcern = isElevated || isSevere;
   const isAnalysisOnly = journal.visibility === 'PARTNER_ANALYSIS_ONLY';
-  const isPartnerVersionOnly =
-    journal.visibility !== 'PARTNER_ORIGINAL' && !isAnalysisOnly;
+  const isTranslatedOnly = journal.visibility === 'PARTNER_TRANSLATED_ONLY';
+  const showPartnerAnalysis = !isTranslatedOnly;
+  const isPartnerVersionOnly = isTranslatedOnly;
   const sharedBody = isAnalysisOnly
     ? ''
     : isPartnerVersionOnly
@@ -96,13 +97,15 @@ export default function PartnerJournalCard({
           <div className="space-y-2">
             <h3 className="font-art text-[1.45rem] leading-tight text-card-foreground">{title}</h3>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              {!isAnalysisOnly && <span>{journal.attachments?.length ?? 0} 張圖片</span>}
+              {journal.visibility === 'PARTNER_ORIGINAL' ? (
+                <span>{journal.attachments?.length ?? 0} 張圖片</span>
+              ) : null}
               {!isAnalysisOnly && journal.partner_translation_status === 'FAILED' ? <span>整理暫未完成</span> : null}
             </div>
           </div>
 
-            {/* 內心深處的渴望 — always visible when available */}
-            {journal.emotional_needs ? (
+            {/* 內心深處的渴望 — hidden when only the partner-adapted text should be visible */}
+            {showPartnerAnalysis && journal.emotional_needs ? (
               <div className={`rounded-[1.7rem] border p-6 shadow-glass-inset ${variant === 'reading-room' ? 'home-surface-ink home-paper-lines border-[rgba(219,204,187,0.34)]' : 'border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,248,243,0.72))]'}`}>
                 <p className="text-sm leading-7 text-muted-foreground">內心深處的渴望</p>
                 <p className="mt-3 font-art text-[1.55rem] leading-[1.65] text-card-foreground italic">
@@ -135,14 +138,14 @@ export default function PartnerJournalCard({
                     ? 'Haven 正在為伴侶整理這篇內容。'
                     : journal.partner_translation_status === 'FAILED'
                       ? '這封來信先留下情緒摘要，整理後的版本稍後再補上。'
-                      : journal.emotional_needs || '希望能被理解與支持'}&quot;
+                      : 'Haven 正在為伴侶整理這篇內容。'}&quot;
                 </p>
               )}
             </div>
           )}
 
-          {/* Attachments — hidden for PARTNER_ANALYSIS_ONLY */}
-          {!isAnalysisOnly && shelfAttachments.length ? (
+          {/* Attachments — visible only when the original page is shared */}
+          {journal.visibility === 'PARTNER_ORIGINAL' && shelfAttachments.length ? (
             <div className="space-y-3">
               <p className="text-sm leading-7 text-muted-foreground">另外附上的圖片</p>
               <div className="grid gap-3 md:grid-cols-2">
@@ -182,7 +185,7 @@ export default function PartnerJournalCard({
             </div>
           )}
 
-          {isSevere ? (
+          {showPartnerAnalysis && isSevere ? (
             <div className="rounded-[1.5rem] border border-destructive/22 bg-destructive/8 p-5">
               <h4 className="flex items-center gap-2.5 text-sm font-bold text-destructive">
                 <span className="icon-badge !w-7 !h-7 !bg-gradient-to-br !from-destructive/12 !to-destructive/4 !border-destructive/8" aria-hidden>
@@ -210,7 +213,7 @@ export default function PartnerJournalCard({
                 </div>
               ) : null}
             </div>
-          ) : (
+          ) : showPartnerAnalysis ? (
             <div className="grid gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
               {journal.card_recommendation ? (
                 <div className="space-y-3">
@@ -244,7 +247,7 @@ export default function PartnerJournalCard({
                 ) : null}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </article>
     </SafetyTierGate>

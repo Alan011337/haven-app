@@ -10,6 +10,11 @@ export type JournalVisibility =
   | 'PARTNER_TRANSLATED_ONLY'
   | 'PARTNER_ANALYSIS_ONLY';
 
+export type JournalCurrentVisibility =
+  | 'PRIVATE'
+  | 'PARTNER_ORIGINAL'
+  | 'PARTNER_TRANSLATED_ONLY';
+
 export type JournalContentFormat = 'markdown';
 
 export type JournalTranslationStatus =

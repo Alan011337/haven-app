@@ -49,12 +49,12 @@ export default function JournalCard({
     journal.visibility === 'PRIVATE'
       ? '私密保存'
       : journal.visibility === 'PRIVATE_LOCAL'
-        ? '完全私密'
+        ? '完全私密（舊版）'
         : journal.visibility === 'PARTNER_ORIGINAL'
           ? '伴侶看原文'
           : journal.visibility === 'PARTNER_ANALYSIS_ONLY'
-            ? '伴侶只看分析'
-            : '整理後版本';
+            ? '伴侶只看分析（舊版）'
+            : '伴侶看整理後的版本';
   const title = deriveJournalTitle(journal);
   const excerpt = buildJournalExcerpt(journal.content);
   const firstImageRaw = extractFirstJournalImage(journal.content);

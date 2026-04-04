@@ -156,13 +156,13 @@ export const createJournal = async (
           content: draft,
           content_format: 'markdown' as const,
           is_draft: false,
-          visibility: 'PARTNER_TRANSLATED_ONLY' as const,
+          visibility: 'PRIVATE' as const,
         }
       : {
           ...draft,
           content_format: 'markdown' as const,
           is_draft: draft.is_draft ?? false,
-          visibility: draft.visibility ?? 'PARTNER_TRANSLATED_ONLY',
+          visibility: draft.visibility ?? 'PRIVATE',
         };
 
   const normalizedContent = payload.content.replace(/\r\n/g, '\n');

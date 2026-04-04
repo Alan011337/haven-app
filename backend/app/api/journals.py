@@ -79,7 +79,8 @@ logger = logging.getLogger(__name__)
 
 _DYNAMIC_CONTEXT_LOOKBACK_HOURS = 48
 _DYNAMIC_CONTEXT_MAX_SAMPLES = 6
-_DEFAULT_VISIBILITY = "PARTNER_TRANSLATED_ONLY"
+_DEFAULT_VISIBILITY = "PRIVATE"
+_LEGACY_DEFAULT_VISIBILITY = "PARTNER_TRANSLATED_ONLY"
 _CONTENT_FORMAT_MARKDOWN = "markdown"
 _TRANSLATION_STATUS_FAILED = "FAILED"
 _TRANSLATION_STATUS_NOT_REQUESTED = "NOT_REQUESTED"
@@ -116,7 +117,6 @@ def _is_partner_shared_visibility(visibility: str | None) -> bool:
     return str(visibility or "").strip().upper() in {
         "PARTNER_ORIGINAL",
         "PARTNER_TRANSLATED_ONLY",
-        "PARTNER_ANALYSIS_ONLY",
     }
 
 
@@ -273,6 +273,19 @@ async def _build_owner_journal_payload(
     return payload
 
 
+def _build_owner_response_seed(journal: Journal) -> dict[str, Any]:
+    return journal.model_dump(
+        exclude={
+            "analysis",
+            "attachments",
+            "card",
+            "mood",
+            "tags",
+            "partner_translated_content",
+        }
+    )
+
+
 async def _build_partner_journal_payload(
     *,
     journal: Journal,
@@ -289,15 +302,22 @@ async def _build_partner_journal_payload(
 
     translated_content = None
     content = ""
-    include_attachments = True
+    include_attachments = False
+    include_analysis = normalized_visibility in {
+        "PARTNER_ORIGINAL",
+        "PARTNER_ANALYSIS_ONLY",
+    }
     if normalized_visibility == "PARTNER_ORIGINAL":
         content = journal.content
+        include_attachments = True
     elif normalized_visibility == "PARTNER_TRANSLATED_ONLY":
         if journal.partner_translation_status == _TRANSLATION_STATUS_READY:
             translated_content = journal.partner_translated_content
     elif normalized_visibility == "PARTNER_ANALYSIS_ONLY":
         # No content, no translation — analysis fields only
-        include_attachments = False
+        include_analysis = True
+    else:
+        include_analysis = False
 
     payload = {
         "id": journal.id,
@@ -305,13 +325,14 @@ async def _build_partner_journal_payload(
         "user_id": journal.user_id,
         "created_at": journal.created_at,
         "updated_at": journal.updated_at,
-        "visibility": normalized_visibility or _DEFAULT_VISIBILITY,
+        "visibility": normalized_visibility or _LEGACY_DEFAULT_VISIBILITY,
         "content": content,
         "partner_translation_status": journal.partner_translation_status or _TRANSLATION_STATUS_NOT_REQUESTED,
         "partner_translated_content": translated_content,
         "attachments": await _serialize_attachments(attachments) if include_attachments else [],
     }
-    payload.update(_analysis_payload(analysis))
+    if include_analysis:
+        payload.update(_analysis_payload(analysis))
     return payload
 
 
@@ -498,7 +519,7 @@ async def create_journal(
                         relationship_weather_hint=relationship_weather_hint,
                         relationship_mode=relationship_mode,
                     )
-                response_data = existing_same_day.model_dump()
+                response_data = _build_owner_response_seed(existing_same_day)
                 response_data["new_savings_score"] = current_user.savings_score
                 response_data["score_gained"] = 0
                 if idem_key:
@@ -637,7 +658,7 @@ async def create_journal(
                 detail="寫入日記時發生錯誤，請稍後再試。"
             )
 
-        response_data = new_journal.model_dump()
+        response_data = _build_owner_response_seed(new_journal)
         response_data["attachments"] = []
         response_data["new_savings_score"] = current_user.savings_score
         response_data["score_gained"] = 0
@@ -738,7 +759,7 @@ async def create_journal(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="寫入日記時發生錯誤，請稍後再試。"
             )
-        response_data = new_journal.model_dump()
+        response_data = _build_owner_response_seed(new_journal)
         response_data["new_savings_score"] = current_user.savings_score
         response_data["score_gained"] = 0
         if idem_key:
@@ -933,7 +954,7 @@ async def create_journal(
             logger.error("通知發送流程出錯: %s", type(n_err).__name__)
 
     # 步驟 4: 建構回傳資料
-    response_data = new_journal.model_dump()
+    response_data = _build_owner_response_seed(new_journal)
     if new_analysis:
         analysis_data = _analysis_payload(new_analysis)
         response_data.update(analysis_data)
