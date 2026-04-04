@@ -56,7 +56,7 @@ export function MediationShell({ children }: MediationShellProps) {
           </Link>
 
           <Badge variant="metadata" size="md" className="border-white/50 bg-white/72 text-primary/78 shadow-soft">
-            Calm Repair Room
+            Mediation
           </Badge>
         </div>
 

@@ -68,7 +68,7 @@ const CORE_SURFACES = [
   {
     href: '/memory',
     label: 'Memory',
-    detail: 'shared archive',
+    detail: 'Shared Archive',
     icon: BookMarked,
   },
   {

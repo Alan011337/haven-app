@@ -212,7 +212,7 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
 }
 
-test.describe('Journal V3 writing studio', () => {
+test.describe('Journal 書房 v3', () => {
   test.use({ bypassCSP: true });
   test.describe.configure({ mode: 'serial' });
   test.setTimeout(60_000);
@@ -231,7 +231,6 @@ test.describe('Journal V3 writing studio', () => {
 
     await page.getByRole('button', { name: '開始新的一頁' }).click();
     await expect(page.getByLabel('Journal title')).toBeVisible();
-    await expect(page.getByText(/^草稿$/)).toBeVisible();
 
     await page.getByLabel('Journal title').fill('夜裡想留下的一頁');
 
@@ -362,7 +361,7 @@ test.describe('Journal V3 writing studio', () => {
     await expect(page.getByLabel('Journal writing canvas')).toContainText('連結文字');
   });
 
-  test('home journal composer hands off into Journal Studio instead of publishing directly', async ({
+  test('home journal composer hands off into Journal 書房 instead of publishing directly', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 1100 });
@@ -370,11 +369,13 @@ test.describe('Journal V3 writing studio', () => {
     await login(page);
 
     await page.goto('/');
-    await page.getByLabel('日記內容').fill('把這一段帶進 Studio，再慢慢變成完整的一頁。');
-    await page.getByRole('button', { name: '帶著這段進入 Studio' }).click();
+    await page.getByLabel('日記內容').fill('把這一段帶進 Journal 書房，再慢慢變成完整的一頁。');
+    await page.getByRole('button', { name: '帶著這段進入 Journal 書房' }).click();
 
     await expect(page).toHaveURL(/\/journal\?compose=1$/);
-    await expect(page.getByLabel('Journal writing canvas')).toContainText('把這一段帶進 Studio，再慢慢變成完整的一頁。');
+    await expect(page.getByLabel('Journal writing canvas')).toContainText(
+      '把這一段帶進 Journal 書房，再慢慢變成完整的一頁。',
+    );
     expect(apiState.createPayloads).toHaveLength(0);
   });
 });

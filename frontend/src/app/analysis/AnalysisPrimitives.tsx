@@ -101,7 +101,7 @@ export function AnalysisCover({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="metadata" size="md" className="border-white/56 bg-white/76 text-primary/82 shadow-soft">
-                Understanding Center
+                Analysis
               </Badge>
               <p className="type-micro uppercase text-primary/82">{eyebrow}</p>
             </div>

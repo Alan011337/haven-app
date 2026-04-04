@@ -263,8 +263,8 @@ test.describe('Home core surface continuity', () => {
     await expect(guide.getByRole('link', { name: 'Blueprint' })).toHaveAttribute('href', '/blueprint');
     await expect(page.getByText('完整反思寫作')).toBeVisible();
     await expect(page.getByText('結構化關係理解')).toBeVisible();
-    await expect(page.getByText('shared archive')).toBeVisible();
-    await expect(page.getByText('完整 Shared Future')).toBeVisible();
+    await expect(guide.getByText('Shared Archive')).toBeVisible();
+    await expect(guide.getByText('完整 Shared Future')).toBeVisible();
 
     const minePanel = page.locator('#home-tabpanel-mine');
     await expect(
@@ -275,20 +275,23 @@ test.describe('Home core surface continuity', () => {
         'Home 先收住今天最前面的幾句；如果你想把感受、圖片與分享邊界寫得更完整，下一步就進 Journal 書房。',
       ),
     ).toBeVisible();
-    await expect(minePanel.getByText('Reflective Writing').first()).toBeVisible();
+    await expect(minePanel.getByText('反思寫作').first()).toBeVisible();
     await expect(minePanel.getByRole('link', { name: '進入 Journal 書房' })).toBeVisible();
 
-    await expect(minePanel.getByRole('link', { name: '進入 Memory（完整 shared archive）' })).toBeVisible();
+    await expect(
+      minePanel.getByRole('link', { name: '進入 Memory（完整 Shared Archive）' }),
+    ).toBeVisible();
 
     await expect(
       page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' }).first(),
     ).toBeVisible({ timeout: 8_000 });
 
     await page.getByRole('tab', { name: '每日儀式' }).click();
+    const cardPanel = page.locator('#home-tabpanel-card');
     await expect(
-      page.getByText('今天的 ritual 先留在這裡；如果某個節奏值得留下更久，就帶去 Relationship System。'),
+      cardPanel.getByText('今天的 ritual 先留在這裡；如果某個節奏值得留下更久，就帶去 Relationship System。'),
     ).toBeVisible();
-    await expect(page.getByRole('link', { name: '進入 Relationship System' })).toBeVisible();
+    await expect(cardPanel.getByRole('link', { name: '進入 Relationship System' })).toBeVisible();
 
     await expect(page.locator('a[href="/love-map"][aria-label="Relationship System"]')).toBeVisible();
     await expect(page.locator('a[href="/blueprint"][aria-label="Blueprint"]')).toBeVisible();
@@ -388,14 +391,16 @@ test.describe('Home core surface continuity', () => {
       'href',
       '/journal?compose=1',
     );
-    await expect(minePanel.getByRole('link', { name: '進入 Memory（完整 shared archive）' })).toBeVisible();
+    await expect(
+      minePanel.getByRole('link', { name: '進入 Memory（完整 Shared Archive）' }),
+    ).toBeVisible();
 
-    await minePanel.getByRole('button', { name: '開始新的一頁' }).click();
+    await minePanel.getByRole('link', { name: '進入 Journal 書房' }).click();
     await expect(page).toHaveURL(/\/journal\?compose=1$/);
 
     await page.goto(`${appBaseUrl}/`, { waitUntil: 'domcontentloaded' });
     const memoryCta = page.locator('#home-tabpanel-mine').getByRole('link', {
-      name: '進入 Memory（完整 shared archive）',
+      name: '進入 Memory（完整 Shared Archive）',
     });
     await expect(
       page.locator('#home-tabpanel-mine').getByRole('heading', { name: '今天這一頁，先只留給你自己。' }),
@@ -413,10 +418,11 @@ test.describe('Home core surface continuity', () => {
     await expect(page).toHaveURL(/\/blueprint$/);
 
     await page.goto(`${appBaseUrl}/?tab=card`, { waitUntil: 'domcontentloaded' });
+    const liveCardPanel = page.locator('#home-tabpanel-card');
     await expect(
-      page.getByText('今天的 ritual 先留在這裡；如果某個節奏值得留下更久，就帶去 Relationship System。'),
+      liveCardPanel.getByText('今天的 ritual 先留在這裡；如果某個節奏值得留下更久，就帶去 Relationship System。'),
     ).toBeVisible();
-    await expect(page.getByRole('link', { name: '進入 Relationship System' })).toHaveAttribute(
+    await expect(liveCardPanel.getByRole('link', { name: '進入 Relationship System' })).toHaveAttribute(
       'href',
       '/love-map',
     );

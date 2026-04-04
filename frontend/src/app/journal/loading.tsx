@@ -6,7 +6,7 @@ export default function JournalLoading() {
       <JournalStatePanel
         eyebrow="Journal Route"
         title="正在把這一頁攤開"
-        description="Journal Studio 正在載入你的書房、草稿與可分享設定。"
+        description="Journal 書房正在載入你的頁面、草稿與可分享設定。"
       />
     </JournalShell>
   );

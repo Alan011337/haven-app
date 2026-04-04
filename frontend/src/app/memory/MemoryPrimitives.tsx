@@ -131,7 +131,7 @@ export function MemoryShell({ children }: MemoryShellProps) {
             size="md"
             className="border-white/50 bg-white/72 text-primary/78 shadow-soft"
           >
-            Shared Memory Gallery
+            Memory
           </Badge>
         </div>
 

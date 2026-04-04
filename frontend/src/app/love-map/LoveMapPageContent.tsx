@@ -800,7 +800,7 @@ export default function LoveMapPageContent() {
             title="你們的故事還沒有累積到足夠的記憶錨點。"
             description="等更多 journal、共同卡片或 appreciation 被留下來後，這裡才會開始誠實地長出關係故事。"
             tone="quiet"
-            actionLabel="去 Memory 看看"
+            actionLabel="進入 Memory（完整 Shared Archive）"
             onAction={() => {
               if (typeof window !== 'undefined') {
                 window.location.href = '/memory';
@@ -858,7 +858,7 @@ export default function LoveMapPageContent() {
               href="/memory"
               className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
             >
-              進入 Memory（完整 shared archive）
+              進入 Memory（完整 Shared Archive）
               <Sparkles className="h-4 w-4" aria-hidden />
             </Link>
           </div>
@@ -869,7 +869,7 @@ export default function LoveMapPageContent() {
         id="inner-landscape"
         eyebrow="Inner Landscape"
         title="把你的 relationship reflections 留成可回讀的內在地圖。"
-        description="Love Map notes 不是共享檔案，也不是 Haven 自動替兩個人下的結論。它們是你願意留下的結構化反思，會幫 Haven 之後更誠實地知道什麼是 shared truth、什麼只是個人理解；如果你想寫成更完整的一頁，則去 Journal 這個反思書房。"
+        description="Inner Landscape notes 不是共享檔案，也不是 Haven 自動替兩個人下的結論。它們是你願意留下的結構化反思，會幫 Haven 之後更誠實地知道什麼是 shared truth、什麼只是個人理解；如果你想寫成更完整的一頁，則去 Journal 這個反思書房。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -879,7 +879,7 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">Trust rule</p>
               <p className="mt-2 type-caption text-muted-foreground">
-                這些是你的筆記，不會因為存在於 Love Map 就被自動公開給伴侶。
+                這些是你的筆記，不會因為存在於 Relationship System 就被自動公開給伴侶。
               </p>
             </div>
           </div>
@@ -889,8 +889,8 @@ export default function LoveMapPageContent() {
           <div className="space-y-4">
             <LoveMapStatePanel
               eyebrow="Partner required"
-              title="先完成雙向伴侶連結，Love Map 才會開始成形。"
-              description="現在你仍然可以先看 prompts，但 Haven 不會在沒有 partner pair 的情況下，把這一區當成正式 relationship system。"
+              title="先完成雙向伴侶連結，Relationship System 才會開始成形。"
+              description="現在你仍然可以先看 prompts，但 Haven 不會在沒有 partner pair 的情況下，把這一區當成正式的 Relationship System。"
               tone="quiet"
               actionLabel="去設定完成連結"
               onAction={() => {
@@ -903,7 +903,7 @@ export default function LoveMapPageContent() {
             {cardsQuery.isError ? (
               <LoveMapStatePanel
                 eyebrow="Prompt preview"
-                title="Love Map prompts 暫時沒有順利載入"
+                title="Relationship System prompts 暫時沒有順利載入"
                 description="等 prompts 回來後，你至少可以先預覽 Haven 會如何帶你們往更深處走。"
                 tone="quiet"
                 actionLabel="重讀 prompts"
@@ -921,7 +921,7 @@ export default function LoveMapPageContent() {
                         key={layer}
                         eyebrow={LAYER_META[layer].label}
                         title="這一層今天沒有新的 prompts。"
-                        description="沒有關係，等 partner 連結完成後，Love Map 仍會從這一層開始慢慢長出來。"
+                        description="沒有關係，等 partner 連結完成後，Relationship System 仍會從這一層開始慢慢長出來。"
                         tone="quiet"
                       />
                     );
@@ -1030,7 +1030,7 @@ export default function LoveMapPageContent() {
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">完整 Shared Future</p>
-              <p className="mt-2 type-caption text-muted-foreground">這裡是摘要與審核層；完整 Shared Future 工作台、備註與整理入口仍在 Blueprint。</p>
+              <p className="mt-2 type-caption text-muted-foreground">這裡是摘要與審核層；完整 Blueprint、備註與整理入口仍在 Blueprint。</p>
             </div>
           </div>
         }

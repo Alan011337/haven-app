@@ -22,7 +22,7 @@ export default function JournalError({
     <JournalShell>
       <JournalStatePanel
         eyebrow="Journal Route"
-        title="Journal Studio 暫時沒有順利展開"
+        title="Journal 書房暫時沒有順利展開"
         description="這比較像是頁面層的失敗，而不是你的內容消失了。重新整理後，Haven 會再把這一頁帶回來。"
         tone="error"
         actions={

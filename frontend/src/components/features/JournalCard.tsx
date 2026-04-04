@@ -197,7 +197,7 @@ export default function JournalCard({
              href={`/journal/${journal.id}`}
              className="inline-flex items-center gap-2 rounded-full border border-white/56 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
            >
-             打開 Journal Studio
+             打開 Journal 書房
            </Link>
          </div>
 

@@ -389,9 +389,9 @@ export default function MemoryPageContent() {
   return (
     <div className="space-y-[clamp(1.5rem,3vw,2.75rem)]">
       <MemoryCover
-        eyebrow="Memory Lane"
+        eyebrow="Memory / Shared Archive"
         title="把你們一起活過的日子，放進一個值得慢慢回來、重新看見、重新被觸動的回憶畫廊。"
-        description="這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 shared archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。"
+        description="這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 Shared Archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。"
         pulse={
           timeCapsuleAvailable
             ? '今天最珍貴的那一段，不一定是最新的，而是剛好回來敲門的那一段。'
@@ -475,9 +475,9 @@ export default function MemoryPageContent() {
         aside={
           <>
             <MemoryOverviewCard
-              eyebrow="Gallery Overview"
+              eyebrow="Shared Archive Overview"
               title="這次回來，哪些片段正在被重新翻開。"
-              description="想看更完整的 shared archive，就留在 Memory；想回到被整理過的故事層與關係脈動，則回到 Relationship System。"
+              description="想看更完整的 Shared Archive，就留在 Memory；想回到被整理過的故事層與關係脈動，則回到 Relationship System。"
             >
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
                 <div className="rounded-[1.7rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">

@@ -49,7 +49,7 @@ export function BlueprintShell({ children }: BlueprintShellProps) {
           </div>
 
           <Badge variant="metadata" size="md" className="border-white/50 bg-white/72 text-primary/78 shadow-soft">
-            Shared Future Blueprint
+            Blueprint
           </Badge>
         </div>
 

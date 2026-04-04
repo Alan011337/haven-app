@@ -65,7 +65,7 @@ export function SettingsShell({ children }: SettingsShellProps) {
             size="md"
             className="border-white/54 bg-white/74 text-primary/78 shadow-soft"
           >
-            Trust &amp; Customization Center
+            Settings
           </Badge>
         </div>
 

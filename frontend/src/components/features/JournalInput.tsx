@@ -48,7 +48,7 @@ export default function JournalInput({
             Journal Entry
           </span>
           <span className="inline-flex items-center rounded-full border border-border/80 bg-white/70 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            Reflective Writing
+            反思寫作
           </span>
         </div>
         <p className="font-mono text-xs tabular-nums text-muted-foreground/70">
@@ -78,7 +78,7 @@ export default function JournalInput({
           aria-label="日記內容"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="先留下一句、幾行，或只是今天的第一個感受。接下來的標題、圖片與分享邊界，都在 Journal Studio 裡慢慢整理。"
+          placeholder="先留下一句、幾行，或只是今天的第一個感受。接下來的標題、圖片與分享邊界，都在 Journal 書房裡慢慢整理。"
           className={cn(
             'relative z-10 w-full resize-none bg-transparent text-[15px] leading-[2] text-foreground outline-none transition-all duration-haven ease-haven placeholder:font-light placeholder:text-muted-foreground/50 md:px-6',
             variant === 'cover' ? 'min-h-[320px] px-6 py-8 md:min-h-[360px] md:px-7' : 'min-h-[220px] px-5 py-6',
@@ -91,7 +91,7 @@ export default function JournalInput({
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl space-y-1.5">
-          <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">Reflective Writing</p>
+          <p className="text-[0.68rem] uppercase tracking-[0.28em] text-primary/80">反思寫作</p>
           <p className="text-sm leading-7 text-muted-foreground">
             Home 先替你收住今天的第一句；真正更完整的反思寫作，會在 Journal 書房裡慢慢長成一頁。你可以先帶著這段進去，也可以直接開一頁空白 draft，先插圖再慢慢寫。
           </p>
@@ -108,7 +108,7 @@ export default function JournalInput({
             type="submit"
             className="inline-flex items-center justify-center gap-2 rounded-full border-t border-t-white/30 bg-gradient-to-b from-primary to-primary/90 px-8 py-3 font-medium text-primary-foreground shadow-satin-button transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {content.trim() ? '帶著這段進入 Studio' : '開始新的一頁'}
+            {content.trim() ? '帶著這段進入 Journal 書房' : '開始新的一頁'}
           </button>
         </div>
       </div>
@@ -125,14 +125,14 @@ export default function JournalInput({
           </h3>
         </div>
         <div className="rounded-full border border-white/50 bg-white/66 px-3 py-2 text-[0.68rem] uppercase tracking-[0.28em] text-primary/75 shadow-soft">
-          writing surface
+          反思寫作
         </div>
       </div>
       {form}
     </div>
   ) : (
     <HomeComposerStage
-      eyebrow="Reflective Writing"
+      eyebrow="反思寫作"
       title="先留下今天最想帶進 Journal 的那幾句。"
       description="Home 先保留開頭；更完整的反思寫作，會在 Journal 書房裡慢慢完成。"
       className={className}

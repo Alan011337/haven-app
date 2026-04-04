@@ -83,7 +83,7 @@ export default function BlueprintPageContent() {
       setTitle('');
       setNotes('');
       await queryClient.invalidateQueries({ queryKey: queryKeys.blueprint() });
-      showToast('已加入願望清單', 'success');
+      showToast('已加入 Blueprint', 'success');
     } catch (err) {
       logClientError('blueprint-add-failed', err);
       showToast('加入失敗，請稍後再試', 'error');
@@ -198,7 +198,7 @@ export default function BlueprintPageContent() {
 
       <BlueprintWishStudio
         id="wish-studio"
-        eyebrow="Wish Studio"
+        eyebrow="Blueprint 工作台"
         title="把下一個想一起擁有的場景寫下來。"
         description="可以是一個想去的地方、一個想一起養成的儀式、一個想實現的小願望，或只是某種你希望兩個人一起活成的樣子。"
         footer={
@@ -248,7 +248,7 @@ export default function BlueprintPageContent() {
               size="lg"
               loading={submitting}
               rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
-              aria-label="加入願望清單"
+              aria-label="加入 Blueprint"
             >
               放進共同藍圖
             </Button>

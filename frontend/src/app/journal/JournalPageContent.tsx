@@ -1068,7 +1068,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         </div>
 
         <JournalStudioHero
-          eyebrow="Journal Library"
+          eyebrow="Journal 書房"
           title="把值得留下來的心事，寫成真正可重讀的一頁。"
           description="Journal 是 Haven 裡更完整的反思書房：Relationship System 的 Inner Landscape 會保留結構化的個人理解，而這裡則讓你把那些感受、語氣、圖像與分享邊界寫成真正可重讀的一頁。"
           actions={
@@ -1122,7 +1122,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 最近寫下的頁面
               </h2>
               <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                這裡是更完整的反思書房，而不是只留摘要的地方。打開任何一頁，都會進入沉浸式 writing studio。
+                這裡是更完整的反思書房，而不是只留摘要的地方。打開任何一頁，都會進入沉浸式書寫空間。
               </p>
             </div>
 

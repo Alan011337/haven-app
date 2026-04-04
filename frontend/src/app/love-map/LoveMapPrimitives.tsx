@@ -50,7 +50,7 @@ export function LoveMapShell({ children }: { children: ReactNode }) {
               href="/blueprint"
               className="inline-flex items-center gap-2 rounded-full border border-white/52 bg-white/64 px-4 py-2.5 text-sm font-medium text-card-foreground/88 shadow-soft backdrop-blur-xl transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-white/74 hover:text-card-foreground hover:shadow-lift focus-ring-premium"
             >
-              Shared Future 工作台
+              Blueprint 工作台
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>

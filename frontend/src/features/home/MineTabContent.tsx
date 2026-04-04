@@ -218,7 +218,7 @@ export default function MineTabContent({
       <EditorialTimelineColumn
         eyebrow="回憶廊道"
         title="寫下的東西，在這裡慢慢長出重量。"
-        description="Home 先保留最近幾頁；想回到更完整的共同生活 archive，再去 Memory。"
+        description="Home 先保留最近幾頁；想回到更完整的 Shared Archive，再去 Memory。"
         aside={
           <div className="flex flex-col items-start gap-3">
             <Badge variant="metadata" size="md" className="bg-white/72 text-primary/72">
@@ -228,7 +228,7 @@ export default function MineTabContent({
               href="/memory"
               className="inline-flex items-center gap-2 rounded-full border border-white/56 bg-white/78 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
             >
-              進入 Memory（完整 shared archive）
+              進入 Memory（完整 Shared Archive）
             </Link>
           </div>
         }

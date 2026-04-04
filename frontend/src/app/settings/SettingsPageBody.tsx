@@ -422,7 +422,7 @@ export default function SettingsPageBody() {
   return (
     <div className="space-y-[clamp(1.5rem,3vw,2.75rem)]">
       <SettingsCover
-        eyebrow="Relationship Configuration"
+        eyebrow="Settings"
         title="用更安靜、更可信的方式，決定 Haven 要怎麼陪你們"
         description="這裡不是一張功能清單，而是你們設定產品節奏、提醒密度、信任邊界與支持方式的地方。每一個選項都在決定 Haven 會怎麼靠近你們。"
         pulse={pulseCopy}
@@ -880,7 +880,7 @@ export default function SettingsPageBody() {
               tone="quiet"
               eyebrow="Relationship System"
               title="正在整理你們目前的關係知識"
-              description="Love Map 會接手承載關係脈動、共同方向與 shared future。"
+              description="Relationship System 會接手承載關係脈動、共同方向與 Shared Future。"
             />
           ) : relationshipQuery.isError ? (
             <SettingsStatePanel
@@ -905,9 +905,9 @@ export default function SettingsPageBody() {
                   <Badge variant="metadata" size="sm" className="border-white/56 bg-white/78">
                     Relationship System
                   </Badge>
-                  <h3 className="type-h3 text-card-foreground">Love Map 現在是這塊知識的主場</h3>
+                  <h3 className="type-h3 text-card-foreground">Relationship System 現在是這塊知識的主場</h3>
                   <p className="type-body-muted text-muted-foreground">
-                    Settings 只保留摘要與配對狀態；真正的關係脈動、內在地圖與共同未來，現在都應該回到 Love Map 裡被一起理解。
+                    Settings 只保留摘要與配對狀態；真正的關係脈動、內在地圖與共同未來，現在都應該回到 Relationship System 裡被一起理解。
                   </p>
                 </div>
 
@@ -939,17 +939,17 @@ export default function SettingsPageBody() {
                 <div className="rounded-[1.9rem] border border-white/58 bg-white/78 p-4 shadow-soft md:p-5">
                   <p className="type-section-title text-card-foreground">這塊現在怎麼運作</p>
                   <p className="mt-2 type-caption text-muted-foreground">
-                    Love Map 會把關係脈動、你的內在地圖與 shared future 放回同一張頁面。Settings 只留下摘要，避免你們在兩個地方維護同一份 relationship truth。
+                    Relationship System 會把關係脈動、你的內在地圖與 Shared Future 放回同一張頁面。Settings 只留下摘要，避免你們在兩個地方維護同一份 relationship truth。
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <Link
                       href="/love-map"
                       className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/82 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
                     >
-                      前往 Love Map / Relationship System
+                      前往 Relationship System
                     </Link>
                     <p className="type-caption text-muted-foreground">
-                      之後所有這類更新，應該都從 Love Map 進行。
+                      之後所有這類更新，應該都從 Relationship System 進行。
                     </p>
                   </div>
                 </div>
