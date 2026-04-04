@@ -254,6 +254,7 @@ async def run_analysis_job(payload_str: str) -> None:
             try:
                 journal.partner_translated_content = await translate_journal_for_partner(journal.content or "")
                 journal.partner_translation_status = "READY"
+                journal.partner_translation_ready_at = utcnow()
             except Exception as exc:
                 logger.warning(
                     "Async partner adaptation failed: journal_id=%s reason=%s",
@@ -262,9 +263,11 @@ async def run_analysis_job(payload_str: str) -> None:
                 )
                 journal.partner_translated_content = None
                 journal.partner_translation_status = "FAILED"
+                journal.partner_translation_ready_at = None
         else:
             journal.partner_translated_content = None
             journal.partner_translation_status = "NOT_REQUESTED"
+            journal.partner_translation_ready_at = None
         journal.updated_at = utcnow()
         session.add(journal)
         session.commit()

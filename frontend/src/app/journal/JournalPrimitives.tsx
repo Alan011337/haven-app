@@ -24,8 +24,13 @@ import type {
   JournalCurrentVisibility,
   JournalVisibility,
 } from '@/types';
+import {
+  buildJournalTranslationStatusPresentation,
+  type JournalTranslationStatusPresentation,
+} from '@/app/journal/journal-translation-status';
 import { JournalRichMarkdown } from '@/lib/journal-markdown';
 import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
+import { formatTranslationReadyAt } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type JournalStudioMode = 'compare' | 'read' | 'write';
@@ -293,6 +298,136 @@ export function JournalVisibilitySwitch({
   );
 }
 
+function getTranslationStatusToneClasses(
+  tone: JournalTranslationStatusPresentation['tone'],
+) {
+  if (tone === 'progress') {
+    return {
+      card: 'border-primary/16 bg-primary/[0.06]',
+      chip: 'border-primary/16 bg-primary/[0.08] text-card-foreground',
+      eyebrow: 'text-primary/80',
+      heading: 'text-card-foreground',
+      icon: 'border-primary/12 bg-primary/[0.1] text-primary',
+      message: 'text-muted-foreground',
+    };
+  }
+  if (tone === 'success') {
+    return {
+      card: 'border-emerald-500/18 bg-[linear-gradient(180deg,rgba(236,253,245,0.92),rgba(246,252,248,0.96))] shadow-[0_18px_36px_-26px_rgba(16,185,129,0.45)]',
+      chip: 'border-emerald-500/20 bg-emerald-500/[0.12] text-emerald-950',
+      eyebrow: 'text-emerald-700/90',
+      heading: 'text-emerald-950',
+      icon: 'border-emerald-500/18 bg-emerald-500/[0.14] text-emerald-700',
+      message: 'text-emerald-900/80',
+    };
+  }
+  if (tone === 'error') {
+    return {
+      card: 'border-destructive/14 bg-destructive/[0.05]',
+      chip: 'border-destructive/16 bg-destructive/[0.08] text-card-foreground',
+      eyebrow: 'text-primary/80',
+      heading: 'text-card-foreground',
+      icon: 'border-destructive/14 bg-destructive/[0.1] text-destructive',
+      message: 'text-muted-foreground',
+    };
+  }
+  return {
+    card: 'border-white/56 bg-white/72',
+    chip: 'border-white/56 bg-white/76 text-card-foreground',
+    eyebrow: 'text-primary/80',
+    heading: 'text-card-foreground',
+    icon: 'border-white/56 bg-white/82 text-card-foreground',
+    message: 'text-muted-foreground',
+  };
+}
+
+function JournalTranslationStatusIcon({
+  presentation,
+}: {
+  presentation: JournalTranslationStatusPresentation;
+}) {
+  const iconClassName = cn(
+    'h-3.5 w-3.5',
+    presentation.state === 'pending' ? 'animate-spin' : '',
+  );
+
+  if (presentation.state === 'pending') {
+    return <LoaderCircle className={iconClassName} aria-hidden />;
+  }
+  if (presentation.state === 'ready') {
+    return <Check className={iconClassName} aria-hidden />;
+  }
+  if (presentation.state === 'failed') {
+    return <AlertCircle className={iconClassName} aria-hidden />;
+  }
+  return <Share2 className={iconClassName} aria-hidden />;
+}
+
+export function JournalTranslationStatusChip({
+  className,
+  presentation,
+}: {
+  className?: string;
+  presentation: JournalTranslationStatusPresentation;
+}) {
+  const toneClasses = getTranslationStatusToneClasses(presentation.tone);
+
+  return (
+    <span
+      data-state={presentation.state}
+      data-testid="journal-translation-status-chip"
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-soft',
+        toneClasses.chip,
+        className,
+      )}
+    >
+      <JournalTranslationStatusIcon presentation={presentation} />
+      {presentation.shortLabel}
+    </span>
+  );
+}
+
+export function JournalTranslationStatusCard({
+  presentation,
+}: {
+  presentation: JournalTranslationStatusPresentation;
+}) {
+  const toneClasses = getTranslationStatusToneClasses(presentation.tone);
+
+  return (
+    <div
+      data-state={presentation.state}
+      data-testid="journal-translation-status-card"
+      className={cn('rounded-[1.35rem] border p-4 shadow-soft', toneClasses.card)}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-soft',
+            toneClasses.icon,
+          )}
+          aria-hidden
+        >
+          <JournalTranslationStatusIcon presentation={presentation} />
+        </span>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className={cn('text-[0.68rem] uppercase tracking-[0.24em]', toneClasses.eyebrow)}>伴侶閱讀狀態</p>
+            <JournalTranslationStatusChip presentation={presentation} />
+          </div>
+          <p className={cn('text-sm font-medium', toneClasses.heading)}>
+            {presentation.readyAt
+              ? `${formatTranslationReadyAt(presentation.readyAt)} ${presentation.label}`
+              : presentation.label}
+          </p>
+          <p className={cn('text-sm leading-7', toneClasses.message)}>{presentation.message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function JournalCanvasFrame({
   children,
   tone = 'writing',
@@ -467,6 +602,15 @@ export function JournalLibraryCard({
   active?: boolean;
   journal: Journal;
 }) {
+  const translationStatus = buildJournalTranslationStatusPresentation({
+    currentVisibility: journal.visibility,
+    hasCurrentJournalId: true,
+    hasExplicitVisibilitySelection: false,
+    isDraft: Boolean(journal.is_draft),
+    partnerTranslationReadyAt: journal.partner_translation_ready_at ?? null,
+    partnerTranslationStatus: journal.partner_translation_status,
+    persistedVisibility: journal.visibility,
+  });
   const visibilityLabel =
     journal.visibility === 'PRIVATE'
       ? '私密保存'
@@ -488,7 +632,10 @@ export function JournalLibraryCard({
     >
       <div className="space-y-3">
         <div className="space-y-1">
-          <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/80">{visibilityLabel}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/80">{visibilityLabel}</p>
+            {translationStatus ? <JournalTranslationStatusChip presentation={translationStatus} /> : null}
+          </div>
           <h3 className="font-art text-[1.45rem] leading-tight text-card-foreground">
             {deriveJournalTitle(journal)}
           </h3>

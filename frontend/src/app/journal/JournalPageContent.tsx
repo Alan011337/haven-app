@@ -30,6 +30,7 @@ import { sortJournalsDesc } from '@/features/home/home-data-utils';
 import { useToast } from '@/hooks/useToast';
 import type {
   JournalAttachmentPublic,
+  JournalTranslationStatus,
   JournalVisibility,
 } from '@/types';
 import { queryKeys } from '@/lib/query-keys';
@@ -48,10 +49,13 @@ import {
   JournalSavePill,
   JournalStatePanel,
   JournalStudioHero,
+  JournalTranslationStatusCard,
+  JournalTranslationStatusChip,
   JournalVisibilitySwitch,
   type JournalSaveState,
   type JournalStudioMode,
 } from '@/app/journal/JournalPrimitives';
+import { buildJournalTranslationStatusPresentation } from '@/app/journal/journal-translation-status';
 import JournalLexicalComposer, {
   type JournalEditorBlockAction,
   type JournalEditorInlineFormat,
@@ -203,6 +207,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const [isDraft, setIsDraft] = useState(false);
   const [visibility, setVisibility] = useState<JournalVisibility>(DEFAULT_VISIBILITY);
   const [attachments, setAttachments] = useState<JournalAttachmentPublic[]>([]);
+  const [partnerTranslationStatus, setPartnerTranslationStatus] = useState<JournalTranslationStatus>('NOT_REQUESTED');
+  const [partnerTranslationReadyAt, setPartnerTranslationReadyAt] = useState<string | null>(null);
   const [editorSeed, setEditorSeed] = useState(0);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<JournalSaveState>('draft');
@@ -296,6 +302,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     const nextAttachments = activeJournal.attachments ?? [];
     const nextContent = activeJournal.content ?? '';
     const nextIsDraft = Boolean(activeJournal.is_draft);
+    const nextPartnerTranslationStatus = activeJournal.partner_translation_status ?? 'NOT_REQUESTED';
+    const nextPartnerTranslationReadyAt = activeJournal.partner_translation_ready_at ?? null;
     const nextTitle = activeJournal.title?.trim() ?? '';
     const nextVisibility = activeJournal.visibility ?? DEFAULT_VISIBILITY;
     const incomingSnapshot = buildSnapshot({
@@ -319,6 +327,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     setIsDraft(nextIsDraft);
     setVisibility(nextVisibility);
     setAttachments(nextAttachments);
+    setPartnerTranslationStatus(nextPartnerTranslationStatus);
+    setPartnerTranslationReadyAt(nextPartnerTranslationReadyAt);
     setLastSavedAt(activeJournal.updated_at ?? activeJournal.created_at);
     setSaveState('saved');
     setHasExplicitVisibilitySelection(false);
@@ -345,6 +355,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     setVisibility(DEFAULT_VISIBILITY);
     setHasExplicitVisibilitySelection(false);
     setAttachments([]);
+    setPartnerTranslationStatus('NOT_REQUESTED');
+    setPartnerTranslationReadyAt(null);
     setLastSavedAt(null);
     setSaveState('draft');
     setSaveError(null);
@@ -541,6 +553,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           const resolvedIsDraft = Boolean(updated.is_draft);
           const resolvedTitle = updated.title?.trim() ?? '';
           const resolvedVisibility = updated.visibility ?? DEFAULT_VISIBILITY;
+          const resolvedTranslationStatus = updated.partner_translation_status ?? 'NOT_REQUESTED';
+          const resolvedTranslationReadyAt = updated.partner_translation_ready_at ?? null;
 
           // Detect concurrent local edits during the async save round-trip
           const latestLocalContent = contentRef.current;
@@ -573,6 +587,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           setIsDraft(resolvedIsDraft);
           commitTitleState(nextTitleState);
           setVisibility(nextVisibilityState);
+          setPartnerTranslationStatus(resolvedTranslationStatus);
+          setPartnerTranslationReadyAt(resolvedTranslationReadyAt);
           setHasExplicitVisibilitySelection(false);
           setLastSavedAt(updated.updated_at ?? updated.created_at);
           setSaveState(hasLocalEditsSinceSubmit ? 'dirty' : 'saved');
@@ -602,6 +618,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         const resolvedTitle = created.title?.trim() ?? '';
         const resolvedContent = created.content ?? '';
         const resolvedVisibility = created.visibility ?? DEFAULT_VISIBILITY;
+        const resolvedTranslationStatus = created.partner_translation_status ?? 'NOT_REQUESTED';
+        const resolvedTranslationReadyAt = created.partner_translation_ready_at ?? null;
         const latestLocalContent = contentRef.current;
         const latestLocalTitle = titleRef.current;
         const latestLocalVisibility = visibilityRef.current;
@@ -630,6 +648,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         setIsDraft(resolvedIsDraft);
         commitTitleState(nextTitleState);
         setVisibility(nextVisibilityState);
+        setPartnerTranslationStatus(resolvedTranslationStatus);
+        setPartnerTranslationReadyAt(resolvedTranslationReadyAt);
         setHasExplicitVisibilitySelection(false);
         setLastSavedAt(created.updated_at ?? created.created_at);
         setSaveState(hasLocalEditsSinceSubmit ? 'dirty' : 'saved');
@@ -767,6 +787,28 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             : '草稿';
 
   const previewContextMessage = buildPreviewContextMessage(visibility);
+  const persistedVisibility = persistedVisibilityRef.current;
+  const translationStatusPresentation = useMemo(
+    () =>
+      buildJournalTranslationStatusPresentation({
+        currentVisibility: visibility,
+        hasCurrentJournalId: Boolean(currentJournalId),
+        hasExplicitVisibilitySelection,
+        isDraft,
+        partnerTranslationReadyAt,
+        partnerTranslationStatus,
+        persistedVisibility,
+      }),
+    [
+      currentJournalId,
+      hasExplicitVisibilitySelection,
+      isDraft,
+      partnerTranslationReadyAt,
+      partnerTranslationStatus,
+      persistedVisibility,
+      visibility,
+    ],
+  );
 
   const insertAttachmentIntoDraft = useCallback(
     ({
@@ -1335,6 +1377,11 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                     }}
                   />
                 </div>
+                {translationStatusPresentation ? (
+                  <div className="mt-4">
+                    <JournalTranslationStatusCard presentation={translationStatusPresentation} />
+                  </div>
+                ) : null}
               </section>
             ) : (
               <div />
@@ -1383,6 +1430,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             <span>{currentDateLabel}</span>
             <span className="text-border">•</span>
             <span>{visibilityLabel}</span>
+            {translationStatusPresentation ? (
+              <>
+                <span className="text-border">•</span>
+                <JournalTranslationStatusChip presentation={translationStatusPresentation} />
+              </>
+            ) : null}
             <span className="text-border">•</span>
             <span>{paragraphCount} 段</span>
             <span className="text-border">•</span>
@@ -1549,14 +1602,19 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           </div>
         ) : null}
         <JournalVisibilitySwitch
-                    value={visibility}
-                    onChange={(nextVisibility) => {
-                      setHasExplicitVisibilitySelection(true);
-                      setVisibility(nextVisibility);
-                      markUnsaved({ nextVisibility, nextIsDraft: isDraft });
-                      setMobileSheet(null);
-                    }}
-                  />
+          value={visibility}
+          onChange={(nextVisibility) => {
+            setHasExplicitVisibilitySelection(true);
+            setVisibility(nextVisibility);
+            markUnsaved({ nextVisibility, nextIsDraft: isDraft });
+            setMobileSheet(null);
+          }}
+        />
+        {translationStatusPresentation ? (
+          <div className="mt-4">
+            <JournalTranslationStatusCard presentation={translationStatusPresentation} />
+          </div>
+        ) : null}
       </JournalMobileSheet>
 
       <JournalMobileSheet

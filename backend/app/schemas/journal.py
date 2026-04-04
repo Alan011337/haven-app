@@ -124,6 +124,7 @@ class JournalRead(BaseModel):
     visibility: str
     content_format: str = "markdown"
     partner_translation_status: str = "NOT_REQUESTED"
+    partner_translation_ready_at: datetime | None = None
     attachments: list[JournalAttachmentPublic] = Field(default_factory=list)
     mood_label: str | None = None
     emotional_needs: str | None = None

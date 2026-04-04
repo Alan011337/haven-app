@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { getJournalSafetyBand } from '@/lib/safety';
 import { buildJournalExcerpt, deriveJournalTitle, extractFirstJournalImage } from '@/lib/journal-format';
+import { JournalTranslationStatusChip } from '@/app/journal/JournalPrimitives';
+import { buildJournalTranslationStatusPresentation } from '@/app/journal/journal-translation-status';
 
 interface JournalCardProps {
   journal: Journal;
@@ -55,6 +57,14 @@ export default function JournalCard({
           : journal.visibility === 'PARTNER_ANALYSIS_ONLY'
             ? '伴侶只看分析（舊版）'
             : '伴侶看整理後的版本';
+  const translationStatus = buildJournalTranslationStatusPresentation({
+    currentVisibility: journal.visibility,
+    hasCurrentJournalId: true,
+    hasExplicitVisibilitySelection: false,
+    isDraft: Boolean(journal.is_draft),
+    partnerTranslationStatus: journal.partner_translation_status,
+    persistedVisibility: journal.visibility,
+  });
   const title = deriveJournalTitle(journal);
   const excerpt = buildJournalExcerpt(journal.content);
   const firstImageRaw = extractFirstJournalImage(journal.content);
@@ -163,8 +173,7 @@ export default function JournalCard({
            <h3 className="font-art text-[1.55rem] leading-tight text-card-foreground">{title}</h3>
            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
              {(journal.attachments?.length ?? 0) > 0 && <span>{journal.attachments!.length} 張圖片</span>}
-             {journal.visibility === 'PARTNER_TRANSLATED_ONLY' && journal.partner_translation_status === 'PENDING' ? <span>整理中</span> : null}
-             {journal.visibility === 'PARTNER_TRANSLATED_ONLY' && journal.partner_translation_status === 'FAILED' ? <span>整理暫未完成</span> : null}
+             {translationStatus ? <JournalTranslationStatusChip presentation={translationStatus} /> : null}
            </div>
          </div>
 

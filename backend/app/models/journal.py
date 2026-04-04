@@ -34,6 +34,7 @@ class JournalBase(SQLModel):
         default=None,
         sa_column=Column(EncryptedText(), nullable=True),
     )
+    partner_translation_ready_at: Optional[datetime] = Field(default=None, nullable=True)
 
 # 2. 資料庫模型 (Table)
 class Journal(JournalBase, table=True):

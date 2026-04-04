@@ -192,6 +192,7 @@ async def _refresh_partner_translation(
     if not _requires_partner_translation(journal.visibility):
         journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
         journal.partner_translated_content = None
+        journal.partner_translation_ready_at = None
         return
     try:
         translated = await translate_journal_for_partner(journal.content or "")
@@ -203,13 +204,16 @@ async def _refresh_partner_translation(
         )
         journal.partner_translation_status = _TRANSLATION_STATUS_FAILED
         journal.partner_translated_content = None
+        journal.partner_translation_ready_at = None
         return
     if translated:
         journal.partner_translation_status = _TRANSLATION_STATUS_READY
         journal.partner_translated_content = translated
+        journal.partner_translation_ready_at = utcnow()
     else:
         journal.partner_translation_status = _TRANSLATION_STATUS_FAILED
         journal.partner_translated_content = None
+        journal.partner_translation_ready_at = None
 
 
 def _analysis_payload(analysis: Analysis | None) -> dict[str, Any]:
@@ -488,6 +492,7 @@ async def create_journal(
                     journal_data.visibility
                 )
                 existing_same_day.partner_translated_content = None
+                existing_same_day.partner_translation_ready_at = None
                 existing_same_day.updated_at = utcnow()
                 session.add(existing_same_day)
                 flush_with_error_handling(
@@ -1326,6 +1331,7 @@ async def update_journal(
     if journal.is_draft:
         journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
         journal.partner_translated_content = None
+        journal.partner_translation_ready_at = None
     elif journal_data.request_analysis and (content_changed or was_draft) and _should_run_ai_analysis(journal.visibility):
         ai_result = await analyze_journal(
             _strip_markdown_images(journal.content),
@@ -1355,6 +1361,7 @@ async def update_journal(
     if journal.is_draft:
         journal.partner_translation_status = _TRANSLATION_STATUS_NOT_REQUESTED
         journal.partner_translated_content = None
+        journal.partner_translation_ready_at = None
     else:
         await _refresh_partner_translation(journal=journal)
     journal.updated_at = utcnow()

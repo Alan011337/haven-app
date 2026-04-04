@@ -44,6 +44,7 @@ export interface Journal {
   visibility?: JournalVisibility;
   content_format?: JournalContentFormat;
   partner_translation_status?: JournalTranslationStatus;
+  partner_translation_ready_at?: string | null;
   partner_translated_content?: string | null;
   attachments?: JournalAttachmentPublic[];
   mood_label?: string;
