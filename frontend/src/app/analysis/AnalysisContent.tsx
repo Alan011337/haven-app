@@ -140,7 +140,7 @@ function formatShortDate(value: string | null | undefined) {
 }
 
 function formatDateTime(value: string | null | undefined) {
-  if (!value) return '尚未生成';
+  if (!value) return '等待更多痕跡';
   return new Date(value).toLocaleString('zh-TW', {
     month: 'numeric',
     day: 'numeric',
@@ -831,7 +831,7 @@ export default function AnalysisContent() {
                 ? '已完成'
                 : todaySync?.unlocked
                   ? '未完成'
-                  : '尚未開啟',
+                  : '還沒開啟',
             hint: '今天是否已經形成雙向靠近',
           },
         ],
@@ -885,7 +885,7 @@ export default function AnalysisContent() {
           },
           {
             label: '今日同步',
-            value: todaySync?.partner_filled ? '對方已填' : '尚未看到',
+            value: todaySync?.partner_filled ? '對方已填' : '還沒看到',
             hint: '今天是否已有新的對話入口',
           },
         ],

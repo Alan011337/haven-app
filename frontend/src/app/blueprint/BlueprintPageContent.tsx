@@ -73,7 +73,7 @@ export default function BlueprintPageContent() {
     const trimmedTitle = title.trim();
 
     if (!trimmedTitle) {
-      showToast('請輸入願望或項目', 'error');
+      showToast('先寫下一個想一起靠近的未來片段。', 'error');
       return;
     }
 
@@ -83,10 +83,10 @@ export default function BlueprintPageContent() {
       setTitle('');
       setNotes('');
       await queryClient.invalidateQueries({ queryKey: queryKeys.blueprint() });
-      showToast('已加入 Blueprint', 'success');
+      showToast('這個片段已收進 Blueprint。', 'success');
     } catch (err) {
       logClientError('blueprint-add-failed', err);
-      showToast('加入失敗，請稍後再試', 'error');
+      showToast('這個片段這次沒有順利收進 Blueprint。', 'error');
     } finally {
       setSubmitting(false);
     }

@@ -193,7 +193,7 @@ export const createJournal = async (
     );
     return response.data;
   } catch (error) {
-    throw new Error(extractJournalApiErrorMessage(error, '儲存失敗，請稍後再試。'));
+    throw new Error(extractJournalApiErrorMessage(error, '這一頁這次沒有順利存下來，稍後再試一次。'));
   }
 };
 
@@ -213,7 +213,7 @@ export const updateJournal = async (
     const response = await api.patch<Journal>(`/journals/${id}`, payload);
     return response.data;
   } catch (error) {
-    throw new Error(extractJournalApiErrorMessage(error, '更新失敗，請稍後再試。'));
+    throw new Error(extractJournalApiErrorMessage(error, '這一頁這次沒有順利更新，稍後再試一次。'));
   }
 };
 
@@ -235,7 +235,7 @@ export const uploadJournalAttachment = async (
     );
     return response.data;
   } catch (error) {
-    throw new Error(extractJournalApiErrorMessage(error, '圖片上傳失敗，請稍後再試。'));
+    throw new Error(extractJournalApiErrorMessage(error, '這張圖片這次沒有順利放進來，稍後再試一次。'));
   }
 };
 

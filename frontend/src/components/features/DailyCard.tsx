@@ -234,9 +234,9 @@ const DailyCard = () => {
     } catch (error) {
       logClientError('daily-card-draw-failed', error);
       if (isAxiosError(error)) {
-        showToast(error.response?.data?.detail || "抽卡失敗，請稍後再試", 'error');
+        showToast(error.response?.data?.detail || '這張卡這次沒有順利翻開，稍後再試一次。', 'error');
       } else {
-        showToast("抽卡失敗，請稍後再試", 'error');
+        showToast('這張卡這次沒有順利翻開，稍後再試一次。', 'error');
       }
     } finally {
       setDrawing(false);
@@ -290,14 +290,14 @@ const DailyCard = () => {
           setAnswer('');
           showToast('已存到離線，連線後會自動同步', 'info');
         } catch {
-          showToast('送出失敗，請檢查網路連線', 'error');
+          showToast('這次沒有順利送出回答，先檢查網路連線。', 'error');
         }
         return;
       }
       if (isAxiosError(error)) {
-        showToast(error.response?.data?.detail || "送出失敗，請檢查網路連線", 'error');
+        showToast(error.response?.data?.detail || '這次沒有順利送出回答，先檢查網路連線。', 'error');
       } else {
-        showToast("送出失敗，請檢查網路連線", 'error');
+        showToast('這次沒有順利送出回答，先檢查網路連線。', 'error');
       }
     } finally {
       setSubmitting(false);

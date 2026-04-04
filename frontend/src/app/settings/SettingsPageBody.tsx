@@ -116,9 +116,9 @@ function scrollToSection(id: string) {
 }
 
 function formatShortDate(iso?: string | null) {
-  if (!iso) return '尚未更新';
+  if (!iso) return '還沒有紀錄';
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '尚未更新';
+  if (Number.isNaN(date.getTime())) return '還沒有紀錄';
   return new Intl.DateTimeFormat('zh-TW', {
     month: 'numeric',
     day: 'numeric',
@@ -126,9 +126,9 @@ function formatShortDate(iso?: string | null) {
 }
 
 function formatDateTime(iso?: string | null) {
-  if (!iso) return '尚未更新';
+  if (!iso) return '還沒有紀錄';
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '尚未更新';
+  if (Number.isNaN(date.getTime())) return '還沒有紀錄';
   return new Intl.DateTimeFormat('zh-TW', {
     month: 'numeric',
     day: 'numeric',
@@ -152,7 +152,7 @@ function getAIIntensityLabel(value: AIIntensity) {
 }
 
 function getGoalLabel(value?: string | null) {
-  return GOAL_OPTIONS.find((option) => option.value === value)?.label ?? '尚未設定';
+  return GOAL_OPTIONS.find((option) => option.value === value)?.label ?? '還在思考方向';
 }
 
 function getInitial(value?: string | null) {
@@ -162,12 +162,12 @@ function getInitial(value?: string | null) {
 
 function getPairErrorMessage(error: unknown) {
   if (isAxiosError(error) && error.response?.status === 409) {
-    return error.response.data?.detail || '綁定狀態衝突，請稍後再試。';
+    return error.response.data?.detail || '目前連結狀態有衝突，請稍後再試一次。';
   }
   if (isAxiosError(error) && error.response?.status === 400) {
-    return '綁定失敗，邀請碼不存在或已失效。';
+    return '這組邀請碼已過期或不存在，請伴侶重新產生一組。';
   }
-  return '綁定失敗，請確認代碼是否正確或稍後再試。';
+  return '連結沒有成功，請確認代碼是否正確，或稍後再試一次。';
 }
 
 export default function SettingsPageBody() {
@@ -252,11 +252,11 @@ export default function SettingsPageBody() {
       queryClient.setQueryData(['settings', 'consent'], updated);
       setTrustDraft({});
       await queryClient.invalidateQueries({ queryKey: queryKeys.onboardingQuest() });
-      showToast('已儲存安全感與通知設定', 'success');
+      showToast('安全感與通知設定已收好。', 'success');
     },
     onError: (error) => {
       logClientError('onboarding-consent-save-failed', error);
-      showToast('儲存失敗，請稍後再試', 'error');
+      showToast('這次沒有順利收好設定，稍後再試一次。', 'error');
     },
   });
 
@@ -267,11 +267,11 @@ export default function SettingsPageBody() {
       queryClient.setQueryData<UserMeResponse | undefined>(['settings', 'me'], (current) =>
         current ? { ...current, invite_code: result.code } : current,
       );
-      showToast('新的邀請連結已準備好', 'success');
+      showToast('新的邀請連結已準備好，可以傳給對方了。', 'success');
     },
     onError: (error) => {
       logClientError('partner-settings-generate-invite-failed', error);
-      showToast('產生失敗，請稍後再試', 'error');
+      showToast('邀請連結這次沒有順利準備好，稍後再試一次。', 'error');
     },
   });
 
@@ -286,7 +286,7 @@ export default function SettingsPageBody() {
       ]);
       setGeneratedInviteCode(null);
       setInputCode('');
-      showToast('綁定成功！', 'success');
+      showToast('你們已經連上了。', 'success');
     },
     onError: (error) => {
       logClientError('partner-settings-bind-failed', error);
@@ -299,11 +299,11 @@ export default function SettingsPageBody() {
     onSuccess: async () => {
       setTickNow(Date.now());
       await queryClient.invalidateQueries({ queryKey: queryKeys.cooldownStatus() });
-      showToast('已啟動冷卻時間，伴侶會收到通知', 'success');
+      showToast('冷卻時間已啟動，伴侶會收到提醒。', 'success');
     },
     onError: (error) => {
       logClientError('cooldown-start-failed', error);
-      showToast('啟動失敗，請稍後再試', 'error');
+      showToast('這次沒有順利啟動冷卻時間，稍後再試一次。', 'error');
     },
   });
 
@@ -314,11 +314,11 @@ export default function SettingsPageBody() {
     },
     onSuccess: (result) => {
       setRewritten(result.rewritten);
-      showToast('已改寫為我訊息風格，可複製使用', 'success');
+      showToast('已整理成更適合說出口的版本。', 'success');
     },
     onError: (error) => {
       logClientError('cooldown-rewrite-failed', error);
-      showToast('改寫失敗，請稍後再試', 'error');
+      showToast('這次沒有順利整理這段話，稍後再試一次。', 'error');
     },
   });
 
@@ -373,7 +373,7 @@ export default function SettingsPageBody() {
     try {
       await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
-      showToast('邀請連結已複製', 'info');
+      showToast('邀請連結已複製，可以直接傳給對方。', 'info');
       window.setTimeout(() => setCopied(false), 2000);
 
       try {
@@ -389,7 +389,7 @@ export default function SettingsPageBody() {
       }
     } catch (error) {
       logClientError('partner-settings-copy-invite-failed', error);
-      showToast('複製失敗，請稍後再試', 'error');
+      showToast('這次沒有順利複製邀請連結，稍後再試一次。', 'error');
     }
   }
 
@@ -404,7 +404,7 @@ export default function SettingsPageBody() {
   function handlePair() {
     const normalized = normalizeInviteCode(inputCode);
     if (!normalized) {
-      showToast('請先輸入有效邀請碼', 'error');
+      showToast('先輸入有效的邀請碼。', 'error');
       return;
     }
     void pairMutation.mutateAsync(normalized);
@@ -413,7 +413,7 @@ export default function SettingsPageBody() {
   function handleRewrite() {
     const text = rewriteDraft.trim();
     if (!text) {
-      showToast('請先輸入想說的話', 'error');
+      showToast('先寫下你現在想說的話。', 'error');
       return;
     }
     void rewriteMutation.mutateAsync(text);
@@ -477,7 +477,7 @@ export default function SettingsPageBody() {
                 <div className="rounded-[1.8rem] border border-white/58 bg-white/74 p-4 shadow-soft">
                   <p className="type-micro uppercase text-primary/78">Relationship State</p>
                   <p className="mt-2 type-h3 text-card-foreground">
-                    {isPartnerLinked ? `已與 ${partner?.partner_name || '伴侶'} 連結` : '尚未連結伴侶'}
+                    {isPartnerLinked ? `已與 ${partner?.partner_name || '伴侶'} 連結` : '還沒有連結伴侶'}
                   </p>
                   <p className="mt-2 type-caption text-muted-foreground">
                     {isPartnerLinked
@@ -602,14 +602,14 @@ export default function SettingsPageBody() {
         {consentQuery.isLoading ? (
           <SettingsStatePanel
             tone="quiet"
-            eyebrow="Loading Trust Settings"
+            eyebrow="正在讀取信任設定"
             title="正在整理隱私與提醒偏好"
             description="我們正在讀取你目前的通知節奏、AI 介入方式與隱私確認狀態。"
           />
         ) : consentQuery.isError ? (
           <SettingsStatePanel
             tone="error"
-            eyebrow="Trust Settings"
+            eyebrow="信任設定離線中"
             title="信任設定暫時沒有順利讀取"
             description="這一區應該讓你安穩地理解 Haven 會怎麼靠近你們，而不是留下不確定。重新讀取後，我們會把設定帶回來。"
             actions={

@@ -50,13 +50,13 @@ export default function AppreciationCard({ className }: { className?: string }) 
       setText("");
       await queryClient.invalidateQueries({ queryKey: HOME_APPRECIATION_HISTORY_QUERY_KEY_PREFIX });
       await refetch();
-      showToast("感恩便利貼已送出", "success");
+      showToast("這句感謝已送出。", "success");
       if (completed) {
         showToast("今日連結循環完成，做得很好", "success");
       }
     } catch (err) {
       logClientError("appreciation-create-failed", err);
-      showToast("送出失敗，請稍後再試", "error");
+      showToast("這句感謝這次沒有順利送出。", "error");
     } finally {
       setSubmitting(false);
     }

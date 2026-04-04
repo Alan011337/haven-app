@@ -21,9 +21,9 @@ export default function NotificationsError({ error, reset }: NotificationsErrorP
     <NotificationsShell>
       <NotificationsStatePanel
         tone="error"
-        eyebrow="Notifications Route"
+        eyebrow="通知中心離線中"
         title="通知中心暫時沒有順利打開"
-        description="這裡應該是一個 calm 而清楚的關係脈動入口，而不是空白頁。重新整理後，我們會把它帶回來。"
+        description="這裡應該是一個安靜而清楚的關係脈動入口，而不是空白頁。重新整理後，我們會把它帶回來。"
         actions={
           <>
             <Button

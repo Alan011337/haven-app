@@ -439,7 +439,7 @@ export default function NotificationsPageContent() {
       <NotificationsFocusBar
         eyebrow="Focus Bar"
         title="選一種現在想處理的節奏"
-        description="篩選不需要堆滿頁面頂端。把它們留在這裡，讓你能更 calm 地收窄視野，再回到真正重要的提醒。"
+        description="篩選不需要堆滿頁面頂端。把它們留在這裡，讓你能更安靜地收窄視野，再回到真正重要的提醒。"
       >
         <div className="space-y-5">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -525,7 +525,7 @@ export default function NotificationsPageContent() {
           {listError ? (
             <NotificationsStatePanel
               tone="error"
-              eyebrow="Notifications Feed"
+              eyebrow="通知列表離線中"
               title="通知列表暫時沒有順利回來"
               description="這不是空白，而是資料載入失敗。重新整理後，我們會把需要照看與尚未閱讀的提醒帶回來。"
               actions={
@@ -553,7 +553,7 @@ export default function NotificationsPageContent() {
               description={
                 hasFiltersApplied
                   ? '你已經把範圍縮得很精準了。放寬條件後，可以重新看到其他已讀、未讀或需要補送的提醒。'
-                  : '現在是一段平靜的空檔。當伴侶更新日記、回覆卡片，或系統需要你接住某個訊號時，這裡會再亮起來。'
+                  : '現在是一段安靜的空檔。當伴侶更新日記、回覆卡片，或系統需要你接住某個訊號時，這裡會再亮起來。'
               }
               actions={
                 hasFiltersApplied ? (
@@ -617,7 +617,7 @@ export default function NotificationsPageContent() {
                       tone="quiet"
                       eyebrow="Unread Now"
                       title="目前沒有新的未讀提醒"
-                      description="如果新的日記、卡片回覆或邀請抵達，這裡會先亮起來，幫你用更 calm 的順序重新進入對話。"
+                      description="如果新的日記、卡片回覆或邀請抵達，這裡會先亮起來，幫你用更安靜的順序重新進入對話。"
                     />
                   ) : unreadRows.length ? (
                     unreadRows.map((item) => (

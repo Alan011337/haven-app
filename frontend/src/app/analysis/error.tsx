@@ -25,7 +25,7 @@ export default function AnalysisError({
     <AnalysisShell>
       <AnalysisStatePanel
         tone="error"
-        eyebrow="Analysis Route"
+        eyebrow="理解中心離線中"
         title="這一頁的洞察暫時沒有順利展開"
         description="這比較像是頁面層的失敗，而不是你們沒有資料。重新嘗試後，Haven 會再把理解中心帶回來。"
         actions={

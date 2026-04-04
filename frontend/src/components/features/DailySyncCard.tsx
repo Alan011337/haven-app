@@ -54,10 +54,10 @@ export default function DailySyncCard({ className }: { className?: string }) {
       await submitDailySync({ mood_score: mood, question_id: qId, answer_text: answer.trim() });
       trackDailySyncSubmitted({ mood_score: mood, question_id: qId });
       await queryClient.invalidateQueries({ queryKey: queryKeys.dailySyncStatus() });
-      showToast("已儲存今日同步", "success");
+      showToast("今天的同步已收好。", "success");
     } catch (err) {
       logClientError("daily-sync-submit-failed", err);
-      showToast("儲存失敗，請稍後再試", "error");
+      showToast("今天的同步這次沒有順利收好。", "error");
     } finally {
       setSubmitting(false);
     }

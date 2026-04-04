@@ -457,7 +457,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
 
       if (!targetIsDraft && !hasJournalDraftContent(currentContent)) {
         if (!silent) {
-          showToast('先留下一段內容，這一頁才能真正被保存。', 'error');
+          showToast('先留下一段內容，這一頁才能真正收進書房。', 'error');
         }
         setSaveState(currentJournalId ? (isDraft ? 'dirty' : 'error') : 'draft');
         return null;
@@ -583,7 +583,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
 
         if (!silent && reason === 'manual') {
           showToast(
-            resolvedIsDraft ? '新的草稿頁已經準備好。' : '新的 Journal page 已經安靜收進書房。',
+            resolvedIsDraft ? '新的草稿頁已收進 Journal 書房。' : '這一頁已收進 Journal 書房。',
             'success',
           );
         }
@@ -699,9 +699,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     saveState === 'saving'
       ? '保存中'
       : saveState === 'saved'
-        ? (isDraft ? '草稿已保存' : '已保存')
+        ? (isDraft ? '草稿已收好' : '已收好')
         : saveState === 'error'
-          ? '保存失敗'
+          ? '暫時沒收好'
           : saveState === 'dirty'
             ? currentJournalId
               ? (isDraft ? '草稿有新變更' : '未儲存變更')
@@ -914,9 +914,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         }
       } catch (error) {
         setSaveState('error');
-        setSaveError('移除圖片失敗，請稍後再試。');
+        setSaveError('這次沒有順利移除這張圖片，稍後再試一次。');
         logClientError('journal_attachment_remove_failed', error);
-        showToast('移除失敗，請稍後再試。', 'error');
+        showToast('這次沒有順利移除這張圖片，稍後再試一次。', 'error');
       }
     },
     [
@@ -963,12 +963,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     try {
       await deleteJournalMutation.mutateAsync(currentJournalId);
       queryClient.removeQueries({ queryKey: queryKeys.journalDetail(currentJournalId) });
-      showToast('這篇 Journal 已刪除。', 'info');
+      showToast('這一頁已從 Journal 書房移開。', 'info');
       resetDraftState();
       setDraftOpen(false);
       router.push('/journal');
     } catch {
-      showToast('刪除失敗，請稍後再試。', 'error');
+      showToast('這次沒有順利移開這一頁，稍後再試一次。', 'error');
     }
   }, [
     confirm,

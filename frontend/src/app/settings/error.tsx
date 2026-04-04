@@ -21,7 +21,7 @@ export default function SettingsError({ error, reset }: SettingsErrorProps) {
     <SettingsShell>
       <SettingsStatePanel
         tone="error"
-        eyebrow="Settings Route"
+        eyebrow="設定中心離線中"
         title="這一頁暫時沒有順利打開"
         description="這裡本來應該是你們調整 Haven 節奏與信任邊界的地方。重新整理後，我們會把設定中心帶回來。"
         actions={

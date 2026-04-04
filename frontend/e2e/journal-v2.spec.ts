@@ -312,8 +312,8 @@ test.describe('Journal 書房 v3', () => {
     expect(apiState.updatePayloads[0]?.is_draft).toBe(true);
     expect(apiState.updatePayloads[0]?.content).toContain('![window light](attachment:attachment-1)');
     await expect(page.getByRole('img', { name: 'window light' }).first()).toBeVisible();
-    await expect(page.getByText('保存失敗')).toHaveCount(0);
-    await expect(page.getByText('草稿已保存')).toBeVisible();
+    await expect(page.getByText('暫時沒收好')).toHaveCount(0);
+    await expect(page.getByText('草稿已收好')).toBeVisible();
   });
 
   test('slash menu stays visible near the viewport edge and supports keyboard selection', async ({

@@ -299,10 +299,10 @@ export default function LoveMapPageContent() {
     try {
       await createOrUpdateLoveMapNote(layer, noteDrafts[layer]);
       await invalidateRelationshipViews();
-      showToast(`${LAYER_META[layer].label} 已保存`, 'success');
+      showToast(`${LAYER_META[layer].label} 已收好。`, 'success');
     } catch (error) {
       logClientError('love-map-layer-save-failed', error);
-      showToast('保存失敗，請稍後再試', 'error');
+      showToast('這一層暫時沒有順利收好，稍後再試一次。', 'error');
     } finally {
       setSavingLayer(null);
     }
@@ -313,10 +313,10 @@ export default function LoveMapPageContent() {
     try {
       await upsertBaseline(baselineDraft);
       await invalidateRelationshipViews();
-      showToast('Relationship Pulse 已更新', 'success');
+      showToast('關係脈動已重新整理。', 'success');
     } catch (error) {
       logClientError('love-map-baseline-save-failed', error);
-      showToast('關係脈動更新失敗，請稍後再試', 'error');
+      showToast('關係脈動這次沒有順利更新，稍後再試一次。', 'error');
     } finally {
       setSavingBaseline(false);
     }
@@ -331,10 +331,10 @@ export default function LoveMapPageContent() {
     try {
       await setCoupleGoal(goalDraft);
       await invalidateRelationshipViews();
-      showToast('共同方向已保存', 'success');
+      showToast('共同方向已收好。', 'success');
     } catch (error) {
       logClientError('love-map-goal-save-failed', error);
-      showToast('共同方向保存失敗，請稍後再試', 'error');
+      showToast('共同方向這次沒有順利收好，稍後再試一次。', 'error');
     } finally {
       setSavingGoal(false);
     }
@@ -351,10 +351,10 @@ export default function LoveMapPageContent() {
       setWishTitle('');
       setWishNotes('');
       await invalidateRelationshipViews();
-      showToast('已放進 Shared Future', 'success');
+      showToast('這段未來片段已放進 Shared Future。', 'success');
     } catch (error) {
       logClientError('love-map-wishlist-add-failed', error);
-      showToast('加入未來片段失敗，請稍後再試', 'error');
+      showToast('這段未來片段這次沒有順利放進 Shared Future。', 'error');
     } finally {
       setSavingWishlist(false);
     }
@@ -369,10 +369,10 @@ export default function LoveMapPageContent() {
         showToast('目前還沒有足夠清楚的 Shared Future 建議。', 'info');
         return;
       }
-      showToast('Haven 已經提出新的 Shared Future 建議。', 'success');
+      showToast('Haven 已整理出新的 Shared Future 提案。', 'success');
     } catch (error) {
       logClientError('love-map-shared-future-suggestions-generate-failed', error);
-      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+      showToast('Haven 暫時還整理不出新的提案，稍後再試一次。', 'error');
     } finally {
       setGeneratingSuggestions(false);
     }
@@ -387,10 +387,10 @@ export default function LoveMapPageContent() {
         showToast('這段故事目前還沒有足夠清楚的 ritual 建議。', 'info');
         return;
       }
-      showToast('Haven 已把這段故事的 ritual 提案放進你的 Shared Future review queue。', 'success');
+      showToast('Haven 已把這段故事的 ritual 提案放進 Shared Future 審核區。', 'success');
     } catch (error) {
       logClientError('love-map-story-ritual-suggestion-generate-failed', error);
-      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+      showToast('Haven 暫時還整理不出新的提案，稍後再試一次。', 'error');
     } finally {
       setGeneratingStoryRitual(false);
     }
@@ -422,7 +422,7 @@ export default function LoveMapPageContent() {
       );
     } catch (error) {
       logClientError('love-map-shared-future-refinement-generate-failed', error);
-      showToast('AI 建議暫時無法使用，請稍後再試。', 'error');
+      showToast('Haven 暫時還整理不出新的提案，稍後再試一次。', 'error');
     } finally {
       setGeneratingRefinement(null);
     }
@@ -439,12 +439,12 @@ export default function LoveMapPageContent() {
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
             ? '節奏已加入這個 Shared Future 片段。'
             : '下一步已加入這個 Shared Future 片段。'
-          : '建議已接受，現在已進入 Shared Future。',
+          : '這則提案已收進 Shared Future。',
         'success',
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-accept-failed', error);
-      showToast('接受建議失敗，請稍後再試。', 'error');
+      showToast('這次沒有順利收下這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
       setReviewingAction(null);
@@ -462,13 +462,13 @@ export default function LoveMapPageContent() {
         suggestion.section === 'shared_future_refinement'
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
             ? '這則節奏建議已略過。'
-            : '這則 refinement 建議已略過。'
-          : '這則建議已略過。',
+            : '這則下一步建議已略過。'
+          : '這則提案先略過了。',
         'success',
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-dismiss-failed', error);
-      showToast('略過建議失敗，請稍後再試。', 'error');
+      showToast('這次沒有順利略過這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
       setReviewingAction(null);
