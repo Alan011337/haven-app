@@ -32,3 +32,17 @@ def resolve_effective_depth_cap(
 def iter_depth_caps(start_cap: int) -> tuple[int, ...]:
     normalized = max(1, min(3, int(start_cap)))
     return tuple(range(normalized, 4))
+
+
+def resolve_preferred_depth_order(preferred_depth: int) -> tuple[int, ...]:
+    """Return a safe fallback order for Home daily depth selection.
+
+    The requested depth is attempted first. If that tier is unavailable, we
+    prefer the nearest gentler option before escalating to a more intense one.
+    """
+    normalized = max(1, min(3, int(preferred_depth)))
+    if normalized == 1:
+        return (1, 2, 3)
+    if normalized == 2:
+        return (2, 1, 3)
+    return (3, 2, 1)

@@ -485,6 +485,138 @@ class CardModeIsolationTests(unittest.TestCase):
         self.assertEqual(payload["id"], str(deep_card_id))
         self.assertEqual(payload["depth_level"], 3)
 
+    def test_daily_ritual_draw_prefers_requested_depth_one(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Medium Daily Card",
+                    description="desc",
+                    question="Medium question",
+                    difficulty_level=2,
+                    depth_level=2,
+                    is_ai_generated=False,
+                )
+            )
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Deep Daily Card",
+                    description="desc",
+                    question="Deep question",
+                    difficulty_level=3,
+                    depth_level=3,
+                    is_ai_generated=False,
+                )
+            )
+            session.commit()
+
+        response = self.client.get(
+            "/api/cards/draw",
+            params={"category": "DAILY_VIBE", "source": "daily_ritual", "preferred_depth": 1},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["depth_level"], 1)
+
+    def test_daily_ritual_draw_prefers_requested_depth_two_over_one(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Medium Daily Card",
+                    description="desc",
+                    question="Medium question",
+                    difficulty_level=2,
+                    depth_level=2,
+                    is_ai_generated=False,
+                )
+            )
+            session.commit()
+
+        response = self.client.get(
+            "/api/cards/draw",
+            params={"category": "DAILY_VIBE", "source": "daily_ritual", "preferred_depth": 2},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["depth_level"], 2)
+
+    def test_daily_ritual_draw_prefers_requested_depth_three_when_available(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Medium Daily Card",
+                    description="desc",
+                    question="Medium question",
+                    difficulty_level=2,
+                    depth_level=2,
+                    is_ai_generated=False,
+                )
+            )
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Deep Daily Card",
+                    description="desc",
+                    question="Deep question",
+                    difficulty_level=3,
+                    depth_level=3,
+                    is_ai_generated=False,
+                )
+            )
+            session.commit()
+
+        response = self.client.get(
+            "/api/cards/draw",
+            params={"category": "DAILY_VIBE", "source": "daily_ritual", "preferred_depth": 3},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["depth_level"], 3)
+
+    def test_daily_ritual_draw_falls_back_from_three_to_two(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Medium Daily Card",
+                    description="desc",
+                    question="Medium question",
+                    difficulty_level=2,
+                    depth_level=2,
+                    is_ai_generated=False,
+                )
+            )
+            session.commit()
+
+        response = self.client.get(
+            "/api/cards/draw",
+            params={"category": "DAILY_VIBE", "source": "daily_ritual", "preferred_depth": 3},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["depth_level"], 2)
+
+    def test_daily_ritual_draw_falls_back_from_two_to_one_before_three(self) -> None:
+        with Session(self.engine) as session:
+            session.add(
+                Card(
+                    category=CardCategory.DAILY_VIBE,
+                    title="Deep Daily Card",
+                    description="desc",
+                    question="Deep question",
+                    difficulty_level=3,
+                    depth_level=3,
+                    is_ai_generated=False,
+                )
+            )
+            session.commit()
+
+        response = self.client.get(
+            "/api/cards/draw",
+            params={"category": "DAILY_VIBE", "source": "daily_ritual", "preferred_depth": 2},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["depth_level"], 1)
+
     def test_deck_draw_prefers_low_depth_for_new_user(self) -> None:
         with Session(self.engine) as session:
             deep_card = Card(

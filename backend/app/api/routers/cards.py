@@ -18,7 +18,11 @@ from app.models.card_response import CardResponse, CardResponseCreate, CardRespo
 from app.models.card_session import CardSession, CardSessionMode, CardSessionStatus 
 from app.models.user import User
 from app.core.socket_manager import manager
-from app.services.depth_policy import iter_depth_caps, resolve_effective_depth_cap
+from app.services.depth_policy import (
+    iter_depth_caps,
+    resolve_effective_depth_cap,
+    resolve_preferred_depth_order,
+)
 from app.services.notification import queue_partner_notification
 from app.services.notification_payloads import build_partner_notification_payload
 from app.services.request_identity import resolve_client_ip, resolve_device_id
@@ -254,6 +258,22 @@ def _pick_daily_card_with_depth_cap(
     ).first()
 
 
+def _pick_daily_card_with_exact_depth(
+    session: SessionDep,
+    *,
+    category_filter: str,
+    depth_level: int,
+) -> Optional[Card]:
+    return session.exec(
+        select(Card)
+        .where(
+            Card.category == category_filter,
+            Card.depth_level == depth_level,
+        )
+        .order_by(func.random())
+    ).first()
+
+
 # --- 1. 每日狀態同步 API ---
 @router.get("/daily-status")
 def get_daily_status(
@@ -428,17 +448,27 @@ def draw_card(
             user_id=current_user.id,
             category_filter=cat_filter,
         )
-        start_depth_cap = resolve_effective_depth_cap(answered_count, preferred_depth)
 
         new_card = None
-        for depth_cap in iter_depth_caps(start_depth_cap):
-            new_card = _pick_daily_card_with_depth_cap(
-                session,
-                category_filter=cat_filter,
-                depth_cap=depth_cap,
-            )
-            if new_card:
-                break
+        if cat_filter == CardCategory.DAILY_VIBE.value and preferred_depth is not None:
+            for depth_level in resolve_preferred_depth_order(preferred_depth):
+                new_card = _pick_daily_card_with_exact_depth(
+                    session,
+                    category_filter=cat_filter,
+                    depth_level=depth_level,
+                )
+                if new_card:
+                    break
+        else:
+            start_depth_cap = resolve_effective_depth_cap(answered_count, preferred_depth)
+            for depth_cap in iter_depth_caps(start_depth_cap):
+                new_card = _pick_daily_card_with_depth_cap(
+                    session,
+                    category_filter=cat_filter,
+                    depth_cap=depth_cap,
+                )
+                if new_card:
+                    break
 
         # 如果該分類沒卡，退回全分類抽卡
         if not new_card:

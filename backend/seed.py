@@ -1,4 +1,5 @@
 # backend/seed.py
+# ruff: noqa: E402
 
 import sys
 import os
@@ -20,35 +21,56 @@ INITIAL_CARDS = [
         "title": "今日能量",
         "description": "用一個比喻來形容今天的狀態。",
         "question": "如果把你今天的狀態形容成一種天氣，那是晴天、陰天還是暴風雨？為什麼？",
-        "difficulty_level": 1
+        "difficulty_level": 1,
+        "depth_level": 1,
     },
     {
         "category": CardCategory.DAILY_VIBE,
         "title": "微小的快樂",
         "description": "生活中的小確幸往往最能治癒人心。",
         "question": "今天發生了哪件小事（無論多小），讓你稍微嘴角上揚了一下？",
-        "difficulty_level": 1
+        "difficulty_level": 1,
+        "depth_level": 1,
     },
     {
         "category": CardCategory.DAILY_VIBE,
         "title": "壓力釋放",
         "description": "說出來，肩膀會輕一點。",
         "question": "此時此刻，你腦中佔用最多記憶體（最煩心）的一件事是什麼？",
-        "difficulty_level": 1
+        "difficulty_level": 2,
+        "depth_level": 2,
     },
     {
         "category": CardCategory.DAILY_VIBE,
         "title": "餐桌話題",
         "description": "關於味覺的記憶。",
         "question": "如果今晚我們可以瞬間移動去吃任何餐廳，你想吃什麼？",
-        "difficulty_level": 1
+        "difficulty_level": 1,
+        "depth_level": 1,
     },
     {
         "category": CardCategory.DAILY_VIBE,
         "title": "睡前感恩",
         "description": "帶著正念結束這一天。",
         "question": "請說出一個你今天想感謝對方的地方（即使是幫忙倒杯水）。",
-        "difficulty_level": 1
+        "difficulty_level": 2,
+        "depth_level": 2
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "收心儀式",
+        "description": "在一天結束前，留下更靠近彼此的時刻。",
+        "question": "今晚睡前，你想跟我一起做的「收心儀式」是什麼？（例：擁抱、分享三件事、一起規劃明天）",
+        "difficulty_level": 3,
+        "depth_level": 3
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "如果今天可以重來",
+        "description": "回頭看看今天，也讓彼此更理解當下的需要。",
+        "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？",
+        "difficulty_level": 3,
+        "depth_level": 3
     },
 
     # 2. Soul Dive (靈魂深潛)
