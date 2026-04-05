@@ -3505,14 +3505,14 @@
     "id": "550e8400-e29b-41d4-a716-446655440207",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "數位排毒",
-    "description": "專注力。",
+    "title": "十分鐘安靜",
+    "description": "把注意力收回彼此和當下。",
     "question": "現在把手機放下 10 分鐘，只看著彼此或發呆，你覺得這對你來說是「放鬆」還是「焦慮」？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
+      "專注",
       "手機",
-      "習慣",
       "當下"
     ],
     "is_ai_generated": true,
@@ -3641,15 +3641,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440215",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "需要空間",
-    "description": "獨處需求。",
+    "title": "恢復血條",
+    "description": "替獨處需求留一點溫柔的空間。",
     "question": "老實說，你現在需要一點「獨處時間」來恢復血條嗎？我可以消失一小時沒關係。",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
       "獨處",
       "界線",
-      "體貼"
+      "恢復"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -10419,16 +10419,15 @@
     "id": "4e55db7c-5a4c-44a6-9b0a-0c01a43cfa93",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #13",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "三個詞的今天",
+    "description": "先幫今天的心情取名字。",
     "question": "如果用三個詞形容你今天的心情，你會選哪三個？",
     "difficulty_level": 3,
     "depth_level": 2,
     "tags": [
-      "check-in",
       "情緒",
-      "壓力",
-      "日常"
+      "check-in",
+      "覺察"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10455,16 +10454,15 @@
     "id": "a4cce5e4-9a16-4c29-9b4d-02f21f2c3c06",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #15",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "還沒說出口的一句話",
+    "description": "把今天沒有整理好的話，安靜地說完。",
     "question": "你今天最想對我說的一句話是什麼（不需要很完美）？",
     "difficulty_level": 3,
-    "depth_level": 2,
+    "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "表達",
+      "脆弱",
+      "連結"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10491,16 +10489,15 @@
     "id": "a45b4f5a-7b64-446c-ae3a-98c2d8e0312d",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #17",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "想被看見的地方",
+    "description": "比近況再深一點，說說今天最需要被理解的那一面。",
     "question": "今天你最想被我「看見」的是哪一部分？",
     "difficulty_level": 3,
-    "depth_level": 2,
+    "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "被看見",
+      "理解",
+      "情緒"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10509,16 +10506,15 @@
     "id": "6b5cc27e-4d1b-4b42-82ff-14c7d8ab5c3c",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #18",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "今天的距離",
+    "description": "回頭看今天，辨認我們靠近或拉遠的時刻。",
     "question": "今天你覺得我們的距離是更近還是更遠？發生了什麼？",
     "difficulty_level": 3,
-    "depth_level": 2,
+    "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "距離",
+      "關係",
+      "回看"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10527,15 +10523,14 @@
     "id": "c1de72b6-94a9-4b3e-a65e-64cbe2cf7d98",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #19",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "想一起分擔的小事",
+    "description": "把負擔說小一點，也更容易被接住。",
     "question": "你今天最想我幫你分擔的一件小事是什麼？",
     "difficulty_level": 3,
     "depth_level": 2,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
+      "支持",
+      "分擔",
       "日常"
     ],
     "is_ai_generated": true,
@@ -10545,16 +10540,15 @@
     "id": "b12b27db-93b8-45cb-8a70-4c37a52d0337",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #20",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "今晚最想一起放鬆",
+    "description": "從今天的疲累裡，找一個能一起靠近的方式。",
     "question": "今天你覺得最放鬆的活動是什麼？我們可以一起做嗎？",
     "difficulty_level": 3,
     "depth_level": 2,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "放鬆",
+      "陪伴",
+      "今晚"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10563,16 +10557,15 @@
     "id": "f1f27e4c-46e9-4a7a-88ab-f3f2c6b6d75e",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #21",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "孤單的那一刻",
+    "description": "不是要解決孤單，而是讓那一刻被好好接住。",
     "question": "你今天有哪一刻覺得孤單？你當時需要什麼？",
     "difficulty_level": 3,
-    "depth_level": 2,
+    "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "孤單",
+      "需求",
+      "陪伴"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10581,16 +10574,15 @@
     "id": "b2a6b7c6-fd1f-4fbe-84d8-cd10c6e2c7b7",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #22",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "對自己太嚴格",
+    "description": "把今天對自己的用力，交給彼此一起看見。",
     "question": "今天你對自己的要求有沒有太高？如果有，在哪裡？",
     "difficulty_level": 3,
-    "depth_level": 2,
+    "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
+      "自我要求",
       "壓力",
-      "日常"
+      "溫柔"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10617,16 +10609,15 @@
     "id": "0c3b1b7b-4df6-4b1d-bd36-45a6cfa9c8d6",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #24",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "收心儀式",
+    "description": "在一天結束前，留下更靠近彼此的時刻。",
     "question": "今晚睡前，你想跟我一起做的「收心儀式」是什麼？（例：擁抱、分享三件事、一起規劃明天）",
     "difficulty_level": 3,
     "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "收心",
+      "夜晚",
+      "陪伴"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -10635,16 +10626,15 @@
     "id": "4a4f5f61-21af-4a55-9061-97f18d57efb1",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "日常共感 #25",
-    "description": "關於當下的心情、微小的喜好、今天的壓力。",
+    "title": "如果今天可以重來",
+    "description": "回頭看看今天，也讓彼此更理解當下的需要。",
     "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？",
     "difficulty_level": 3,
     "depth_level": 3,
     "tags": [
-      "check-in",
-      "情緒",
-      "壓力",
-      "日常"
+      "回看",
+      "支持",
+      "修復"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"

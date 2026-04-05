@@ -5,6 +5,8 @@ import path from 'path';
 import process from 'process';
 import { fileURLToPath } from 'url';
 
+import { buildDailyVibeQualityReport } from './content-review-daily-vibe.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dataPath = path.resolve(__dirname, 'data/cards.json');
@@ -106,6 +108,7 @@ function main() {
   const insufficient = categories.filter((cat) => (counts.get(cat) || 0) < minCardsPerCategory);
   const afterDarkViolations = collectAfterDarkViolations(cards);
   const coPilotWeak = collectCoPilotWeakPracticality(cards);
+  const dailyVibeQuality = buildDailyVibeQualityReport(cards);
 
   console.log('[content-review-check] category counts:');
   for (const cat of categories) {
@@ -130,6 +133,52 @@ function main() {
     );
   }
 
+  const depthCounts = dailyVibeQuality.depth_counts;
+  const depthRatios = dailyVibeQuality.depth_ratios;
+  console.log('[content-review-check] DAILY_VIBE quality:');
+  console.log(
+    `  - depth counts: L1=${depthCounts[1]} L2=${depthCounts[2]} L3=${depthCounts[3]}`,
+  );
+  console.log(
+    `  - depth ratios: L1=${(depthRatios[1] * 100).toFixed(1)}% L2=${(depthRatios[2] * 100).toFixed(1)}% L3=${(depthRatios[3] * 100).toFixed(1)}%`,
+  );
+
+  if (dailyVibeQuality.floor_warnings.length > 0) {
+    console.warn(
+      `[content-review-check] DAILY_VIBE floor warnings: ${dailyVibeQuality.floor_warnings.join(' | ')}`,
+    );
+  } else {
+    console.log('  - floor warnings: none');
+  }
+
+  const crossDepthTitles = dailyVibeQuality.cross_depth_duplicate_titles.map((item) => item.title);
+  const mediumDeepDuplicateTitles = dailyVibeQuality.medium_deep_duplicate_titles.map((item) => item.title);
+  const placeholderTitles = dailyVibeQuality.medium_deep_placeholder_titles.map((item) => item.title);
+
+  if (crossDepthTitles.length > 0) {
+    console.warn(
+      `[content-review-check] DAILY_VIBE cross-depth duplicate titles: ${crossDepthTitles.length} (${crossDepthTitles.slice(0, 5).join(', ')})`,
+    );
+  } else {
+    console.log('  - cross-depth duplicate titles: none');
+  }
+
+  if (mediumDeepDuplicateTitles.length > 0) {
+    console.warn(
+      `[content-review-check] DAILY_VIBE medium/deep duplicate titles: ${mediumDeepDuplicateTitles.length} (${mediumDeepDuplicateTitles.slice(0, 5).join(', ')})`,
+    );
+  } else {
+    console.log('  - medium/deep duplicate titles: none');
+  }
+
+  if (placeholderTitles.length > 0) {
+    console.warn(
+      `[content-review-check] DAILY_VIBE medium/deep placeholder titles: ${placeholderTitles.length} (${placeholderTitles.slice(0, 5).join(', ')})`,
+    );
+  } else {
+    console.log('  - medium/deep placeholder titles: none');
+  }
+
   const report = {
     generated_at: new Date().toISOString(),
     min_cards_per_category: minCardsPerCategory,
@@ -138,6 +187,7 @@ function main() {
     after_dark_blocked_violations: afterDarkViolations.slice(0, 200),
     co_pilot_weak_practicality: coPilotWeak.slice(0, 200),
     max_co_pilot_weak: maxCoPilotWeak,
+    daily_vibe_quality: dailyVibeQuality,
   };
 
   const reportPath = path.resolve(__dirname, 'data/reports/content-review-report.json');

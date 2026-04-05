@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # 建立資料庫連線
 engine = create_engine(settings.DATABASE_URL)
 
-# 30 張黃金測試卡片 (由 Gemini AI 生成)
+# 36 張黃金測試卡片 (由 Gemini AI 生成)
 INITIAL_CARDS = [
     # 1. Daily Vibe (日常共感)
     {
@@ -69,6 +69,54 @@ INITIAL_CARDS = [
         "title": "如果今天可以重來",
         "description": "回頭看看今天，也讓彼此更理解當下的需要。",
         "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？",
+        "difficulty_level": 3,
+        "depth_level": 3
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "三個詞的今天",
+        "description": "先幫今天的心情取名字。",
+        "question": "如果用三個詞形容你今天的心情，你會選哪三個？",
+        "difficulty_level": 2,
+        "depth_level": 2
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "想一起分擔的小事",
+        "description": "把負擔說小一點，也更容易被接住。",
+        "question": "你今天最想我幫你分擔的一件小事是什麼？",
+        "difficulty_level": 2,
+        "depth_level": 2
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "今晚最想一起放鬆",
+        "description": "從今天的疲累裡，找一個能一起靠近的方式。",
+        "question": "今天你覺得最放鬆的活動是什麼？我們可以一起做嗎？",
+        "difficulty_level": 2,
+        "depth_level": 2
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "還沒說出口的一句話",
+        "description": "把今天沒有整理好的話，安靜地說完。",
+        "question": "你今天最想對我說的一句話是什麼（不需要很完美）？",
+        "difficulty_level": 3,
+        "depth_level": 3
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "想被看見的地方",
+        "description": "比近況再深一點，說說今天最需要被理解的那一面。",
+        "question": "今天你最想被我「看見」的是哪一部分？",
+        "difficulty_level": 3,
+        "depth_level": 3
+    },
+    {
+        "category": CardCategory.DAILY_VIBE,
+        "title": "孤單的那一刻",
+        "description": "不是要解決孤單，而是讓那一刻被好好接住。",
+        "question": "你今天有哪一刻覺得孤單？你當時需要什麼？",
         "difficulty_level": 3,
         "depth_level": 3
     },
