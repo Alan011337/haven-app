@@ -37,15 +37,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440003",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "味蕾渴望",
-    "description": "身體的慾望。",
-    "question": "如果不考慮熱量和預算，你現在最想大口吃進嘴裡的東西是什麼？",
+    "title": "現在最想大口吃什麼",
+    "description": "不是理性選擇，是身體現在最直接的那一口。",
+    "question": "如果不考慮熱量和預算，你現在最想大口吃進嘴裡的是什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "美食",
+      "食物",
       "慾望",
-      "輕鬆"
+      "即時"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -173,13 +173,13 @@
     "id": "550e8400-e29b-41d4-a716-446655440011",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "吐槽時間",
-    "description": "釋放負能量。",
-    "question": "給你 3 分鐘，告訴我今天遇到最蠢或最無言的一件事。我保證只聽不評論。",
+    "title": "最無言的一件事",
+    "description": "把今天最讓人語塞的那件事完整講完。",
+    "question": "給你 3 分鐘，說完今天最蠢或最無言的一件事。我保證只聽不評論。",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "抱怨",
+      "無言",
       "傾聽",
       "釋放"
     ],
@@ -3471,15 +3471,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440205",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "味蕾渴望",
-    "description": "食慾與心情。",
+    "title": "胃在想什麼",
+    "description": "有時候不是嘴饞，是胃在替今天選安慰。",
     "question": "你的胃現在告訴你它想吃什麼？是療癒的炸物、清爽的沙拉，還是甜甜的飲料？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "食物",
-      "慾望",
-      "輕鬆"
+      "胃口",
+      "安慰",
+      "食慾"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6854,15 +6854,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441004",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "微小願望",
-    "description": "即時滿足。",
-    "question": "此時此刻，如果你可以馬上得到一樣食物或飲料，你最想吃/喝什麼？",
+    "title": "立刻想來點什麼",
+    "description": "不是大餐計畫，只是現在立刻想被滿足的那一口。",
+    "question": "此時此刻，如果你可以馬上得到一樣吃的或喝的，你最想來點什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "渴望",
-      "食物",
-      "輕鬆"
+      "即時",
+      "吃喝",
+      "願望"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6871,15 +6871,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441005",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "煩人指數",
-    "description": "壓力釋放。",
-    "question": "今天有沒有遇到什麼讓你翻白眼或覺得煩躁的人/事？給你兩分鐘抱怨一下！",
+    "title": "今天最煩的是什麼",
+    "description": "鎖定今天最磨人的那個點，抱怨完就算了。",
+    "question": "今天有沒有哪個人或哪件事特別讓你煩？給你兩分鐘，先抱怨完再說。",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "煩躁",
       "抱怨",
-      "紓壓",
-      "傾聽"
+      "紓壓"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -12024,15 +12024,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443003",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "壓力釋放",
-    "description": "情緒宣洩。",
-    "question": "如果現在可以把一樣東西（具象或抽象）丟進垃圾桶徹底消失，你想丟掉今天的什麼？",
+    "title": "今天最想丟掉什麼",
+    "description": "把今天最不想留著的那件事先丟出去。",
+    "question": "如果現在可以把今天的一樣東西丟進垃圾桶，讓它徹底消失，你最想丟掉什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "壓力",
-      "發洩",
-      "同理"
+      "釋放",
+      "回顧",
+      "情緒"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12041,14 +12041,14 @@
     "id": "770e8400-e29b-41d4-a716-446655443004",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "味蕾渴望",
-    "description": "感官連結。",
+    "title": "舌頭偏愛哪一味",
+    "description": "先問味道，再問晚餐。",
     "question": "現在這一秒，你的舌頭最想嚐到什麼味道？（甜、辣、熱湯、冰淇淋？）",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "食物",
-      "慾望",
+      "味道",
+      "感官",
       "輕鬆"
     ],
     "is_ai_generated": true,
@@ -12143,9 +12143,9 @@
     "id": "770e8400-e29b-41d4-a716-446655443010",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "吐槽大會",
-    "description": "負能量。",
-    "question": "給你 30 秒抱怨今天遇到的一個笨蛋或一件蠢事，我保證絕對不打斷也不說教。",
+    "title": "先讓你抱怨 30 秒",
+    "description": "先把那口氣吐出來，我只聽不插嘴。",
+    "question": "給你 30 秒，抱怨今天遇到的一個笨蛋或一件蠢事，我保證不打斷也不說教。",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
@@ -20029,15 +20029,15 @@
     "id": "d6a9a32b-a105-447e-a15c-049b8c63793e",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "壓力釋放",
-    "description": "吐槽時間。",
-    "question": "今天有沒有哪個瞬間讓你很想翻白眼？",
+    "title": "翻白眼的瞬間",
+    "description": "那個讓人忍不住翻白眼的時刻，說出來就沒那麼卡。",
+    "question": "今天有沒有哪個瞬間，讓你差點直接翻白眼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "壓力",
-      "宣洩",
-      "趣事"
+      "翻白眼",
+      "吐槽",
+      "輕鬆"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20046,15 +20046,15 @@
     "id": "59c3a161-d938-4fd7-8449-d47cd9d75004",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "晚餐直覺",
-    "description": "食慾。",
-    "question": "如果不考慮卡路里和金錢，你現在這一秒最想吃什麼？",
+    "title": "今晚最想吃的路線",
+    "description": "比起菜名，更像是在選今晚想走哪種心情。",
+    "question": "如果今晚不用考慮卡路里和金錢，你最想往哪一種食物路線走？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "食物",
-      "慾望",
-      "輕鬆"
+      "晚餐",
+      "選擇",
+      "心情"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -23412,14 +23412,14 @@
     "id": "be28fcb2-ab91-47a7-8bce-206c44ad9f33",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "壓力釋放",
-    "description": "宣洩。",
-    "question": "今天有沒有哪個瞬間讓你覺得很煩躁或想翻白眼？",
+    "title": "最想嘆氣的時刻",
+    "description": "不一定要大事，小小一口悶氣也值得被看見。",
+    "question": "今天有沒有哪個瞬間，讓你很想嘆氣、翻白眼，或先安靜一下？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "壓力",
-      "抱怨",
+      "煩躁",
+      "情緒",
       "傾聽"
     ],
     "is_ai_generated": true,
@@ -23429,14 +23429,14 @@
     "id": "31affbd3-a2e7-4076-b83f-298b198b984f",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "晚餐直覺",
-    "description": "味蕾。",
-    "question": "不考慮價錢和熱量，你現在這一秒最想把什麼東西塞進嘴巴裡？",
+    "title": "嘴巴現在想要什麼",
+    "description": "嘴巴的衝動，通常比理智更快說實話。",
+    "question": "不考慮價錢和熱量，你現在這一秒最想把什麼東西送進嘴巴裡？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "食物",
-      "慾望",
+      "嘴饞",
+      "衝動",
       "輕鬆"
     ],
     "is_ai_generated": true,
@@ -23548,15 +23548,15 @@
     "id": "744dddf0-2217-4a8b-b377-2c9ffb18f56a",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "吐槽大會",
-    "description": "幽默。",
-    "question": "今天有沒有遇到什麼「奇葩」的人或事，想跟我吐槽一下？",
+    "title": "今天的奇葩事件",
+    "description": "有些事不需要解法，只需要一起覺得荒謬。",
+    "question": "今天有沒有遇到什麼奇葩的人或事，讓你很想跟我一起吐槽一下？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "聊天",
-      "八卦",
-      "連結"
+      "奇葩",
+      "吐槽",
+      "聊天"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
