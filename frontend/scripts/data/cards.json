@@ -105,15 +105,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440007",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "天氣影響",
-    "description": "環境感知。",
-    "question": "今天的天氣如何影響了你的心情？如果是雨天，你會覺得憂鬱還是平靜？",
+    "title": "天氣有沒有影響你",
+    "description": "先聊外面的天，再聊心裡的變化。",
+    "question": "今天的天氣有沒有影響到你的心情？如果是雨天，你通常會更憂鬱、平靜，還是其實沒差？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "天氣",
       "心情",
-      "環境"
+      "感受"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -3403,15 +3403,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440201",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日天氣",
-    "description": "心情氣象台。",
-    "question": "如果用一種天氣來形容你現在的心情，是晴朗、多雲、還是有點悶熱的雷雨前夕？",
+    "title": "此刻心裡的天色",
+    "description": "把現在的心情翻成一片天空。",
+    "question": "如果把你現在的心情變成一種天色，會是晴朗、多雲，還是有點悶著的雷雨前？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "心情",
-      "隱喻",
-      "覺察"
+      "比喻",
+      "天氣"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -3488,15 +3488,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440206",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日BGM",
-    "description": "音樂投射。",
-    "question": "如果今天要選一首歌當作你的背景音樂，你會選哪一首（或哪種類型的歌）？",
+    "title": "今天該配什麼歌",
+    "description": "一首歌有時比一段解釋更準。",
+    "question": "如果現在要替今天的你配一首歌，你會選哪一首，或哪一種類型？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "音樂",
-      "氛圍",
-      "藝術"
+      "歌曲",
+      "分享",
+      "氛圍"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6837,15 +6837,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441003",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "情緒天氣",
-    "description": "具象化感受。",
-    "question": "如果要用一種天氣來形容你現在的心情（例如：多雲偶陣雨、午後雷暴、暖陽），那會是什麼？",
+    "title": "今天像哪一種氣候",
+    "description": "不是一瞬間，而是今天整體走過的氣候感。",
+    "question": "如果要用一種氣候來形容你今天整體的狀態，它比較像暖陽、多雲偶陣雨，還是午後雷暴？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "情緒",
-      "比喻",
-      "溝通"
+      "氣候",
+      "回顧"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -12075,15 +12075,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443006",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "背景音樂",
-    "description": "心情比喻。",
-    "question": "如果今天的生活是一部電影，你覺得背景音樂會是什麼風格？（爵士、重金屬、悲傷慢歌？）",
+    "title": "今天的配樂風格",
+    "description": "先選一種風格，看看今天到底是什麼片型。",
+    "question": "如果今天的生活是一部電影，你覺得配樂會是什麼風格？是爵士、重金屬，還是悲傷慢歌？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "音樂",
-      "心情",
-      "比喻"
+      "風格",
+      "心情"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12364,15 +12364,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443024",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "天氣影響",
-    "description": "環境。",
-    "question": "今天的天氣對你的心情有影響嗎？你喜歡今天的天氣嗎？",
+    "title": "今天天氣站在你這邊嗎",
+    "description": "有些天氣會加分，有些只會讓人更想躲起來。",
+    "question": "你喜歡今天這種天氣嗎？它讓你比較舒服，還是反而有點煩、累，或只想躲起來？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "天氣",
-      "閒聊",
-      "感受"
+      "體感",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -19978,14 +19978,14 @@
     "id": "fb3ef0eb-1bfe-462d-b017-fa93c45d558e",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "情緒氣象台",
-    "description": "心情掃描。",
-    "question": "如果用一種天氣來形容你現在的心情，會是晴天、陰天、暴雨還是濃霧？",
+    "title": "今天的心情預報",
+    "description": "幫今天的心情做一則小小預報。",
+    "question": "如果你的心情現在要發一則預報，會是晴天、陰天、暴雨、濃霧，還是快放晴了？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "心情",
-      "比喻",
+      "預報",
       "覺察"
     ],
     "is_ai_generated": true,
@@ -20097,15 +20097,15 @@
     "id": "2950e82a-b0b0-4ff0-ad5a-8788c6355c8b",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "背景音樂",
-    "description": "氛圍。",
-    "question": "如果今天的生活是一部電影，你覺得背景音樂會是哪一種類型？（爵士、搖滾、悲傷慢歌？）",
+    "title": "如果今天有主題曲",
+    "description": "不是背景，是今天最該被播出來的那一首。",
+    "question": "如果今天只能留下一首主題曲，你想選哪一種類型，甚至哪一首歌？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "音樂",
-      "想像",
-      "心情"
+      "主題曲",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -23446,15 +23446,15 @@
     "id": "4d154092-f24e-4223-847c-21d490003990",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "本日BGM",
-    "description": "心情配樂。",
-    "question": "如果要為你的今天選一首背景音樂（悲傷、激昂、慵懶...），會是什麼風格？",
+    "title": "今天的聲音濾鏡",
+    "description": "把今天想像成一種聲音質地，而不只是歌名。",
+    "question": "如果今天有一層聲音濾鏡，它會比較像慵懶 Lo-fi、激昂鼓點、安靜白噪音，還是別的什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "音樂",
-      "心情",
-      "隱喻"
+      "聲音",
+      "氛圍",
+      "想像"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
@@ -25398,14 +25398,15 @@
     "id": "5b1c9350-6d28-440c-b182-fafef9e5fb82",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今天的天氣和你的心情",
-    "description": "天氣常影響情緒，聊聊這個共同的環境因素。",
-    "question": "今天的天氣如何？它影響你的心情了嗎？",
+    "title": "今天天氣讓你想怎麼過",
+    "description": "天氣不只改變心情，也會改變今天想活成什麼節奏。",
+    "question": "今天天氣讓你比較想出門、窩著、慢一點，還是乾脆什麼都不想做？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "天氣",
-      "心情"
+      "節奏",
+      "日常"
     ],
     "is_ai_generated": false,
     "created_at": "2025-02-14 12:00:00"
