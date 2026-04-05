@@ -12,7 +12,11 @@ import {
 } from '@/lib/relationship-events';
 import { feedback } from '@/lib/feedback';
 import { getDeckDisplayName } from '@/lib/deck-meta';
-import { DEPTH_OPTIONS, getDepthPresentation, resolveDepthLevel, type DepthLevel } from '@/lib/depth-level';
+import { getDepthPresentation, resolveDepthLevel, type DepthLevel } from '@/lib/depth-level';
+import {
+  getHomeDailyDepthPresentation,
+  HOME_DAILY_DEPTH_OPTIONS,
+} from '@/lib/home-daily-depth';
 import { logClientError } from '@/lib/safe-error-log';
 import { cardService, type DailyStatus } from '@/services/cardService';
 import { useToast } from '@/hooks/useToast';
@@ -343,34 +347,36 @@ const DailyCard = () => {
   // === State A: Draw card (no card yet) ===
   // Reveal/ritual: long durations (500/700/1000ms) intentional for daily ritual and result reveal; excluded from Haven micro-motion tokens by design.
   if (!status?.card) {
+    const selectedDepthOption = getHomeDailyDepthPresentation(selectedDepth);
+
     return (
-      <div className="relative group cursor-pointer transform hover:scale-[1.01] transition-all duration-haven ease-haven" onClick={handleDraw}>
-        <div className="absolute -inset-2 bg-primary/15 rounded-card blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-1000 ease-out" aria-hidden />
+      <div className="relative">
+        <div className="absolute -inset-2 bg-primary/15 rounded-card blur-xl opacity-60 transition-opacity duration-1000 ease-out" aria-hidden />
         <div className="relative bg-card/95 backdrop-blur-xl rounded-card p-10 text-center border border-foreground/10 shadow-soft overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" aria-hidden />
           <div className="flex justify-between items-start mb-8">
-             <span className="icon-badge !rounded-2xl animate-breathe" aria-hidden>
-                <Sparkles className="w-4 h-4" />
-             </span>
-             <span className="text-[10px] font-art font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">每日儀式</span>
+            <span className="icon-badge !rounded-2xl animate-breathe" aria-hidden>
+              <Sparkles className="w-4 h-4" />
+            </span>
+            <span className="text-[10px] font-art font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">每日儀式</span>
           </div>
-          <div className="mx-auto w-28 h-28 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mb-8 border border-border/50 shadow-soft shadow-glass-inset group-hover:shadow-lift transition-all duration-haven ease-haven">
-            <span className="text-5xl transform group-hover:rotate-12 group-hover:scale-110 transition-transform duration-500 ease-out" aria-hidden>🃏</span>
+          <div className="mx-auto w-28 h-28 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mb-8 border border-border/50 shadow-soft shadow-glass-inset transition-all duration-haven ease-haven">
+            <span className="text-5xl" aria-hidden>🃏</span>
           </div>
-          <h3 className="text-2xl font-art font-bold text-foreground mb-3">今日共感卡片</h3>
-          <p className="text-muted-foreground mb-8 font-light leading-relaxed max-w-sm mx-auto">
+          <p className="text-[10px] font-art font-bold tracking-[0.15em] text-muted-foreground/60 uppercase text-center mb-3">
+            今晚的節奏
+          </p>
+          <h3 className="text-2xl font-art font-bold text-foreground mb-3">今晚想怎麼聊？</h3>
+          <p className="text-muted-foreground mb-8 font-light leading-relaxed max-w-md mx-auto">
             {isSolo
-              ? <>抽一張卡片，<br/>開啟與自己的深度對話。</>
-              : <>抽一張卡片，<br/>開啟與 <span className="font-semibold text-primary">{status?.partner_name || '伴侶'}</span> 的深度連結。</>
+              ? <>先選今晚想靠近自己的方式，<br />再抽一張剛剛好的題目。</>
+              : <>先選今晚想和 <span className="font-semibold text-primary">{status?.partner_name || '伴侶'}</span> 靠近的方式，<br />再抽一張剛剛好的題目。</>
             }
           </p>
-          {/* Depth selector */}
-          <div className="mb-8" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-            <p className="text-[10px] font-art font-bold tracking-[0.15em] text-muted-foreground/60 uppercase text-center mb-3">
-              話題深度
-            </p>
-            <div className="flex items-center justify-center gap-2" role="group" aria-label="選擇話題深度">
-              {DEPTH_OPTIONS.map((opt) => {
+
+          <div className="mb-8" data-testid="home-daily-depth-chooser">
+            <div className="grid gap-3 md:grid-cols-3" role="group" aria-label="選擇今晚想聊的節奏">
+              {HOME_DAILY_DEPTH_OPTIONS.map((opt) => {
                 const isSelected = selectedDepth === opt.level;
                 const style = getDepthPresentation(opt.level);
                 return (
@@ -378,28 +384,46 @@ const DailyCard = () => {
                     key={opt.level}
                     type="button"
                     onClick={() => setSelectedDepth(isSelected ? null : opt.level)}
-                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-haven ease-haven
+                    data-testid={`home-daily-depth-option-${opt.level}`}
+                    className={`rounded-[1.6rem] border px-4 py-4 text-left transition-all duration-haven ease-haven
                       ${isSelected
-                        ? style.badgeClass
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                        ? `${style.questionSurfaceClass} ${style.accentFrameClass} text-foreground shadow-soft`
+                        : 'bg-muted/35 text-muted-foreground hover:bg-muted/55 border-border/60'
                       }
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
                     aria-pressed={isSelected}
                     aria-label={`${opt.label} — ${opt.description}`}
                   >
-                    {opt.label}
+                    <span className="block text-sm font-semibold text-foreground">{opt.label}</span>
+                    <span className="mt-2 block text-sm leading-6 text-muted-foreground">
+                      {opt.description}
+                    </span>
                   </button>
                 );
               })}
             </div>
-            {selectedDepth && (
-              <p className="text-[11px] text-muted-foreground/70 text-center mt-2.5 font-light animate-in fade-in duration-300">
-                {DEPTH_OPTIONS.find((o) => o.level === selectedDepth)?.description}
-              </p>
-            )}
+            <p className="text-[11px] text-muted-foreground/75 text-center mt-3 font-light animate-in fade-in duration-300">
+              {selectedDepthOption
+                ? selectedDepthOption.description
+                : '先選一個今晚想聊的節奏，再抽一張剛剛好的題目。'}
+            </p>
           </div>
-          <button type="button" className="px-8 py-3.5 rounded-full bg-gradient-to-b from-primary to-primary/90 text-primary-foreground font-medium border-t border-t-white/30 shadow-satin-button hover:shadow-lift hover:-translate-y-0.5 active:scale-95 transition-all duration-haven ease-haven flex items-center gap-2 mx-auto group-hover:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-            <Sparkles size={16} aria-hidden /> 抽取今日話題
+
+          <button
+            type="button"
+            onClick={handleDraw}
+            disabled={!selectedDepthOption || drawing || loading}
+            data-testid="home-daily-depth-draw-cta"
+            className={`px-8 py-3.5 rounded-full font-medium border-t shadow-satin-button transition-all duration-haven ease-haven flex items-center gap-2 mx-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+              selectedDepthOption && !drawing && !loading
+                ? 'bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t-white/30 hover:shadow-lift hover:-translate-y-0.5 active:scale-95'
+                : 'bg-muted text-muted-foreground border-t-transparent shadow-none cursor-not-allowed'
+            }`}
+          >
+            {drawing ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
+            {drawing
+              ? '抽題中...'
+              : selectedDepthOption?.ctaLabel ?? '先選今晚想怎麼聊'}
           </button>
         </div>
       </div>
@@ -411,6 +435,7 @@ const DailyCard = () => {
   if (status.state === 'IDLE' || status.state === 'PARTNER_STARTED') {
     const depthLevel = resolveDepthLevel(status.card.depth_level, status.card.difficulty_level);
     const depthStyle = getDepthPresentation(depthLevel);
+    const homeDepth = getHomeDailyDepthPresentation(depthLevel);
 
     return (
       <div
@@ -428,7 +453,7 @@ const DailyCard = () => {
         <div className="p-8">
           <div className="mb-8 text-center">
             <span className={`inline-block px-3 py-1 text-[10px] font-bold tracking-widest rounded-full mb-4 uppercase ${depthStyle.badgeClass}`}>
-              {getDeckDisplayName(status.card.category)} · 深度 {depthLevel} · {depthStyle.label}
+              {getDeckDisplayName(status.card.category)} · {homeDepth?.label ?? depthStyle.label}
             </span>
             <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{depthStyle.guidance}</p>
             <h2 className="text-2xl font-art font-bold text-foreground mb-4 leading-tight">{status.card.title}</h2>

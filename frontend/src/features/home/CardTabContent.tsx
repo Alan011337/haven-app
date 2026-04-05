@@ -9,8 +9,8 @@ export default function CardTabContent() {
   return (
     <HomeCoverStage
       eyebrow="每日儀式"
-      title="今晚，只留一個問題給彼此。"
-      description="安靜抽一張，慢慢答。"
+      title="今晚，想聊得輕一點，還是更靠近彼此？"
+      description="先選今晚的節奏，再抽一張剛剛好的題目。"
       pulse={
         <>
           如果今晚只做一件彼此有感的事，
