@@ -3,15 +3,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440001",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "能量電池",
-    "description": "覺察當下狀態。",
+    "title": "現在剩幾格電",
+    "description": "先看見今天還剩多少能量。",
     "question": "如果你的身體是一個電池，現在的電量剩幾趴？你是需要「快充」（休息）還是「省電模式」（安靜）？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "能量",
       "狀態",
-      "自我覺察"
+      "覺察"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -20,14 +20,14 @@
     "id": "550e8400-e29b-41d4-a716-446655440002",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日高光",
-    "description": "微小的快樂。",
-    "question": "今天發生了什麼小事（哪怕很微不足道），讓你覺得心情稍微好了一點點？",
+    "title": "今天變好的一刻",
+    "description": "抓住那個讓心情回升一點點的瞬間。",
+    "question": "今天有沒有哪一刻，讓你本來普通或有點煩的心情，突然變好了一點？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "感恩",
-      "快樂",
+      "正向",
+      "微光",
       "分享"
     ],
     "is_ai_generated": true,
@@ -190,15 +190,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440012",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "放鬆習慣。",
+    "title": "今晚怎麼放鬆",
+    "description": "睡前先選一個讓身心慢下來的方式。",
     "question": "今晚睡覺前，你想做點什麼讓自己放鬆？（滑手機、冥想、還是聊聊天？）",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "睡眠",
-      "習慣",
-      "放鬆"
+      "睡前",
+      "放鬆",
+      "選擇"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -224,15 +224,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440014",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "數位排毒",
-    "description": "科技影響。",
-    "question": "你覺得今天看手機的時間太多了嗎？有沒有因為滑手機而錯過了什麼？",
+    "title": "滑太久的那一刻",
+    "description": "不是檢討，只是看看手機有沒有悄悄把一段時間帶走。",
+    "question": "今天有沒有哪個時刻，你一回神才發現自己已經滑手機滑得比想像中久了？那時候原本想做什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "手機",
-      "專注",
-      "反思"
+      "滑手機",
+      "注意力",
+      "覺察"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -292,14 +292,14 @@
     "id": "550e8400-e29b-41d4-a716-446655440018",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體掃描",
-    "description": "身體覺察。",
-    "question": "閉上眼睛感覺一下，現在你的肩膀是緊繃的還是放鬆的？哪裡覺得痠痛？",
+    "title": "肩膀今天還好嗎",
+    "description": "先從最容易默默撐住的部位開始關心。",
+    "question": "現在閉上眼睛感覺一下，你的肩膀是鬆的還是緊的？還有哪裡也在偷偷喊累？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "肩膀",
       "身體",
-      "健康",
       "關心"
     ],
     "is_ai_generated": true,
@@ -326,15 +326,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440020",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "新聞話題",
-    "description": "時事連結。",
-    "question": "今天有沒有看到什麼新聞讓你覺得很驚訝、很生氣或很有趣？",
+    "title": "讓你有反應的一則消息",
+    "description": "今天哪條消息最讓你起反應？",
+    "question": "今天有沒有哪一則消息，讓你立刻覺得驚訝、生氣，或忍不住想笑？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "時事",
-      "話題",
-      "連結"
+      "新聞",
+      "情緒",
+      "分享"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -3420,15 +3420,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440202",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "能量電池",
-    "description": "狀態檢查。",
+    "title": "今晚還想見人嗎",
+    "description": "社交電量夠不夠，會直接改變今晚的節奏。",
     "question": "你現在的「社交電池」剩幾趴？你是想出門走走，還是想窩在沙發上充電？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "社交",
       "能量",
-      "需求",
-      "休息"
+      "選擇"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -3573,15 +3573,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440211",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "結束這一天。",
+    "title": "今晚的收尾方式",
+    "description": "看看今天想怎麼一起把節奏放慢。",
     "question": "今晚睡覺前，你想聊聊天、一起看個劇，還是各自安靜滑手機？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "睡眠",
-      "習慣",
-      "陪伴"
+      "睡前",
+      "陪伴",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -3675,15 +3675,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440217",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日新聞",
-    "description": "話題分享。",
-    "question": "今天滑手機或看新聞時，有沒有看到什麼有趣、荒謬或讓你生氣的事想跟我分享？",
+    "title": "滑手機時看到的荒謬事",
+    "description": "把滑到的一則荒謬或有感內容拿來一起吐槽。",
+    "question": "今天滑手機時，你有沒有看到哪件有趣、荒謬或讓你翻白眼的事想丟給我？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "時事",
-      "閒聊",
-      "資訊"
+      "滑手機",
+      "荒謬",
+      "分享"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -3692,15 +3692,15 @@
     "id": "550e8400-e29b-41d4-a716-446655440218",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體掃描",
-    "description": "生理覺察。",
-    "question": "閉上眼睛感覺一下，現在全身上下哪裡最痠痛或最緊繃？需要我幫你按一下嗎？",
+    "title": "哪裡最需要按一下",
+    "description": "找出今天最想被放鬆的地方。",
+    "question": "現在全身上下，哪裡最痠或最緊？如果可以，我最想先幫你按哪裡？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "身體",
+      "痠痛",
       "按摩",
-      "關心"
+      "照顧"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6803,15 +6803,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441001",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "能量電池",
-    "description": "狀態檢視。",
+    "title": "今天怎麼這麼耗電",
+    "description": "說出消耗和充電來源，狀態就更清楚。",
     "question": "如果你的身體是一個電池，現在的電量剩下幾 %？是什麼消耗了你，又是什麼能幫你充電？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "能量",
-      "狀態",
-      "關心"
+      "消耗",
+      "恢復"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6820,15 +6820,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441002",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日高光",
-    "description": "正向聚焦。",
-    "question": "回想今天發生的一件小事，什麼事情讓你忍不住微笑或感到稍微輕鬆了一點？",
+    "title": "忍不住微笑的一下",
+    "description": "把那個讓你鬆一口氣或笑出來的瞬間說出來。",
+    "question": "回想今天，有沒有哪個瞬間讓你忍不住笑了一下，或終於鬆了一口氣？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "快樂",
-      "感恩",
-      "分享"
+      "微笑",
+      "放鬆",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -6956,15 +6956,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441010",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "結束今天。",
+    "title": "睡前想靠近還是安靜",
+    "description": "把今晚需要的陪伴距離說清楚。",
     "question": "今晚睡覺前，你想聊聊天，還是想各自滑手機安靜一下？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "睡眠",
-      "習慣",
-      "邊界"
+      "睡前",
+      "邊界",
+      "陪伴"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -7007,15 +7007,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441013",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體感受",
-    "description": "覺察。",
-    "question": "閉上眼睛感覺一下，現在你身體哪個部位最緊繃？需要我幫你拍拍或揉揉嗎？",
+    "title": "想被揉揉的地方",
+    "description": "把想被照顧的地方說得更具體。",
+    "question": "現在你身體哪個地方最想被拍拍、揉揉，或被好好照顧一下？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "身體",
-      "放鬆",
-      "接觸"
+      "接觸",
+      "照顧",
+      "需求"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -7024,15 +7024,15 @@
     "id": "550e8400-e29b-41d4-a716-446655441014",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "一句話總結",
-    "description": "標題。",
+    "title": "今天的新聞標題",
+    "description": "用一句有畫面的標題幫今天下註解。",
     "question": "如果要為你的今天下一個「新聞標題」，你會怎麼寫？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "總結",
-      "趣味",
-      "創意"
+      "創意",
+      "回顧"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -11990,15 +11990,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443001",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "能量電池",
-    "description": "狀態檢核。",
+    "title": "體力和心情電量",
+    "description": "把身體和情緒一起看一眼。",
     "question": "如果你的體力與情緒有「電池百分比」，現在你是幾%？為什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "狀態",
+      "體力",
       "情緒",
-      "日常"
+      "狀態"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12007,14 +12007,14 @@
     "id": "770e8400-e29b-41d4-a716-446655443002",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日高光",
-    "description": "正向聚焦。",
-    "question": "今天發生的一件小事（再微小都可以），讓你覺得心情稍微變好的是什麼？",
+    "title": "心情回溫時刻",
+    "description": "看看今天是哪一刻讓心情慢慢回來。",
+    "question": "今天有沒有哪件小事，讓你覺得心情慢慢回溫了一點？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "快樂",
-      "感恩",
+      "心情",
+      "回溫",
       "分享"
     ],
     "is_ai_generated": true,
@@ -12160,15 +12160,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443011",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "放鬆。",
+    "title": "今晚想被照顧什麼",
+    "description": "讓睡前的一點照顧更剛剛好。",
     "question": "今晚睡前，你最希望我為你做一件什麼小事？（幫你倒水、按摩肩膀、講個笑話？）",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "照顧",
       "需求",
-      "溫柔"
+      "睡前"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12194,15 +12194,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443013",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體掃描",
-    "description": "覺察。",
-    "question": "閉上眼睛感受一下，現在你身體哪一個部位最痠痛或緊繃？",
+    "title": "今天最累的部位",
+    "description": "替身體點名，看看哪裡先撐不住了。",
+    "question": "今天你的身體哪一個部位最有「我真的累了」的感覺？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "疲勞",
       "身體",
-      "健康",
-      "關心"
+      "覺察"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12211,15 +12211,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443014",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "新聞話題",
-    "description": "資訊交流。",
-    "question": "今天你在網路上看到最有趣或最震驚的新聞/迷因是什麼？分享給我看。",
+    "title": "今天最想丟給我的連結",
+    "description": "把那則你最想立刻分享的內容丟過來。",
+    "question": "今天在網路上，你最想直接丟給我看的那則新聞、迷因或內容是什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "話題",
+      "網路",
       "分享",
-      "新知"
+      "迷因"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12262,15 +12262,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443018",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "手機依賴",
-    "description": "數位習慣。",
-    "question": "今天你花最多時間是在哪一個 App 上？覺得那是浪費時間還是放鬆？",
+    "title": "今天最常打開的 App",
+    "description": "看見時間都流向了哪裡。",
+    "question": "今天你最常打開的是哪個 App？待在那裡的時間，對你來說比較像放鬆，還是只是被吸進去？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "App",
       "手機",
-      "習慣",
-      "閒聊"
+      "習慣"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -12313,15 +12313,15 @@
     "id": "770e8400-e29b-41d4-a716-446655443021",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "一句話總結",
-    "description": "覆盤。",
+    "title": "今天這章叫什麼",
+    "description": "把今天想成故事，標題會更有感。",
     "question": "如果這一天是一章小說，這一章的標題會叫什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "故事",
       "總結",
-      "趣味",
-      "定義"
+      "想像"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -19995,15 +19995,15 @@
     "id": "54337f63-bf8e-4848-b894-b4d86c4b2815",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "能量電池",
-    "description": "狀態檢查。",
+    "title": "社交電量還夠嗎",
+    "description": "看看現在適合再互動，還是先休息一下。",
     "question": "你的「社交電池」現在剩幾趴？需要充電還是可以繼續放電？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "能量",
+      "社交",
       "疲勞",
-      "需求"
+      "界線"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20012,15 +20012,15 @@
     "id": "dfaf6750-9927-4259-9d15-fd30df7cce79",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日高光",
-    "description": "感恩練習。",
-    "question": "今天發生的一件小事，雖然微不足道，但讓你稍微開心了一下的？",
+    "title": "小小幸運",
+    "description": "再小也沒關係，重要的是它真的讓你亮了一下。",
+    "question": "今天有沒有什麼小事，雖然不大，卻讓你覺得自己有一點點幸運？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "感恩",
-      "正向",
-      "分享"
+      "幸運",
+      "快樂",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20063,15 +20063,15 @@
     "id": "e3183d97-1e0d-4000-8678-b13c4080405f",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "習慣。",
+    "title": "你的入睡開關",
+    "description": "找到最能讓你慢慢安靜下來的方式。",
     "question": "你覺得睡前做什麼事（滑手機、聊天、聽音樂）最能讓你放鬆入睡？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "睡眠",
       "習慣",
-      "生活"
+      "放鬆"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20148,15 +20148,15 @@
     "id": "24b09ba4-ea56-4e8e-ac7e-3dd8ffacffd4",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "手機依賴",
-    "description": "數位。",
-    "question": "今天你在手機上花最多時間看什麼內容？（社群、新聞、遊戲？）",
+    "title": "今天滑最多的是什麼",
+    "description": "比起時間，內容更能看出今天的腦袋在找什麼。",
+    "question": "今天你在手機上滑最多的是哪一類內容？是社群、新聞、遊戲，還是別的什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "習慣",
-      "分享",
-      "話題"
+      "內容",
+      "滑手機",
+      "日常"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20233,15 +20233,15 @@
     "id": "405a5aa4-c256-4260-9b04-69037bcd7721",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體感受",
-    "description": "健康。",
-    "question": "閉上眼睛掃描全身，你現在身體哪個部位最緊繃或痠痛？",
+    "title": "身體哪裡卡住了",
+    "description": "從全身掃描裡找到今天最卡的地方。",
+    "question": "閉上眼睛掃描全身，哪個部位最像還卡著今天的壓力或疲累？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "健康",
-      "關心",
-      "身體"
+      "身體",
+      "掃描",
+      "放鬆"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20250,15 +20250,15 @@
     "id": "3a99be09-f057-45bb-bbde-eccaf940df0d",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "一句話總結",
-    "description": "覆盤。",
+    "title": "今天最貼切的詞",
+    "description": "不用完整句子，一個詞就夠。",
     "question": "用一個形容詞總結你的一整天（例如：混亂的、平靜的、高效的）。",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "總結",
-      "分享",
-      "對話"
+      "形容詞",
+      "直覺",
+      "回顧"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -20352,15 +20352,15 @@
     "id": "e2d527a0-e648-4eb8-b148-0f582eb4ff1b",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "新聞話題",
-    "description": "時事。",
-    "question": "今天有沒有看到什麼新聞或八卦讓你很想跟我討論的？",
+    "title": "今天想聊的八卦",
+    "description": "輕一點的時事或八卦，也很適合拿來熱身。",
+    "question": "今天有沒有什麼新聞或八卦，讓你一看到就覺得「這個我要跟你聊」？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "八卦",
       "話題",
-      "交流",
-      "資訊"
+      "閒聊"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -23565,15 +23565,15 @@
     "id": "c49fcab6-fd11-4211-86e6-a6a92f088ce8",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "身體感受",
-    "description": "覺察。",
-    "question": "閉上眼睛掃描一下全身，你現在哪個部位最緊繃或痠痛？",
+    "title": "疲勞落在哪裡",
+    "description": "把模糊的累，變成可以說得出的地方。",
+    "question": "如果把今天的累畫在身體上，它現在最明顯落在哪個位置？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "健康",
-      "按摩",
-      "照顧"
+      "疲勞",
+      "痠痛",
+      "覺察"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
@@ -23582,13 +23582,13 @@
     "id": "89984281-3664-4556-bbd0-ce0a5df5d8ec",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "睡前儀式",
-    "description": "習慣。",
+    "title": "睡前想一起做什麼",
+    "description": "在睡前留一個屬於彼此的小時刻。",
     "question": "今晚睡覺前，你想跟我一起做些什麼？（聊聊天、滑手機、還是親熱一下？）",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "睡眠",
+      "睡前",
       "陪伴",
       "選擇"
     ],
@@ -23616,15 +23616,15 @@
     "id": "26391376-e0b8-464e-ab32-5b9619e9d69b",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "螢幕時間",
-    "description": "數位生活。",
-    "question": "今天你在網路上看到了什麼有趣的、好笑的、或奇怪的東西想分享給我？",
+    "title": "今天掉進哪個網路洞",
+    "description": "有時候不是找東西，而是一路被演算法帶著走。",
+    "question": "今天你在網路上有沒有不知不覺一路點下去，最後逛到一個連自己都沒預料到的地方？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "話題",
       "網路",
-      "興趣"
+      "好奇",
+      "分享"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
@@ -23769,15 +23769,15 @@
     "id": "3effddac-b1af-4e52-a8a3-ecadedb4b91c",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "今日新聞",
-    "description": "時事。",
-    "question": "今天發生在世界上的大事，哪一件是你最想跟我討論的？",
+    "title": "今天最想討論的大事",
+    "description": "從世界的聲音裡，挑一件你最在意的事。",
+    "question": "今天世界上的大事裡，哪一件是你最想跟我一起聊聊看法的？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
+      "時事",
       "觀點",
-      "資訊",
-      "交流"
+      "討論"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
@@ -23786,15 +23786,15 @@
     "id": "560e9efa-2ed5-4da2-a086-a68f17a5a4c1",
     "deck_id": 1,
     "category": "DAILY_VIBE",
-    "title": "一句話總結",
-    "description": "回顧。",
+    "title": "給今天貼個標籤",
+    "description": "選一個最像今天氣氛的詞，讓這一天被記住。",
     "question": "如果用一個形容詞來總結你的今天，那會是什麼詞？（忙碌、充實、荒謬...？）",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "總結",
+      "標籤",
       "情緒",
-      "標籤"
+      "總結"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
