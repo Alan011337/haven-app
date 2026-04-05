@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { getJournalSafetyBand } from '@/lib/safety';
 import { buildJournalExcerpt, deriveJournalTitle, extractFirstJournalImage } from '@/lib/journal-format';
-import { JournalTranslationStatusChip } from '@/app/journal/JournalPrimitives';
+import { JournalTranslationReadyAtLine, JournalTranslationStatusChip } from '@/app/journal/JournalPrimitives';
 import { buildJournalTranslationStatusPresentation } from '@/app/journal/journal-translation-status';
 
 interface JournalCardProps {
@@ -62,6 +62,7 @@ export default function JournalCard({
     hasCurrentJournalId: true,
     hasExplicitVisibilitySelection: false,
     isDraft: Boolean(journal.is_draft),
+    partnerTranslationReadyAt: journal.partner_translation_ready_at ?? null,
     partnerTranslationStatus: journal.partner_translation_status,
     persistedVisibility: journal.visibility,
   });
@@ -175,6 +176,7 @@ export default function JournalCard({
              {(journal.attachments?.length ?? 0) > 0 && <span>{journal.attachments!.length} 張圖片</span>}
              {translationStatus ? <JournalTranslationStatusChip presentation={translationStatus} /> : null}
            </div>
+           {translationStatus ? <JournalTranslationReadyAtLine presentation={translationStatus} /> : null}
          </div>
 
          {/* Journal content */}

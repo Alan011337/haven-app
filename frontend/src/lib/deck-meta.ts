@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Brain, Coffee, Flame, Hourglass, House, Plane, Shield, Sprout } from 'lucide-react';
 
 import { formatDeckCategoryFallback, normalizeDeckCategory } from '@/lib/deck-category';
+import type { DepthLevel } from '@/lib/depth-level';
 import { CardCategory } from '@/types';
 
 /** Card-back gradient and optional pattern. Uses semantic tokens only (ART-DIRECTION). */
@@ -24,6 +25,8 @@ export type DeckMeta = {
   Icon: LucideIcon;
   /** Card back (face-down) gradient and accent for flip/reveal. */
   cardBack: DeckCardBackStyle;
+  /** Primary conversation depth: 1=暖身, 2=深入, 3=靈魂深潛. */
+  depthIdentity: DepthLevel;
   /** P2-A DoD: primary/secondary for design sync (RN, tokens). */
   primaryColor?: string;
   secondaryColor?: string;
@@ -40,6 +43,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-4',
     badgeClass: 'bg-chart-4/15 text-foreground',
     Icon: Coffee,
+    depthIdentity: 1,
     cardBack: { gradient: 'bg-chart-4', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-dots' },
     primaryColor: '#f97316',
     secondaryColor: '#fbbf24',
@@ -53,6 +57,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-1',
     badgeClass: 'bg-chart-1/15 text-foreground',
     Icon: Brain,
+    depthIdentity: 3,
     cardBack: { gradient: 'bg-chart-1', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-lines' },
     primaryColor: '#8b5cf6',
     secondaryColor: '#ec4899',
@@ -66,6 +71,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-2',
     badgeClass: 'bg-chart-2/15 text-foreground',
     Icon: Shield,
+    depthIdentity: 2,
     cardBack: { gradient: 'bg-chart-2', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-grid' },
     primaryColor: '#10b981',
     secondaryColor: '#14b8a6',
@@ -79,6 +85,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-5',
     badgeClass: 'bg-chart-5/15 text-foreground',
     Icon: Hourglass,
+    depthIdentity: 1,
     cardBack: { gradient: 'bg-chart-5', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-dots' },
     primaryColor: '#eab308',
     secondaryColor: '#f59e0b',
@@ -92,6 +99,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-3',
     badgeClass: 'bg-chart-3/15 text-foreground',
     Icon: Sprout,
+    depthIdentity: 2,
     cardBack: { gradient: 'bg-chart-3', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-lines' },
     primaryColor: '#3b82f6',
     secondaryColor: '#06b6d4',
@@ -105,6 +113,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-depth-3',
     badgeClass: 'bg-depth-3/15 text-foreground',
     Icon: Flame,
+    depthIdentity: 3,
     cardBack: { gradient: 'bg-depth-3', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-grid' },
     primaryColor: '#f43f5e',
     secondaryColor: '#d946ef',
@@ -118,6 +127,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-chart-3',
     badgeClass: 'bg-chart-3/15 text-foreground',
     Icon: Plane,
+    depthIdentity: 1,
     cardBack: { gradient: 'bg-chart-3', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-dots' },
     primaryColor: '#06b6d4',
     secondaryColor: '#3b82f6',
@@ -131,6 +141,7 @@ export const DECK_META_MAP: Record<CardCategory, DeckMeta> = {
     iconColor: 'text-depth-1',
     badgeClass: 'bg-depth-1/15 text-foreground',
     Icon: House,
+    depthIdentity: 2,
     cardBack: { gradient: 'bg-depth-1', borderClass: 'border-white/30', glowClass: 'shadow-soft', patternKey: 'pattern-card-lines' },
     primaryColor: '#64748b',
     secondaryColor: '#475569',

@@ -14,6 +14,7 @@ import Badge from '@/components/ui/Badge';
 import { GlassCard } from '@/components/haven/GlassCard';
 import { CardBackVariant } from '@/components/haven/CardBackVariant';
 import type { DeckMeta } from '@/lib/deck-meta';
+import { getDepthPresentation } from '@/lib/depth-level';
 import { routeLinkCtaClasses } from '@/features/decks/ui/routeStyleHelpers';
 
 type DeckMetric = {
@@ -83,6 +84,17 @@ type DeckLibraryRailCardProps = {
   actionLabel?: string;
   icon?: LucideIcon;
 };
+
+function DeckDepthBadge({ deck }: { deck: DeckMeta }) {
+  const depth = getDepthPresentation(deck.depthIdentity);
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 type-micro font-semibold whitespace-nowrap ${depth.badgeClass}`}
+    >
+      {depth.label}
+    </span>
+  );
+}
 
 function DeckPreviewFigure({
   deck,
@@ -301,6 +313,7 @@ export function DeckLibraryFeaturedCard({
             <Badge variant="metadata" size="sm" className="bg-white/78 text-primary/76 shadow-soft">
               {eyebrow}
             </Badge>
+            <DeckDepthBadge deck={deck} />
             <Badge variant={statusVariant} size="sm" className="bg-white/76 text-card-foreground/84 shadow-soft">
               {statusLabel}
             </Badge>
@@ -361,7 +374,10 @@ export function DeckLibraryCompanionCard({
         <div className="flex h-full flex-col justify-between gap-5">
           <div className="flex items-start justify-between gap-4">
             <div className="stack-block">
-              <p className="type-micro uppercase text-primary/74">{eyebrow}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="type-micro uppercase text-primary/74">{eyebrow}</p>
+                <DeckDepthBadge deck={deck} />
+              </div>
               <div className="stack-block">
                 <h3 className="type-h3 text-card-foreground">{deck.title}</h3>
                 <p className="type-caption text-muted-foreground">{spotlight}</p>
@@ -410,7 +426,10 @@ export function DeckLibraryShelfCard({
         <div className="flex h-full flex-col justify-between gap-5">
           <div className="flex items-start justify-between gap-4">
             <div className="stack-block">
-              <p className="type-micro uppercase text-primary/72">{eyebrow}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="type-micro uppercase text-primary/72">{eyebrow}</p>
+                <DeckDepthBadge deck={deck} />
+              </div>
               <div className="stack-block">
                 <h3 className="type-section-title text-card-foreground">{deck.title}</h3>
                 <p className="type-caption text-muted-foreground">{spotlight}</p>

@@ -388,6 +388,30 @@ export function JournalTranslationStatusChip({
   );
 }
 
+export function JournalTranslationReadyAtLine({
+  className,
+  presentation,
+}: {
+  className?: string;
+  presentation: JournalTranslationStatusPresentation;
+}) {
+  if (presentation.state !== 'ready' || !presentation.readyAt) return null;
+
+  const toneClasses = getTranslationStatusToneClasses(presentation.tone);
+
+  return (
+    <span
+      className={cn(
+        'text-[10px] font-medium tabular-nums tracking-wide',
+        toneClasses.eyebrow,
+        className,
+      )}
+    >
+      {formatTranslationReadyAt(presentation.readyAt)} 整理好
+    </span>
+  );
+}
+
 export function JournalTranslationStatusCard({
   presentation,
 }: {
@@ -636,6 +660,7 @@ export function JournalLibraryCard({
             <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/80">{visibilityLabel}</p>
             {translationStatus ? <JournalTranslationStatusChip presentation={translationStatus} /> : null}
           </div>
+          {translationStatus ? <JournalTranslationReadyAtLine presentation={translationStatus} /> : null}
           <h3 className="font-art text-[1.45rem] leading-tight text-card-foreground">
             {deriveJournalTitle(journal)}
           </h3>
