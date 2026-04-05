@@ -66,8 +66,8 @@ INITIAL_CARDS = [
     },
     {
         "category": CardCategory.DAILY_VIBE,
-        "title": "如果今天可以重來",
-        "description": "回頭看看今天，也讓彼此更理解當下的需要。",
+        "title": "想重寫的一刻",
+        "description": "回頭看看今天卡住的那一刻，也讓彼此更理解當下的需要。",
         "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？",
         "difficulty_level": 3,
         "depth_level": 3

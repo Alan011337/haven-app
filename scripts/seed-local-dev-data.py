@@ -150,7 +150,7 @@ SEED_CARDS = [
     {"category": CardCategory.DAILY_VIBE, "title": "餐桌話題", "description": "關於味覺的記憶。", "question": "如果今晚我們可以瞬間移動去吃任何餐廳，你想吃什麼？", "difficulty_level": 1, "depth_level": 1},
     {"category": CardCategory.DAILY_VIBE, "title": "睡前感恩", "description": "帶著正念結束這一天。", "question": "請說出一個你今天想感謝對方的地方。", "difficulty_level": 2, "depth_level": 2},
     {"category": CardCategory.DAILY_VIBE, "title": "收心儀式", "description": "在一天結束前，留下更靠近彼此的時刻。", "question": "今晚睡前，你想跟我一起做的「收心儀式」是什麼？（例：擁抱、分享三件事、一起規劃明天）", "difficulty_level": 3, "depth_level": 3},
-    {"category": CardCategory.DAILY_VIBE, "title": "如果今天可以重來", "description": "回頭看看今天，也讓彼此更理解當下的需要。", "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？", "difficulty_level": 3, "depth_level": 3},
+    {"category": CardCategory.DAILY_VIBE, "title": "想重寫的一刻", "description": "回頭看看今天卡住的那一刻，也讓彼此更理解當下的需要。", "question": "如果今天可以重來一次，你最想改變的 1 件事是什麼？我能怎麼協助？", "difficulty_level": 3, "depth_level": 3},
     {"category": CardCategory.DAILY_VIBE, "title": "三個詞的今天", "description": "先幫今天的心情取名字。", "question": "如果用三個詞形容你今天的心情，你會選哪三個？", "difficulty_level": 2, "depth_level": 2},
     {"category": CardCategory.DAILY_VIBE, "title": "想一起分擔的小事", "description": "把負擔說小一點，也更容易被接住。", "question": "你今天最想我幫你分擔的一件小事是什麼？", "difficulty_level": 2, "depth_level": 2},
     {"category": CardCategory.DAILY_VIBE, "title": "今晚最想一起放鬆", "description": "從今天的疲累裡，找一個能一起靠近的方式。", "question": "今天你覺得最放鬆的活動是什麼？我們可以一起做嗎？", "difficulty_level": 2, "depth_level": 2},
