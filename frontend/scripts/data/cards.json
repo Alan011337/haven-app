@@ -1313,13 +1313,13 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "誰當壞人",
-    "description": "對外應對。",
-    "question": "如果遇到推銷員或是服務態度很差的店員，通常我們誰比較會去當「黑臉」拒絕或反應？",
+    "description": "先講好對外應對的分工，臨場才不會一起卡住。",
+    "question": "遇到推銷或不合理服務時，我們通常誰來當黑臉比較順？另一個人要怎麼接手，才算有默契的分工？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "角色",
-      "對外",
+      "對外應對",
+      "分工",
       "默契"
     ],
     "is_ai_generated": true,
@@ -1381,14 +1381,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "社交擋箭牌",
-    "description": "默契暗號。",
-    "question": "如果在聚會上我們其中一人想回家了，我們有沒有一個「暗號」可以暗示對方快點撤退？",
+    "description": "先約好聚會撤退的暗號和時間判斷，社交行程才不會硬撐。",
+    "question": "如果聚會中有人先想回家，我們要不要約一個暗號和撤退時間？怎樣的分工最不讓人尷尬？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "暗號",
       "社交",
-      "默契"
+      "暗號",
+      "行程"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1483,14 +1483,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "道歉SOP",
-    "description": "和解機制。",
-    "question": "如果我們冷戰了，打破僵局的「SOP」通常是什麼？是誰先開口？這樣公平嗎？",
+    "description": "和好不靠猜，先對齊冷戰後誰先開口、多久後再談的時間規則。",
+    "question": "如果我們冷戰了，打破僵局的流程最好是什麼？誰先開口、隔多久再談，對你來說才算公平？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
-      "冷戰",
       "和解",
-      "模式"
+      "流程",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1534,14 +1534,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "家庭CEO",
-    "description": "行政管理。",
-    "question": "我們家誰比較像「CEO」（做大方向決定），誰比較像「營運長」（執行細節）？",
+    "description": "家裡的大事決策和日常分工怎麼分，會直接影響生活是否順手。",
+    "question": "我們家誰比較適合做大方向決策，誰比較擅長把生活分工和細節安排落地？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "分工",
-      "角色",
-      "管理"
+      "決策",
+      "生活"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1568,14 +1568,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "週末模式",
-    "description": "休閒同步。",
-    "question": "週末時，你是「睡到自然醒派」還是「早起出門玩樂派」？我們怎麼平衡？",
+    "description": "先對齊週末行程和休息時間，比臨時拉扯更不容易掃興。",
+    "question": "週末你偏向睡到自然醒還是早起出門？如果要一起過，我們理想的行程和留白時間怎麼分？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "作息",
       "週末",
-      "協調"
+      "行程",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1585,14 +1585,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "密碼共享",
-    "description": "數位隱私。",
-    "question": "你知道我的手機密碼嗎？你覺得伴侶之間應該互相知道密碼嗎？",
+    "description": "方便和隱私之間怎麼拿捏，本質上是生活權限的界線決策。",
+    "question": "你知道我的手機密碼嗎？在日常生活裡，伴侶互相知道密碼對你比較像方便、安心，還是界線壓力？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
       "隱私",
-      "信任",
-      "界線"
+      "權限",
+      "生活"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1653,14 +1653,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "記帳習慣",
-    "description": "財務管理。",
-    "question": "我們需要共同記帳嗎？還是只要大概知道錢花去哪裡就好？",
+    "description": "共同花費要不要記，是預算透明還是生活彈性，最好先講清楚。",
+    "question": "我們平常需要一起記帳嗎？哪些共同花費該進帳單，哪些只要大概知道預算就好？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
-      "金錢",
-      "習慣",
-      "共識"
+      "預算",
+      "記帳",
+      "共同花費"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -8266,13 +8266,13 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "記帳習慣",
-    "description": "財務管理。",
-    "question": "如果是共同花費，我們應該要「每一筆都記」還是「大筆再記就好」？",
+    "description": "每筆都記還是大筆再記，本質上是共同預算和帳單管理的規則。",
+    "question": "如果是共同花費，我們的帳單要每筆都記，還是大筆再記就好？你心裡比較安心的預算透明度是什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "金錢",
-      "記帳",
+      "預算",
+      "帳單",
       "規則"
     ],
     "is_ai_generated": true,
@@ -21201,14 +21201,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "記帳習慣",
-    "description": "金錢管理。",
-    "question": "關於共同花費，你傾向「當下結清/AA制」還是「一人付一次、大概就好」？",
+    "description": "AA、輪流請，還是月底再算，反映的是共同預算和帳單節奏。",
+    "question": "關於共同花費，你傾向當下結清、輪流請，還是月底一起對帳單？哪一種最不容易讓人心裡有帳？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
-      "金錢",
-      "規則",
-      "價值觀"
+      "預算",
+      "對帳",
+      "金錢"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -21252,14 +21252,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "社交擋箭牌",
-    "description": "對外默契。",
-    "question": "如果不喜歡某個聚會想提早走，我們可以設定什麼「暗號」嗎？",
+    "description": "對外社交時怎麼互相救援、怎麼收這個行程，最能看出彼此的界線默契。",
+    "question": "如果我不喜歡某個聚會想提早走，我們要不要約一個暗號？你比較希望我直接說，還是由你幫我收這個社交場合？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "社交",
-      "默契",
-      "互助"
+      "救援",
+      "界線"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -21558,14 +21558,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "密碼共享",
-    "description": "隱私。",
-    "question": "我們是否知道彼此的手機密碼？這是為了方便還是信任？",
+    "description": "知道密碼不等於沒有界線，先說清楚生活便利和隱私權限。",
+    "question": "我們是否知道彼此的手機密碼？如果知道，哪些情境算生活便利，哪些情境仍然需要先問？",
     "difficulty_level": 3,
     "depth_level": 3,
     "tags": [
       "隱私",
-      "信任",
-      "權限"
+      "界線",
+      "便利"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
