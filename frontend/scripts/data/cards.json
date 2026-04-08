@@ -1364,14 +1364,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "導航風格",
-    "description": "解決問題。",
-    "question": "如果開車迷路了，你是傾向「相信直覺繼續開」還是「馬上停下來看地圖/問路」？",
+    "description": "開車時誰看導航、誰做路線決策，會直接影響旅遊行程的壓力感。",
+    "question": "如果開車迷路或導航開始亂報，我們通常誰負責看路線、誰負責開車決策？你比較希望先停下來重整，還是邊開邊修正？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "性格",
-      "問題解決",
-      "反應"
+      "導航",
+      "路線",
+      "決策"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -1687,14 +1687,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "副駕的任務",
-    "description": "互相支援。",
-    "question": "作為你的「人生副駕駛」，你覺得我目前做得最好的一點是什麼？哪一點可以改進？",
+    "description": "真正的副駕不是稱號，是旅途裡看路、顧時間、接手小決策的分工。",
+    "question": "如果一起開車或規劃旅遊，你心中的副駕任務應該包含什麼？看導航、提醒時間、顧票券，還是幫忙做小決策？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
-      "回饋",
-      "夥伴",
-      "關係"
+      "副駕",
+      "分工",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -4747,14 +4747,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "危機處理",
-    "description": "突發狀況。",
-    "question": "如果旅行中遇到突發狀況（例如沒趕上飛機），你的第一反應通常是「慌張生氣」還是「冷靜解決」？",
+    "description": "旅遊出狀況時，先分清誰穩住情緒、誰處理行程變動，事情會快很多。",
+    "question": "如果旅遊中臨時沒趕上飛機或車次，我們通常誰先處理改票、誰先安排行程備案？你希望當下怎麼分工？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
       "危機",
-      "EQ",
-      "反應"
+      "行程",
+      "分工"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -8130,14 +8130,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "副駕禮儀",
-    "description": "行車默契。",
-    "question": "開車/騎車時，你希望副駕/後座的人做什麼？（幫忙看路、餵食、聊天、還是安靜睡覺？）",
+    "description": "副駕不是乘客而已，先講好行程中的支援分工，開車才不會互相嫌。",
+    "question": "開車或騎車出門時，你希望副駕幫忙哪一種分工？看導航、顧時間、準備食物，還是穩定氣氛最有幫助？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "交通",
-      "習慣",
-      "禮儀"
+      "副駕",
+      "分工",
+      "行程"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -8147,14 +8147,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "危機處理",
-    "description": "應變能力。",
-    "question": "如果我們在國外旅行護照不見了，你第一反應會是慌張生氣，還是冷靜解決？",
+    "description": "證件或重要物品出問題時，能不能快速做決策，比責怪誰更重要。",
+    "question": "如果在國外旅遊時護照不見了，你希望我們誰先聯絡單位、誰先整理資料？怎樣的決策分工會讓你比較安心？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
       "危機",
-      "性格",
-      "合作"
+      "證件",
+      "決策"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -8283,14 +8283,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "迷路",
-    "description": "問題解決。",
-    "question": "如果我們迷路了導航又壞掉，你會選擇「問路」還是「憑感覺繼續開」？",
+    "description": "導航失靈時怎麼分工找路，最能看出旅遊現場的決策默契。",
+    "question": "如果導航壞掉又迷路了，我們要怎麼分工？誰負責問路、誰負責看方向，還是先停下來花一點時間重整行程？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
       "迷路",
-      "性格",
-      "反應"
+      "分工",
+      "決策"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -11819,14 +11819,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "兩天一夜誰負責什麼",
-    "description": "規劃一趟小旅行，你想負責哪些、我負責哪些？",
-    "question": "如果要規劃一趟兩天一夜的小旅行，你希望你負責什麼、我負責什麼？",
+    "description": "短旅遊最容易卡在誰訂房、誰排行程、誰顧時間，先分工就省掉很多摩擦。",
+    "question": "如果要規劃一趟兩天一夜的小旅行，你希望誰負責訂房、誰負責交通、誰負責行程節奏？有沒有哪一項分工你最不想碰？",
     "difficulty_level": 3,
     "depth_level": 2,
     "tags": [
-      "旅行",
+      "旅遊",
       "分工",
-      "規劃"
+      "行程"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:00:00"
@@ -21354,14 +21354,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "危機處理",
-    "description": "應變。",
-    "question": "如果旅行時護照不見了或錢被偷了，我們之中誰比較適合負責冷靜處理？",
+    "description": "突發事件來了，先講好誰扛決策、誰顧現場，旅遊危機會少很多混亂。",
+    "question": "如果旅行時護照不見了或錢被偷了，我們之中誰比較適合主導決策？另一個人要負責什麼，才算有效的分工？",
     "difficulty_level": 2,
     "depth_level": 2,
     "tags": [
       "危機",
       "角色",
-      "信任"
+      "分工"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
