@@ -1602,14 +1602,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "打包哲學",
-    "description": "旅行準備。",
-    "question": "旅行打包行李時，你是「列清單提早收好」還是「出發前一晚隨便塞」？",
+    "description": "旅遊出發前要不要列行李清單、預留多少時間，最能看出準備節奏。",
+    "question": "旅遊打包時，你比較像會先列行李清單、提早留時間的人，還是出發前一晚才開始決定要帶什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "習慣",
-      "性格",
-      "旅行"
+      "旅遊",
+      "行李清單",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T13:14:00Z"
@@ -4730,14 +4730,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "打包哲學",
-    "description": "準備習慣。",
-    "question": "出門旅行你會「帶齊所有可能用到的東西」還是「越少越好，缺了再買」？",
+    "description": "帶滿安全感還是精簡到剛好，本質上是旅遊準備怎麼做取捨。",
+    "question": "如果是一起旅遊，你傾向把可能用到的東西都帶上，還是先精簡行李、缺了再買？這種準備決策你怎麼做？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "習慣",
-      "收拾",
-      "差異"
+      "旅遊",
+      "取捨",
+      "決策"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -8300,14 +8300,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "打包風格",
-    "description": "準備工作。",
-    "question": "出門旅行你會「提前一週打包」還是「出發前一晚才塞行李」？",
+    "description": "誰先收、誰補漏、誰顧出發時間，會直接影響旅遊前的壓力值。",
+    "question": "出門旅遊前，你通常是提前一週慢慢收，還是最後一晚集中處理？如果一起出發，我們要怎麼分工才不會趕成一團？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "習慣",
-      "互補"
+      "旅遊",
+      "分工",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T14:00:00Z"
@@ -13179,14 +13179,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "旅行風格",
-    "description": "出遊。",
-    "question": "旅行時你是「按表操課派」還是「隨性流浪派」？如果我們風格不同，怎麼折衷？",
+    "description": "旅遊行程要排多滿、留多少空白，最能看出兩個人的出遊合作感。",
+    "question": "旅行時，你比較想把行程排滿，還是保留很多空白時間？如果我們風格不同，第一個要先對齊的決策是什麼？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "習慣",
-      "磨合"
+      "旅遊",
+      "行程",
+      "留白"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T15:00:00Z"
@@ -21167,14 +21167,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "旅行風格",
-    "description": "規劃習慣。",
-    "question": "旅行時你是「按表操課派」還是「隨遇而安派」？我們該怎麼協調？",
+    "description": "臨時改點、下雨塞車時，能不能接受行程變動，決定了旅遊中的摩擦大小。",
+    "question": "如果旅遊中臨時要改行程，你比較能接受隨機應變，還是希望照原本規劃走？我們怎樣做決策你會比較安心？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "習慣",
-      "協調"
+      "旅遊",
+      "彈性",
+      "決策"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -21405,14 +21405,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "打包風格",
-    "description": "準備。",
-    "question": "出門旅行前，你是「一週前就整理好」還是「出發前一晚才塞行李」？",
+    "description": "打包不只是個人習慣，也關係到兩個人的出發時間和準備分工。",
+    "question": "出門旅遊前，你習慣先整理好再睡，還是最後一刻才塞行李？如果另一個人節奏不同，怎樣的時間安排最不容易吵架？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "習慣",
-      "互補",
-      "趣事"
+      "旅遊",
+      "分工",
+      "準備"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T16:00:00Z"
@@ -24584,14 +24584,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "旅行風格",
-    "description": "規劃。",
-    "question": "出國旅行時，你是「按表操課派」還是「隨遇而安派」？我們怎麼平衡？",
+    "description": "出國前要做多少功課、抓多細的時間安排，是很實際的旅遊合作問題。",
+    "question": "出國旅遊前，你希望行程和時間安排做到多細？哪些地方一定要先決定，哪些可以到現場再調整？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "習慣",
-      "衝突"
+      "旅遊",
+      "規劃",
+      "時間"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14T12:00:00Z"
@@ -26213,13 +26213,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "旅行偏好",
-    "description": "了解彼此的旅行風格，規劃更開心的旅程。",
-    "question": "你喜歡怎麼樣的旅行？悠閒度假還是冒險探索？",
+    "description": "旅行偏好不是抽象喜好，而是行程排序和旅遊決策的優先順序。",
+    "question": "如果一次旅遊只能保住兩個重點，你會優先選放鬆、吃好、看景點、購物，還是冒險體驗？這會怎麼影響我們排行程？",
     "difficulty_level": 1,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "偏好"
+      "旅遊",
+      "優先順序",
+      "決策"
     ],
     "is_ai_generated": false,
     "created_at": "2025-02-14 12:00:00"
@@ -29606,14 +29607,14 @@
     "deck_id": 7,
     "category": "CO_PILOT",
     "title": "旅行節奏",
-    "description": "旅行最容易吵架的地方，往往是節奏不同。",
-    "question": "旅行時你偏好怎樣的節奏（排滿、半排、隨性）？你最不能接受的旅行習慣是什麼？",
+    "description": "一天走幾個點、幾點出門、要不要午休，都是很現實的時間安排。",
+    "question": "旅行時你理想的一天節奏是什麼？早起多跑點、下午留休息時間，還是慢慢走一兩個行程就好？哪種時間安排最容易讓你煩躁？",
     "difficulty_level": 2,
     "depth_level": 1,
     "tags": [
-      "旅行",
-      "節奏",
-      "習慣"
+      "行程",
+      "時間",
+      "節奏"
     ],
     "is_ai_generated": true,
     "created_at": "2026-02-14 00:30:02"
