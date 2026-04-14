@@ -477,10 +477,15 @@ export interface WeeklyReportPublic {
   period_end: string;
   daily_sync_completion_rate: number;
   daily_sync_days_filled: number;
+  partner_daily_sync_days_filled: number;
+  pair_sync_overlap_days: number;
+  pair_sync_alignment_rate: number | null;
   appreciation_count: number;
   insight: string | null;
 }
 
-export const fetchWeeklyReport = async (): Promise<WeeklyReportPublic> => {
-  return apiGet<WeeklyReportPublic>('/reports/weekly');
+export const fetchWeeklyReport = async (
+  config?: AxiosRequestConfig,
+): Promise<WeeklyReportPublic> => {
+  return apiGet<WeeklyReportPublic>('/reports/weekly', config);
 };

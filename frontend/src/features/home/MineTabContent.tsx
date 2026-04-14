@@ -10,6 +10,7 @@ import DateSuggestionCard from '@/components/features/DateSuggestionCard';
 import MediationEntryBanner from '@/components/features/MediationEntryBanner';
 import AppreciationCard from '@/components/features/AppreciationCard';
 import LoveLanguageWeeklyCard from '@/components/features/LoveLanguageWeeklyCard';
+import WeeklyPulseCard from '@/components/features/WeeklyPulseCard';
 import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import {
@@ -23,7 +24,10 @@ import {
   TimelineDateRail,
 } from '@/features/home/HomePrimitives';
 import { resolveHomeTimelineStage } from '@/lib/home-timeline-state';
+import { HOME_OPTIONAL_DATA_TIMEOUT_MS } from '@/lib/home-performance';
 import { cn } from '@/lib/utils';
+import { fetchWeeklyReport, type WeeklyReportPublic } from '@/services/api-client';
+import { logClientError } from '@/lib/safe-error-log';
 import { Journal } from '@/types';
 
 interface MineTabContentProps {
@@ -35,6 +39,7 @@ interface MineTabContentProps {
     score: number;
     streakDays: number;
     hasNewPartnerContent: boolean;
+    hasPartnerContext: boolean;
   };
   onJournalDeleted?: () => void;
   onRetryTimeline: () => void;
@@ -67,6 +72,8 @@ export default function MineTabContent({
   const [dateSuggestionReady, setDateSuggestionReady] = useState(false);
   const [appreciationReady, setAppreciationReady] = useState(false);
   const [weeklyTaskReady, setWeeklyTaskReady] = useState(false);
+  const [weeklyPulseReady, setWeeklyPulseReady] = useState(false);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReportPublic | null>(null);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
@@ -81,13 +88,32 @@ export default function MineTabContent({
     const dateSuggestionTimer = window.setTimeout(() => setDateSuggestionReady(true), 1_000);
     const appreciationTimer = window.setTimeout(() => setAppreciationReady(true), 2_250);
     const weeklyTaskTimer = window.setTimeout(() => setWeeklyTaskReady(true), 3_500);
+    const weeklyPulseTimer = window.setTimeout(() => setWeeklyPulseReady(true), 4_750);
 
     return () => {
       window.clearTimeout(dateSuggestionTimer);
       window.clearTimeout(appreciationTimer);
       window.clearTimeout(weeklyTaskTimer);
+      window.clearTimeout(weeklyPulseTimer);
     };
   }, [secondaryContentReady]);
+
+  // Fetch weekly report after deferred timer fires — graceful failure (card simply won't render).
+  useEffect(() => {
+    if (!weeklyPulseReady) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetchWeeklyReport({ timeout: HOME_OPTIONAL_DATA_TIMEOUT_MS });
+        if (!cancelled) setWeeklyReport(r);
+      } catch (e) {
+        logClientError('home-weekly-pulse-fetch-failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [weeklyPulseReady]);
+
+  const showWeeklyPulse = secondaryContentReady && weeklyPulseReady;
 
   const timelineStage = resolveHomeTimelineStage({
     mounted,
@@ -214,6 +240,19 @@ export default function MineTabContent({
           </HomeMosaicRail>
         )}
       </HomeSectionFrame>
+
+      {showWeeklyPulse && weeklyReport ? (
+        <HomeSectionFrame
+          eyebrow="本週脈搏"
+          title="這七天的節奏，你感覺到了嗎？"
+        >
+          <WeeklyPulseCard
+            report={weeklyReport}
+            streakDays={relationshipPulse.streakDays}
+            hasPartnerContext={relationshipPulse.hasPartnerContext}
+          />
+        </HomeSectionFrame>
+      ) : null}
 
       <EditorialTimelineColumn
         eyebrow="回憶廊道"

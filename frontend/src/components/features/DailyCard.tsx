@@ -4,7 +4,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { isAxiosError } from 'axios';
-import { Loader2, Send, Lock, CheckCircle2, Sparkles, Heart, Quote } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { BookOpen, HeartHandshake, Loader2, Send, Lock, CheckCircle2, Sparkles, Heart, Quote } from 'lucide-react';
 import { trackRitualDraw, trackRitualRespond, trackRitualUnlock } from '@/lib/cuj-events';
 import {
   trackCardAnswerSubmitted,
@@ -35,6 +36,9 @@ import {
 // 小工具：取得名字首字
 const getInitial = (name?: string) => name ? name.charAt(0).toUpperCase() : "P";
 
+// Same key used by JournalInput — Journal studio picks up seed automatically
+const JOURNAL_HOME_SEED_STORAGE_KEY = 'haven_journal_home_seed_v1';
+
 type SocketEvent = {
   event?: string;
   session_id?: string;
@@ -48,6 +52,7 @@ const DailyCard = () => {
   const [answer, setAnswer] = useState('');
   const [selectedDepth, setSelectedDepth] = useState<DepthLevel | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const { showToast } = useToast();
@@ -512,6 +517,89 @@ const DailyCard = () => {
           >
             {submitting ? <Loader2 className="animate-spin"/> : <Send size={18} />}
             {submitting ? '傳送中...' : '送出並解鎖'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Solo completion: show reflection instead of locked envelope ──
+  if (status.state === 'WAITING_PARTNER' && isSolo) {
+    const seedText = status.card?.question
+      ? `今天的卡片：「${status.card.question}」\n我的回答：${status.my_content || ''}`
+      : '';
+
+    const handleJournalHandoff = () => {
+      if (seedText) {
+        try {
+          sessionStorage.setItem(JOURNAL_HOME_SEED_STORAGE_KEY, seedText);
+        } catch { /* storage full — continue without seed */ }
+      }
+      router.push('/journal?compose=1');
+    };
+
+    return (
+      <div className="bg-card/95 backdrop-blur-xl rounded-card shadow-soft border border-foreground/10 p-10 max-w-md mx-auto text-center relative overflow-hidden animate-in fade-in duration-500">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-accent/8 rounded-full blur-hero-orb -z-10 animate-breathe" aria-hidden />
+        <div className="mb-6">
+          <CheckCircle2 className="w-10 h-10 text-accent mx-auto" aria-hidden />
+        </div>
+        <span className="text-[10px] font-art font-bold tracking-[0.2em] text-accent uppercase mb-2 block">
+          今日完成
+        </span>
+        <h3 className="text-xl font-art font-bold text-foreground mb-2">
+          你剛剛靠近了自己一點
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6 font-art italic leading-relaxed px-4">
+          &quot;{status.card?.question}&quot;
+        </p>
+
+        {/* Show user's own answer */}
+        <div className="bg-muted/30 p-5 rounded-2xl border border-border/50 text-left mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] text-primary font-bold">我</div>
+            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">我的回答</span>
+          </div>
+          <p className="text-foreground text-sm leading-relaxed">
+            {status.my_content}
+          </p>
+        </div>
+
+        {/* Journal handoff CTA */}
+        <button
+          type="button"
+          onClick={handleJournalHandoff}
+          className="w-full py-4 rounded-xl font-bold transition-all duration-haven ease-haven flex items-center justify-center gap-2 active:scale-[0.98] bg-gradient-to-b from-primary to-primary/90 text-primary-foreground border-t border-t-white/30 shadow-satin-button hover:shadow-lift hover:-translate-y-0.5"
+        >
+          <BookOpen size={18} />
+          把這段帶進 Journal，繼續寫
+        </button>
+
+        {/* Paired blind-box preview — show what the partner experience unlocks */}
+        <div className="mt-6 pt-6 border-t border-border/30">
+          <p className="text-[10px] font-art font-bold tracking-[0.18em] text-primary/60 uppercase mb-3">
+            如果伴侶也回答了同一個問題
+          </p>
+          <div className="flex gap-3 mb-4">
+            <div className="flex-1 rounded-xl bg-primary/8 px-3 py-2.5 text-left">
+              <span className="text-[10px] text-primary/60 font-medium block mb-1">我</span>
+              <p className="text-xs text-foreground/80 line-clamp-2">{status.my_content}</p>
+            </div>
+            <div className="flex-1 rounded-xl bg-muted/40 px-3 py-2.5 text-left relative overflow-hidden">
+              <span className="text-[10px] text-muted-foreground/50 font-medium block mb-1">伴侶</span>
+              <p className="text-xs text-muted-foreground/30 blur-[4px] select-none" aria-hidden>等待對方回答後解鎖</p>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Lock size={14} className="text-muted-foreground/40" aria-hidden />
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/settings')}
+            className="w-full py-3 rounded-xl font-medium transition-all duration-haven ease-haven flex items-center justify-center gap-2 active:scale-[0.98] border border-primary/20 bg-primary/6 text-primary hover:bg-primary/10 hover:-translate-y-0.5 hover:shadow-soft text-sm"
+          >
+            <HeartHandshake size={16} />
+            邀請伴侶，解鎖盲盒對話
           </button>
         </div>
       </div>

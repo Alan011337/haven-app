@@ -108,6 +108,7 @@ function HomeContent() {
                   score: savingsScore,
                   streakDays: gamificationSummary.streak_days,
                   hasNewPartnerContent,
+                  hasPartnerContext: gamificationSummary.has_partner_context,
                 }}
                 onJournalDeleted={loadData}
                 onRetryTimeline={loadData}

@@ -33,6 +33,18 @@ export default function PartnerSettings() {
   const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
 
+  // --- 0. Auto-fill invite code from sessionStorage (invited partner flow) ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const pairCode = sessionStorage.getItem('haven_pair_code_prefill');
+      if (pairCode) {
+        setInputCode(pairCode.toUpperCase().slice(0, 6));
+        sessionStorage.removeItem('haven_pair_code_prefill');
+      }
+    } catch { /* storage unavailable — partner can type code manually */ }
+  }, []);
+
   // --- 1. 取得使用者資料 ---
   const fetchUser = useCallback(async () => {
     try {
@@ -179,16 +191,16 @@ export default function PartnerSettings() {
                   </div>
                 </div>
 
-                {/* 按鈕：跳轉到伴侶日記頁面 */}
+                {/* 按鈕：跳轉到第一個共同儀式 */}
                 <div className="pt-8">
                     <Button
                         size="lg"
                         variant="primary"
                         rightIcon={<ArrowRight className="w-5 h-5" aria-hidden />}
-                        onClick={() => router.push('/?tab=partner')}
+                        onClick={() => router.push('/?tab=card')}
                         className="px-10 py-4"
                     >
-                        去看看對方的日記
+                        開始你們的第一個共同儀式
                     </Button>
                 </div>
               </div>

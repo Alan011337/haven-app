@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, Clock3, Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
@@ -45,9 +45,24 @@ type TimelineMemoryModel = {
 
 const MEMORY_DAY_TIMELINE_LIMIT = 100;
 const MEMORY_DAY_STALE_TIME_MS = 60_000;
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseMemoryDate(dateString: string) {
+  if (DATE_ONLY_PATTERN.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  return new Date(dateString);
+}
 
 function formatDateLong(dateString: string) {
-  return new Date(dateString).toLocaleDateString('zh-TW', {
+  const parsedDate = parseMemoryDate(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateString;
+  }
+
+  return parsedDate.toLocaleDateString('zh-TW', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -56,14 +71,24 @@ function formatDateLong(dateString: string) {
 }
 
 function formatDateShort(dateString: string) {
-  return new Date(dateString).toLocaleDateString('zh-TW', {
+  const parsedDate = parseMemoryDate(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateString;
+  }
+
+  return parsedDate.toLocaleDateString('zh-TW', {
     month: 'long',
     day: 'numeric',
   });
 }
 
 function formatGeneratedLabel(dateString: string) {
-  return new Date(dateString).toLocaleDateString('zh-TW', {
+  const parsedDate = parseMemoryDate(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateString;
+  }
+
+  return parsedDate.toLocaleDateString('zh-TW', {
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
@@ -244,11 +269,9 @@ function renderSourceState(
 }
 
 export default function MemoryPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [manualSelectedCalendarDate, setManualSelectedCalendarDate] = useState<string | null>(() => {
-    const initialDate = searchParams.get('date');
-    return initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : null;
-  });
   const {
     view,
     setView,
@@ -282,9 +305,10 @@ export default function MemoryPageContent() {
   const focusKind = searchParams.get('kind');
   const focusId = searchParams.get('id');
   const deepLinkedCalendarDate = useMemo(
-    () => (deepLinkDate && /^\d{4}-\d{2}-\d{2}$/.test(deepLinkDate) ? deepLinkDate : null),
+    () => (deepLinkDate && DATE_ONLY_PATTERN.test(deepLinkDate) ? deepLinkDate : null),
     [deepLinkDate],
   );
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(deepLinkedCalendarDate);
   const focusKey = useMemo(
     () => (deepLinkDate && focusKind && focusId ? `${deepLinkDate}:${focusKind}:${focusId}` : null),
     [deepLinkDate, focusId, focusKind],
@@ -294,7 +318,26 @@ export default function MemoryPageContent() {
       setView('calendar');
     }
   }, [deepLinkedCalendarDate, setView]);
-  const selectedCalendarDate = deepLinkedCalendarDate ?? manualSelectedCalendarDate;
+  useEffect(() => {
+    setSelectedCalendarDate(deepLinkedCalendarDate);
+  }, [deepLinkedCalendarDate]);
+
+  const handleSelectCalendarDate = useCallback(
+    (date: string) => {
+      setSelectedCalendarDate(date);
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('date', date);
+      params.delete('kind');
+      params.delete('id');
+
+      const nextQuery = params.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
+  );
 
   const isFocusTarget = useCallback(
     (item: TimelineItem): boolean => {
@@ -802,7 +845,7 @@ export default function MemoryPageContent() {
                   photoDays: calendarPhotoDays,
                 }}
                 selectedDate={activeSelectedCalendarDate}
-                onSelectDate={setManualSelectedCalendarDate}
+                onSelectDate={handleSelectCalendarDate}
                 onPrevMonth={prevMonth}
                 onNextMonth={nextMonth}
               />

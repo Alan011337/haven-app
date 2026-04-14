@@ -1,6 +1,7 @@
 'use client';
 
-import { BookHeart, HeartHandshake, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { BookHeart, HeartHandshake, RefreshCw, Sparkles } from 'lucide-react';
 import PartnerJournalCard from '@/components/features/PartnerJournalCard';
 import Skeleton from '@/components/ui/Skeleton';
 import PartnerSafetyBanner from '@/components/features/PartnerSafetyBanner';
@@ -117,12 +118,26 @@ export default function PartnerTabContent({
             />
           </div>
         ) : partnerJournals.length === 0 ? (
-          <div className="pl-12">
+          <div className="pl-12 space-y-6">
             <EditorialEmptyState
               icon={BookHeart}
               title="今天還沒有新的來信。"
               description="伴侶寫下日記後，這裡會安靜地亮起來。"
             />
+            <div className="rounded-[2rem] border border-white/50 bg-white/68 px-5 py-4 shadow-soft backdrop-blur-xl">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm leading-7 text-muted-foreground">
+                  等待來信的同時，先一起回答今天的卡片吧。
+                </p>
+                <Link
+                  href="/?tab=card"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-white/58 bg-white/82 px-5 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                >
+                  <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+                  一起回答今天的卡片
+                </Link>
+              </div>
+            </div>
           </div>
         ) : (
           partnerJournals.map((journal, idx) => {

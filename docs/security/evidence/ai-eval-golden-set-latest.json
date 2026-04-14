@@ -1,10 +1,10 @@
 {
   "artifact_kind": "ai-eval-golden-set-snapshot",
   "schema_version": "1.0.0",
-  "generated_at": "2026-03-23T12:11:24.882579Z",
+  "generated_at": "2026-04-14T00:02:26.322677Z",
   "generated_by": "backend/scripts/run_ai_eval_golden_set_snapshot.py",
-  "policy_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmpgb6uqn1b/policy.json",
-  "results_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmpgb6uqn1b/results.json",
+  "policy_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmp9cai4lpt/policy.json",
+  "results_path": "/private/var/folders/c_/n_qjlr4x2494qg3w3hv3xh6w0000gn/T/tmp9cai4lpt/results.json",
   "results_source": "results_file",
   "policy_version": "2026-02-23.v1",
   "evaluation": {

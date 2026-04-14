@@ -52,6 +52,12 @@ export default function LoginPage() {
         const userData = await getCurrentUser({ authCritical: true });
         const referralInviteCode = readReferralInviteCode();
         const postLoginRedirect = referralInviteCode ? '/settings' : '/';
+        // Stash invite code in sessionStorage so PartnerSettings can auto-fill it
+        if (referralInviteCode) {
+          try {
+            sessionStorage.setItem('haven_pair_code_prefill', referralInviteCode);
+          } catch { /* storage unavailable — partner can still type code manually */ }
+        }
         if (referralInviteCode) {
           try {
             await trackReferralSignup({

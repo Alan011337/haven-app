@@ -40,17 +40,17 @@ const STEP_META: Record<
   },
   BIND_PARTNER: {
     icon: HeartHandshake,
-    eyebrow: "Day 2",
-    helper: "連結伴侶之後，首頁、來信與每日儀式才會真的開始成形。",
+    eyebrow: "Day 4",
+    helper: "邀請伴侶加入，首頁、來信與每日儀式才會真的開始成形。",
   },
   CREATE_FIRST_JOURNAL: {
     icon: NotebookPen,
-    eyebrow: "Day 3",
+    eyebrow: "Day 2",
     helper: "寫下第一篇日記，讓 Haven 開始理解你今天真正的狀態。",
   },
   RESPOND_FIRST_CARD: {
     icon: Sparkles,
-    eyebrow: "Day 4",
+    eyebrow: "Day 3",
     helper: "完成第一張卡片，讓日常互動開始帶有一點儀式感。",
   },
   PARTNER_FIRST_JOURNAL: {

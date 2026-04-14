@@ -80,11 +80,7 @@ type ReflectionPrompt = {
   evidenceId?: string;
 };
 
-type AnalysisWeeklyReport = WeeklyReportPublic & {
-  partner_daily_sync_days_filled?: number;
-  pair_sync_overlap_days?: number;
-  pair_sync_alignment_rate?: number | null;
-};
+// WeeklyReportPublic now includes partner/pair fields canonically — no local extension needed.
 
 type AnalysisEvidenceStat = {
   label: string;
@@ -383,9 +379,9 @@ export default function AnalysisContent() {
   const dailySyncQuery = useDailySyncStatus();
   const appreciationHistoryQuery = useHomeAppreciationHistory();
 
-  const weeklyReportQuery = useQuery<AnalysisWeeklyReport>({
+  const weeklyReportQuery = useQuery<WeeklyReportPublic>({
     queryKey: ['analysis', 'weekly-report'],
-    queryFn: async () => fetchWeeklyReport() as Promise<AnalysisWeeklyReport>,
+    queryFn: async () => fetchWeeklyReport(),
     enabled: !!user && !authLoading,
     staleTime: ANALYSIS_STALE_MS,
     retry: false,

@@ -185,22 +185,10 @@ def evaluate_onboarding_quest(
         ),
         _build_step(
             user_id=current_user_id,
-            key="BIND_PARTNER",
-            title="完成伴侶綁定",
-            description="綁定另一半，開啟雙人任務與同步體驗。",
-            quest_day=2,
-            completed=has_partner_context,
-            reason="eligible" if has_partner_context else "partner_not_bound",
-            metadata={
-                "has_partner_context": has_partner_context,
-            },
-        ),
-        _build_step(
-            user_id=current_user_id,
             key="CREATE_FIRST_JOURNAL",
             title="寫下第一篇日記",
             description="完成首篇 journal，建立關係記錄基線。",
-            quest_day=3,
+            quest_day=2,
             completed=user_journal_count >= 1,
             reason="eligible" if user_journal_count >= 1 else "journal_missing",
             metadata={
@@ -213,12 +201,24 @@ def evaluate_onboarding_quest(
             key="RESPOND_FIRST_CARD",
             title="回覆第一張卡片",
             description="完成第一筆卡片回覆，確保儀式流程可用。",
-            quest_day=4,
+            quest_day=3,
             completed=user_card_response_count >= 1,
             reason="eligible" if user_card_response_count >= 1 else "card_response_missing",
             metadata={
                 "user_card_response_count": user_card_response_count,
                 "target": 1,
+            },
+        ),
+        _build_step(
+            user_id=current_user_id,
+            key="BIND_PARTNER",
+            title="完成伴侶綁定",
+            description="綁定另一半，開啟雙人任務與同步體驗。",
+            quest_day=4,
+            completed=has_partner_context,
+            reason="eligible" if has_partner_context else "partner_not_bound",
+            metadata={
+                "has_partner_context": has_partner_context,
             },
         ),
         _build_step(
