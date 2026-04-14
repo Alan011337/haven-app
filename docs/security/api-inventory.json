@@ -112,6 +112,20 @@
       ]
     },
     {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.appreciations.get_appreciation",
+      "method": "GET",
+      "name": "get_appreciation",
+      "owner_team": "backend-platform",
+      "path": "/api/appreciations/{appreciation_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "appreciations"
+      ]
+    },
+    {
       "auth_policy": "public",
       "data_sensitivity": "account_sensitive",
       "endpoint": "app.api.login.logout",
@@ -371,6 +385,20 @@
       "name": "get_deck_history_summary",
       "owner_team": "backend-core",
       "path": "/api/card-decks/history/summary",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "card-decks"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.card_decks.get_deck_history_entry",
+      "method": "GET",
+      "name": "get_deck_history_entry",
+      "owner_team": "backend-core",
+      "path": "/api/card-decks/history/{session_id}",
       "protocol": "http",
       "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
       "tags": [

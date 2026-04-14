@@ -321,25 +321,42 @@ def build_history_entries(
 ) -> list[DeckHistoryEntry]:
     history_entries: list[DeckHistoryEntry] = []
     for item in completed_sessions:
-        card = cards_by_id.get(item.card_id)
-        my_resp = responses_by_key.get((item.id, current_user_id))
-        partner_id = item.partner_id if item.creator_id == current_user_id else item.creator_id
-        partner_resp = responses_by_key.get((item.id, partner_id)) if partner_id else None
-
-        if card and my_resp and partner_resp:
-            history_entries.append(
-                DeckHistoryEntry(
-                    session_id=item.id,
-                    card_title=card.title,
-                    card_question=card.question,
-                    category=item.category,
-                    depth_level=card.depth_level,
-                    my_answer=my_resp.content,
-                    partner_answer=partner_resp.content,
-                    revealed_at=item.created_at,
-                )
-            )
+        history_entry = build_history_entry(
+            completed_session=item,
+            cards_by_id=cards_by_id,
+            responses_by_key=responses_by_key,
+            current_user_id=current_user_id,
+        )
+        if history_entry:
+            history_entries.append(history_entry)
     return history_entries
+
+
+def build_history_entry(
+    *,
+    completed_session: CardSession,
+    cards_by_id: dict[int, Card],
+    responses_by_key: dict[tuple[uuid.UUID, uuid.UUID], CardResponse],
+    current_user_id: uuid.UUID,
+) -> DeckHistoryEntry | None:
+    card = cards_by_id.get(completed_session.card_id)
+    my_resp = responses_by_key.get((completed_session.id, current_user_id))
+    partner_id = completed_session.partner_id if completed_session.creator_id == current_user_id else completed_session.creator_id
+    partner_resp = responses_by_key.get((completed_session.id, partner_id)) if partner_id else None
+
+    if not card or not my_resp or not partner_resp:
+        return None
+
+    return DeckHistoryEntry(
+        session_id=completed_session.id,
+        card_title=card.title,
+        card_question=card.question,
+        category=completed_session.category,
+        depth_level=card.depth_level,
+        my_answer=my_resp.content,
+        partner_answer=partner_resp.content,
+        revealed_at=completed_session.created_at,
+    )
 
 
 def resolve_history_month_bounds(*, now: datetime) -> tuple[datetime, datetime]:

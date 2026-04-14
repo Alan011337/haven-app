@@ -160,6 +160,16 @@ export const fetchDeckHistory = async (query: DeckHistoryQuery = {}): Promise<De
   }
 };
 
+export const fetchDeckHistoryEntry = async (sessionId: string): Promise<DeckHistoryEntry> => {
+  try {
+    const response = await api.get<DeckHistoryEntry>(`/card-decks/history/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    logClientError('fetch-deck-history-entry-failed', error);
+    throw error;
+  }
+};
+
 export const fetchDeckHistorySummary = async (
   query: DeckHistoryQuery = {},
 ): Promise<DeckHistorySummary> => {

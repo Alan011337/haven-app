@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 106,
-  "route_digest": "7f8b06564bdb77a53e392007c36136a9187c768c5735ca75ea031ef2f5368f4f",
+  "route_count": 117,
+  "route_digest": "91be8c2ca5a8b89af1b8e0283720c5d97b81ebabd1dd3ae35bb85ed0a12b1495",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -47,6 +47,11 @@
       "idempotency_policy": "required",
       "method": "POST",
       "path": "/api/appreciations"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/appreciations/{appreciation_id}"
     },
     {
       "idempotency_policy": "exempt",
@@ -142,6 +147,11 @@
       "idempotency_policy": "n/a",
       "method": "GET",
       "path": "/api/card-decks/history/summary"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/card-decks/history/{session_id}"
     },
     {
       "idempotency_policy": "n/a",
@@ -312,6 +322,51 @@
       "idempotency_policy": "required",
       "method": "PUT",
       "path": "/api/love-map/notes/{note_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/suggestions/shared-future"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/shared-future/generate"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/shared-future/generate-story-ritual"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/suggestions/shared-future/refinements"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/shared-future/refinements/{wishlist_item_id}/generate"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/shared-future/refinements/{wishlist_item_id}/generate-cadence"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/{suggestion_id}/accept"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/{suggestion_id}/dismiss"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/system"
     },
     {
       "idempotency_policy": "required",

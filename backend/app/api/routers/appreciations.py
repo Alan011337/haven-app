@@ -58,6 +58,34 @@ def list_appreciations(
     ]
 
 
+@router.get("/{appreciation_id}", response_model=AppreciationPublic)
+def get_appreciation(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    appreciation_id: int,
+) -> AppreciationPublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    row = session.exec(
+        select(Appreciation).where(
+            Appreciation.id == appreciation_id,
+            (
+                ((Appreciation.user_id == current_user.id) & (Appreciation.partner_id == partner_id))
+                | ((Appreciation.user_id == partner_id) & (Appreciation.partner_id == current_user.id))
+            ),
+        )
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這則感謝。")
+
+    return AppreciationPublic(
+        id=row.id,
+        body_text=row.body_text,
+        created_at=row.created_at,
+        is_mine=(row.user_id == current_user.id),
+    )
+
+
 @router.post("", response_model=AppreciationPublic, status_code=status.HTTP_201_CREATED)
 def create_appreciation(
     *,

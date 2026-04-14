@@ -244,6 +244,8 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   });
   const visibilityLabel = buildVisibilityLabel(visibility);
   const shouldAutoOpenDraft = searchParams.get('compose') === '1';
+  const memoryReturnDate = searchParams.get('date');
+  const fromMemory = searchParams.get('from') === 'memory';
   const showLegacyVisibilityNotice =
     isLegacyJournalVisibility(persistedVisibilityRef.current) && !hasExplicitVisibilitySelection;
   const legacyVisibilityMessage =
@@ -252,6 +254,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
       : persistedVisibilityRef.current === 'PARTNER_ANALYSIS_ONLY'
         ? '這一頁沿用較早的「伴侶只看分析」設定。只要你不改分享設定，它就會維持只分享分析資訊。'
         : null;
+  const memoryReturnHref =
+    fromMemory && memoryReturnDate && /^\d{4}-\d{2}-\d{2}$/.test(memoryReturnDate)
+      ? `/memory?date=${memoryReturnDate}`
+      : null;
+  const detailBackHref = memoryReturnHref ?? (currentJournalId ? '/journal' : '/');
+  const detailErrorBackHref = memoryReturnHref ?? '/journal';
 
   const commitContentState = useCallback((nextContent: string) => {
     contentRef.current = nextContent;
@@ -1134,7 +1142,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               重新讀取
             </Button>
             <Link
-              href="/journal"
+              href={detailErrorBackHref}
               className="inline-flex items-center gap-2 rounded-full border border-white/56 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
             >
               回 Journal 書房
@@ -1257,7 +1265,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-2.5">
             <Link
-              href={currentJournalId ? '/journal' : '/'}
+              href={detailBackHref}
               className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/72 px-3.5 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:bg-white/86 focus-ring-premium"
             >
               返回

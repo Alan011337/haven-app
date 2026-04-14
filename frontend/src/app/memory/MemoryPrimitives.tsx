@@ -15,8 +15,16 @@ import {
   MessageCircle,
   Sparkles,
 } from 'lucide-react';
+import { GlassModal } from '@/components/haven/GlassModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/shadcn/dialog';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import type { CalendarDay, TimelineAttachmentMeta } from '@/services/memoryService';
 
@@ -312,6 +320,7 @@ interface MemoryFeaturedMemoryCardProps {
   support?: string;
   attachments?: TimelineAttachmentMeta[];
   focused?: boolean;
+  footer?: ReactNode;
 }
 
 export function MemoryFeaturedMemoryCard({
@@ -325,6 +334,7 @@ export function MemoryFeaturedMemoryCard({
   support,
   attachments,
   focused,
+  footer,
 }: MemoryFeaturedMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
@@ -400,6 +410,12 @@ export function MemoryFeaturedMemoryCard({
           {support ? (
             <div className="rounded-[1.8rem] border border-white/56 bg-white/70 px-4 py-4 shadow-soft">
               <p className="type-body-muted text-card-foreground">{support}</p>
+            </div>
+          ) : null}
+
+          {footer ? (
+            <div className="flex flex-wrap gap-3">
+              {footer}
             </div>
           ) : null}
         </div>
@@ -509,6 +525,7 @@ interface MemoryStreamMemoryCardProps {
   support?: string;
   attachments?: TimelineAttachmentMeta[];
   focused?: boolean;
+  footer?: ReactNode;
 }
 
 export function MemoryStreamMemoryCard({
@@ -522,6 +539,7 @@ export function MemoryStreamMemoryCard({
   support,
   attachments,
   focused,
+  footer,
 }: MemoryStreamMemoryCardProps) {
   const usesMatteFrame = kind === 'photo';
 
@@ -589,9 +607,61 @@ export function MemoryStreamMemoryCard({
           {support ? (
             <p className="type-caption leading-6 text-card-foreground/74">{support}</p>
           ) : null}
+
+          {footer ? (
+            <div className="flex flex-wrap gap-3">
+              {footer}
+            </div>
+          ) : null}
         </div>
       </div>
     </GlassCard>
+  );
+}
+
+interface MemoryArtifactDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+  className?: string;
+}
+
+export function MemoryArtifactDialog({
+  open,
+  onOpenChange,
+  eyebrow,
+  title,
+  description,
+  children,
+  className = '',
+}: MemoryArtifactDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn('w-[min(100%-2rem,72rem)] max-w-5xl border-none bg-transparent p-0 shadow-none', className)}>
+        <GlassModal className="max-h-[85vh] overflow-y-auto border-white/60 bg-white/72">
+          <div className="space-y-6 p-6 md:p-7">
+            <div className="space-y-2">
+              <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription className="max-w-3xl text-muted-foreground">
+                {description}
+              </DialogDescription>
+            </div>
+
+            {children}
+
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => onOpenChange(false)}>
+                關閉
+              </Button>
+            </div>
+          </div>
+        </GlassModal>
+      </DialogContent>
+    </Dialog>
   );
 }
 

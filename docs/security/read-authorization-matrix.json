@@ -37,6 +37,14 @@
       "auth_mode": "authenticated",
       "method": "GET",
       "owner_team": "backend-core",
+      "path": "/api/card-decks/history/{session_id}",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "GET",
+      "owner_team": "backend-core",
       "path": "/api/card-decks/history/summary",
       "subject_scope": "pair_member",
       "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
@@ -56,6 +64,14 @@
       "path": "/api/card-decks/{deck_id}/draw",
       "subject_scope": "pair_member",
       "test_ref": "backend/tests/test_card_read_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "method": "GET",
+      "owner_team": "backend-platform",
+      "path": "/api/appreciations/{appreciation_id}",
+      "subject_scope": "pair_member",
+      "test_ref": "backend/tests/test_appreciation_read_authorization_matrix.py"
     },
     {
       "auth_mode": "authenticated",

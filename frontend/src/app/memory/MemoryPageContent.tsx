@@ -7,7 +7,16 @@ import { CalendarDays, Clock3, Gift } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { GlassCard } from '@/components/haven/GlassCard';
+import { DeckArchiveCard } from '@/features/decks/ui/DeckPrimitives';
 import { useMemoryData } from '@/features/memory/useMemoryData';
+import {
+  fetchAppreciationById,
+  type AppreciationPublic,
+} from '@/services/appreciations-api';
+import {
+  fetchDeckHistoryEntry,
+  type DeckHistoryEntry,
+} from '@/services/deckService';
 import type {
   TimeCapsuleMemory,
   TimelineAppreciationItem,
@@ -24,6 +33,7 @@ import {
   MemoryCalendarAtlas,
   MemoryCompanionMemoryCard,
   MemoryCover,
+  MemoryArtifactDialog,
   MemoryFeaturedMemoryCard,
   MemoryModeRail,
   MemoryOverviewCard,
@@ -46,6 +56,21 @@ type TimelineMemoryModel = {
 const MEMORY_DAY_TIMELINE_LIMIT = 100;
 const MEMORY_DAY_STALE_TIME_MS = 60_000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+type MemoryArtifactDialogState =
+  | {
+      kind: 'card';
+      sessionId: string;
+      date: string;
+      previewTitle: string;
+    }
+  | {
+      kind: 'appreciation';
+      appreciationId: number | null;
+      date: string;
+      previewTitle: string;
+      isMine: boolean;
+    };
 
 function parseMemoryDate(dateString: string) {
   if (DATE_ONLY_PATTERN.test(dateString)) {
@@ -94,6 +119,22 @@ function formatGeneratedLabel(dateString: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function buildJournalHref(journalId: string, date: string) {
+  const params = new URLSearchParams({
+    from: 'memory',
+    date,
+  });
+  return `/journal/${journalId}?${params.toString()}`;
+}
+
+function normalizeAppreciationId(rawId: string) {
+  const parsedId = Number.parseInt(rawId, 10);
+  if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    return null;
+  }
+  return parsedId;
 }
 
 function buildJournalModel(item: TimelineJournalItem): TimelineMemoryModel {
@@ -272,6 +313,7 @@ export default function MemoryPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [artifactDialog, setArtifactDialog] = useState<MemoryArtifactDialogState | null>(null);
   const {
     view,
     setView,
@@ -410,6 +452,92 @@ export default function MemoryPageContent() {
   );
   const selectedDayFeaturedModel = selectedDayItems[0] ? buildTimelineModel(selectedDayItems[0]) : null;
   const selectedDayStreamItems = selectedDayItems.slice(1);
+  const cardArtifactQuery = useQuery<DeckHistoryEntry>({
+    queryKey: ['memory', 'artifact', 'card', artifactDialog?.kind === 'card' ? artifactDialog.sessionId : null],
+    queryFn: () => fetchDeckHistoryEntry(artifactDialog?.kind === 'card' ? artifactDialog.sessionId : ''),
+    enabled: artifactDialog?.kind === 'card',
+    staleTime: MEMORY_DAY_STALE_TIME_MS,
+  });
+  const appreciationArtifactQuery = useQuery<AppreciationPublic>({
+    queryKey: ['memory', 'artifact', 'appreciation', artifactDialog?.kind === 'appreciation' ? artifactDialog.appreciationId : null],
+    queryFn: () => fetchAppreciationById(artifactDialog?.kind === 'appreciation' ? artifactDialog.appreciationId ?? -1 : -1),
+    enabled: artifactDialog?.kind === 'appreciation' && artifactDialog.appreciationId !== null,
+    staleTime: MEMORY_DAY_STALE_TIME_MS,
+  });
+
+  const handleOpenJournalArtifact = useCallback(
+    (journalId: string, date: string) => {
+      router.push(buildJournalHref(journalId, date));
+    },
+    [router],
+  );
+
+  const handleOpenCardArtifact = useCallback((item: TimelineCardItem, date: string) => {
+    setArtifactDialog({
+      kind: 'card',
+      sessionId: item.session_id,
+      date,
+      previewTitle: item.card_title,
+    });
+  }, []);
+
+  const handleOpenAppreciationArtifact = useCallback((item: TimelineAppreciationItem, date: string) => {
+    setArtifactDialog({
+      kind: 'appreciation',
+      appreciationId: normalizeAppreciationId(item.id),
+      date,
+      previewTitle: item.is_mine ? '我寫給伴侶的感謝' : '伴侶寫給我的感謝',
+      isMine: item.is_mine,
+    });
+  }, []);
+
+  const buildDaySpotlightAction = useCallback(
+    (item: TimelineItem) => {
+      if (!activeSelectedCalendarDate) {
+        return null;
+      }
+
+      if (item.type === 'journal') {
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleOpenJournalArtifact(item.id, activeSelectedCalendarDate)}
+          >
+            打開完整日記
+          </Button>
+        );
+      }
+
+      if (item.type === 'card') {
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleOpenCardArtifact(item, activeSelectedCalendarDate)}
+          >
+            打開完整卡片對話
+          </Button>
+        );
+      }
+
+      if (item.type === 'appreciation') {
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleOpenAppreciationArtifact(item, activeSelectedCalendarDate)}
+          >
+            打開完整感謝
+          </Button>
+        );
+      }
+
+      return null;
+    },
+    [activeSelectedCalendarDate, handleOpenAppreciationArtifact, handleOpenCardArtifact, handleOpenJournalArtifact],
+  );
+
   useEffect(() => {
     if (!focusKey || view !== 'calendar' || !hasFocusedDayItem || !focusRef.current || hasScrolledToFocus.current) {
       return;
@@ -422,8 +550,35 @@ export default function MemoryPageContent() {
     }, 400);
     return () => window.clearTimeout(timer);
   }, [focusKey, hasFocusedDayItem, view]);
+  useEffect(() => {
+    setArtifactDialog(null);
+  }, [activeSelectedCalendarDate]);
+  useEffect(() => {
+    if (view !== 'calendar') {
+      setArtifactDialog(null);
+    }
+  }, [view]);
   const initialPageLoading =
     items.length === 0 && timelineLoading && timeCapsuleLoading && reportLoading;
+
+  const artifactDialogTitle =
+    artifactDialog?.kind === 'card'
+      ? '完整卡片對話'
+      : artifactDialog?.kind === 'appreciation'
+        ? '完整感謝'
+        : '';
+  const artifactDialogEyebrow =
+    artifactDialog?.kind === 'card'
+      ? 'Card Archive'
+      : artifactDialog?.kind === 'appreciation'
+        ? 'Gratitude Archive'
+        : '';
+  const artifactDialogDescription =
+    artifactDialog?.kind === 'card'
+      ? `把 ${formatDateLong(artifactDialog.date)} 的卡片真正打開來看，不只看摘要。`
+      : artifactDialog?.kind === 'appreciation'
+        ? `把 ${formatDateLong(artifactDialog.date)} 留下的感謝完整讀完。`
+        : '';
 
   if (initialPageLoading) {
     return <MemorySkeleton />;
@@ -918,6 +1073,7 @@ export default function MemoryPageContent() {
                             support={selectedDayFeaturedModel.support}
                             attachments={selectedDayFeaturedModel.attachments}
                             focused={featuredFocused}
+                            footer={buildDaySpotlightAction(selectedDayItems[0])}
                           />
                         );
                         return featuredFocused ? <div ref={focusRef}>{card}</div> : card;
@@ -941,6 +1097,7 @@ export default function MemoryPageContent() {
                                 support={model.support}
                                 attachments={model.attachments}
                                 focused={itemFocused}
+                                footer={buildDaySpotlightAction(item)}
                               />
                             );
                             return itemFocused
@@ -966,6 +1123,104 @@ export default function MemoryPageContent() {
           ) : null}
         </section>
       )}
+
+      <MemoryArtifactDialog
+        open={artifactDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArtifactDialog(null);
+          }
+        }}
+        eyebrow={artifactDialogEyebrow}
+        title={artifactDialogTitle}
+        description={artifactDialogDescription}
+      >
+        {artifactDialog?.kind === 'card' ? (
+          cardArtifactQuery.isLoading ? (
+            <GlassCard className="rounded-[2rem] border-white/56 bg-white/76 shadow-soft">
+              <div className="h-72" aria-hidden />
+            </GlassCard>
+          ) : cardArtifactQuery.isError ? (
+            <MemoryStatePanel
+              tone="error"
+              eyebrow="Card artifact unavailable"
+              title="這張卡片對話這次沒有順利打開。"
+              description="Day Spotlight 已經帶你回到正確的那一天，但這份完整對話這次沒有順利帶回。你可以再試一次。"
+              action={
+                <Button variant="secondary" onClick={() => void cardArtifactQuery.refetch()}>
+                  重新載入完整卡片
+                </Button>
+              }
+            />
+          ) : cardArtifactQuery.data ? (
+            <DeckArchiveCard entry={cardArtifactQuery.data} />
+          ) : (
+            <MemoryStatePanel
+              tone="quiet"
+              eyebrow="Card artifact unavailable"
+              title="這張卡片暫時沒有完整內容。"
+              description="目前沒有找到這次卡片揭曉的完整內容。你可以回到 Memory 換一個片段看看。"
+            />
+          )
+        ) : null}
+
+        {artifactDialog?.kind === 'appreciation' ? (
+          artifactDialog.appreciationId === null ? (
+            <MemoryStatePanel
+              tone="error"
+              eyebrow="Appreciation artifact unavailable"
+              title="這段感謝的編號這次沒有順利對上。"
+              description="這個 Day Spotlight 片段有內容，但完整感謝的識別資料不完整，所以 Haven 不會冒險打開錯的內容。"
+            />
+          ) : appreciationArtifactQuery.isLoading ? (
+            <GlassCard className="rounded-[2rem] border-white/56 bg-white/76 shadow-soft">
+              <div className="h-56" aria-hidden />
+            </GlassCard>
+          ) : appreciationArtifactQuery.isError ? (
+            <MemoryStatePanel
+              tone="error"
+              eyebrow="Appreciation artifact unavailable"
+              title="這段感謝這次沒有順利打開。"
+              description="Day Spotlight 已經帶你回到正確的那一天，但完整感謝內容這次沒有順利帶回。你可以再試一次。"
+              action={
+                <Button variant="secondary" onClick={() => void appreciationArtifactQuery.refetch()}>
+                  重新載入完整感謝
+                </Button>
+              }
+            />
+          ) : appreciationArtifactQuery.data ? (
+            <GlassCard className="rounded-[2.15rem] border-white/56 bg-[linear-gradient(165deg,rgba(255,249,250,0.95),rgba(244,230,234,0.92))] p-6 shadow-soft">
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="default" size="sm">
+                    {appreciationArtifactQuery.data.is_mine ? '我寫的' : '伴侶寫的'}
+                  </Badge>
+                  <Badge variant="metadata" size="sm" className="border-white/56 bg-white/72">
+                    {formatGeneratedLabel(appreciationArtifactQuery.data.created_at)}
+                  </Badge>
+                </div>
+                <div className="rounded-[1.8rem] border border-white/56 bg-white/74 p-5 shadow-soft">
+                  <p className="type-body whitespace-pre-wrap leading-7 text-card-foreground">
+                    {appreciationArtifactQuery.data.body_text}
+                  </p>
+                </div>
+                <p className="type-caption leading-6 text-card-foreground/76">
+                  {artifactDialog.isMine
+                    ? '這是你當時主動留下的一段感謝。'
+                    : '這是對方當時留給你的一段感謝。'}
+                </p>
+              </div>
+            </GlassCard>
+          ) : (
+            <MemoryStatePanel
+              tone="quiet"
+              eyebrow="Appreciation artifact unavailable"
+              title="這段感謝暫時沒有完整內容。"
+              description="目前沒有找到這則感謝的完整版本。你可以回到 Memory 換一個片段看看。"
+            />
+          )
+        ) : null}
+      </MemoryArtifactDialog>
 
     </div>
   );

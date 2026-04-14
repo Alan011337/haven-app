@@ -48,6 +48,7 @@ from app.services.offline_conflict import (
 )
 from app.api.routers.card_deck_route_support import (
     build_active_session_partner_filter,
+    build_history_entry,
     build_history_clauses,
     build_history_entries,
     build_participant_ids,
@@ -737,6 +738,74 @@ def get_deck_history_summary(
         total_records=summary.total_records,
     )
     return summary
+
+
+@router.get("/history/{session_id}", response_model=DeckHistoryEntry)
+def get_deck_history_entry(
+    *,
+    session: ReadSessionDep,
+    current_user: CurrentUser,
+    session_id: uuid.UUID,
+):
+    query_started_at = perf_counter()
+    clauses = build_history_clauses(
+        current_user_id=current_user.id,
+        category=None,
+        revealed_from=None,
+        revealed_to=None,
+    )
+    clauses.append(CardSession.id == session_id)
+
+    completed_session = session.exec(select(CardSession).where(*clauses)).first()
+    if not completed_session:
+        _log_history_metrics(
+            endpoint="history_detail",
+            current_user=current_user,
+            category=None,
+            revealed_from=None,
+            revealed_to=None,
+            duration_ms=int((perf_counter() - query_started_at) * 1000),
+            result_count=0,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這次卡片揭曉紀錄。")
+
+    cards = session.exec(select(Card).where(Card.id == completed_session.card_id)).all()
+    cards_by_id = {card.id: card for card in cards}
+    responses = session.exec(
+        select(CardResponse).where(
+            CardResponse.session_id == completed_session.id,
+            CardResponse.deleted_at.is_(None),
+        )
+    ).all()
+    responses_by_key = {(resp.session_id, resp.user_id): resp for resp in responses}
+    history_entry = build_history_entry(
+        completed_session=completed_session,
+        cards_by_id=cards_by_id,
+        responses_by_key=responses_by_key,
+        current_user_id=current_user.id,
+    )
+    if not history_entry:
+        _log_history_metrics(
+            endpoint="history_detail",
+            current_user=current_user,
+            category=None,
+            revealed_from=None,
+            revealed_to=None,
+            duration_ms=int((perf_counter() - query_started_at) * 1000),
+            result_count=0,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這次卡片揭曉紀錄。")
+
+    _log_history_metrics(
+        endpoint="history_detail",
+        current_user=current_user,
+        category=None,
+        revealed_from=None,
+        revealed_to=None,
+        duration_ms=int((perf_counter() - query_started_at) * 1000),
+        result_count=1,
+    )
+    return history_entry
 
 
 # ----------------------------------------------------------------

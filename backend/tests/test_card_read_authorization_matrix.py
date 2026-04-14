@@ -1,4 +1,5 @@
 # READ_AUTHZ_MATRIX: GET /api/card-decks/history
+# READ_AUTHZ_MATRIX: GET /api/card-decks/history/{session_id}
 # READ_AUTHZ_MATRIX: GET /api/card-decks/{deck_id}/draw
 # READ_AUTHZ_MATRIX: GET /api/card-decks/history/summary
 # READ_AUTHZ_MATRIX: GET /api/card-decks/stats
@@ -332,6 +333,24 @@ class CardReadAuthorizationMatrixTests(unittest.TestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["session_id"], str(self.session_cd_id))
         self.assertNotEqual(payload[0]["session_id"], str(self.session_ab_id))
+
+    def test_deck_history_detail_allows_pair_member_for_owned_session(self) -> None:
+        response = self.client.get(f"/api/card-decks/history/{self.session_ab_id}")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["session_id"], str(self.session_ab_id))
+        self.assertEqual(payload["my_answer"], "a-answer")
+        self.assertEqual(payload["partner_answer"], "b-answer")
+
+    def test_deck_history_detail_rejects_foreign_session(self) -> None:
+        self.current_user_id = self.user_c_id
+        response = self.client.get(f"/api/card-decks/history/{self.session_ab_id}")
+        self.assertEqual(response.status_code, 404)
+
+    def test_deck_history_detail_returns_not_found_for_unpaired_user(self) -> None:
+        self.current_user_id = self.user_e_id
+        response = self.client.get(f"/api/card-decks/history/{self.session_ab_id}")
+        self.assertEqual(response.status_code, 404)
 
     def test_draw_card_from_deck_isolated_to_current_pair_partner_journal(self) -> None:
         response_a = self.client.get(f"/api/card-decks/{self.deck_draw_id}/draw")
