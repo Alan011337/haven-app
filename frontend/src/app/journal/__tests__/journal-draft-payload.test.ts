@@ -87,6 +87,7 @@ test('buildUpdateJournalPayload emits only the backend-supported update fields',
     {
       content: '更新後內容',
       is_draft: false,
+      request_analysis: false,
       title: null,
       visibility: 'PRIVATE',
     },

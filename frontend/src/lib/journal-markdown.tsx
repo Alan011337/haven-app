@@ -4,6 +4,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
 import type { JournalAttachmentPublic } from '@/types';
+import {
+  buildJournalSectionDomId,
+  type JournalOutlineEntry,
+} from '@/lib/journal-outline';
 import { cn } from '@/lib/utils';
 
 export type JournalMarkdownVariant = 'partner' | 'read' | 'studio';
@@ -42,6 +46,8 @@ function transformJournalMarkdownUrl(rawUrl: string): string {
 function buildMarkdownComponents(
   attachments: JournalAttachmentPublic[],
   variant: JournalMarkdownVariant,
+  headingEntries: JournalOutlineEntry[],
+  surface: 'read' | 'write',
 ): Components {
   const isPartner = variant === 'partner';
   const isRead = variant === 'read';
@@ -61,32 +67,57 @@ function buildMarkdownComponents(
     : isRead
       ? 'my-12 overflow-hidden rounded-[2.15rem] border border-[rgba(219,204,187,0.3)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(249,244,237,0.92))] shadow-soft md:mx-[-2.75rem]'
       : 'my-10 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.34)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(249,244,237,0.9))] shadow-soft md:mx-[-1.25rem]';
+  let headingEntryIndex = 0;
+
+  const takeHeadingEntry = () => {
+    const entry = headingEntries[headingEntryIndex] ?? null;
+    if (entry) {
+      headingEntryIndex += 1;
+    }
+    return entry;
+  };
 
   return {
-    h1: ({ children }) => (
-      <h1
-        className={cn(
-          headingBase,
-          isRead
-            ? 'mt-2 text-[2.55rem] leading-[0.98] md:text-[3.25rem]'
-            : 'mt-2 text-[2.3rem] leading-[1.02] md:text-[2.85rem]',
-        )}
-      >
-        {children}
-      </h1>
-    ),
-    h2: ({ children }) => (
-      <h2
-        className={cn(
-          headingBase,
-          isRead
-            ? 'mt-12 text-[1.9rem] leading-[1.08] md:text-[2.2rem]'
-            : 'mt-10 text-[1.76rem] leading-[1.1] md:text-[2rem]',
-        )}
-      >
-        {children}
-      </h2>
-    ),
+    h1: ({ children }) => {
+      const entry = takeHeadingEntry();
+      return (
+        <h1
+          id={entry ? buildJournalSectionDomId(surface, entry.id) : undefined}
+          data-journal-section-id={entry?.id}
+          data-journal-surface={entry ? surface : undefined}
+          data-testid={entry ? `journal-${surface}-section-${entry.id}` : undefined}
+          className={cn(
+            headingBase,
+            'scroll-mt-32 md:scroll-mt-40',
+            isRead
+              ? 'mt-2 text-[2.55rem] leading-[0.98] md:text-[3.25rem]'
+              : 'mt-2 text-[2.3rem] leading-[1.02] md:text-[2.85rem]',
+          )}
+        >
+          {children}
+        </h1>
+      );
+    },
+    h2: ({ children }) => {
+      const entry = takeHeadingEntry();
+      return (
+        <h2
+          id={entry ? buildJournalSectionDomId(surface, entry.id) : undefined}
+          data-journal-section-id={entry?.id}
+          data-journal-surface={entry ? surface : undefined}
+          data-testid={entry ? `journal-${surface}-section-${entry.id}` : undefined}
+          className={cn(
+            headingBase,
+            'scroll-mt-32 md:scroll-mt-40',
+            isRead
+              ? 'mt-12 text-[1.9rem] leading-[1.08] md:text-[2.2rem]'
+              : 'mt-10 text-[1.76rem] leading-[1.1] md:text-[2rem]',
+          )}
+        >
+          {children}
+        </h2>
+      );
+    },
     h3: ({ children }) => (
       <h3
         className={cn(
@@ -203,13 +234,17 @@ function buildMarkdownComponents(
 
 export function JournalRichMarkdown({
   attachments,
+  headingEntries = [],
   content,
   className,
+  surface = 'read',
   variant = 'studio',
 }: {
   attachments: JournalAttachmentPublic[];
   className?: string;
   content: string;
+  headingEntries?: JournalOutlineEntry[];
+  surface?: 'read' | 'write';
   variant?: JournalMarkdownVariant;
 }) {
   return (
@@ -222,7 +257,7 @@ export function JournalRichMarkdown({
       )}
     >
       <ReactMarkdown
-        components={buildMarkdownComponents(attachments, variant)}
+        components={buildMarkdownComponents(attachments, variant, headingEntries, surface)}
         remarkPlugins={[remarkGfm]}
         urlTransform={transformJournalMarkdownUrl}
       >

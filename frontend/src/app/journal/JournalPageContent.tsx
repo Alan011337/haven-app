@@ -41,6 +41,7 @@ import {
   JournalAssetTray,
   JournalBackLink,
   JournalCanvasFrame,
+  JournalDocumentMap,
   JournalLibraryCard,
   JournalMobileDock,
   JournalMobileSheet,
@@ -76,6 +77,10 @@ import {
   hasJournalSubstantiveContent,
   resolveJournalDraftContent,
 } from '@/app/journal/journal-draft-payload';
+import {
+  buildJournalOutline,
+  type JournalOutlineEntry,
+} from '@/lib/journal-outline';
 
 const DEFAULT_VISIBILITY: JournalVisibility = 'PRIVATE';
 const JOURNAL_HOME_SEED_STORAGE_KEY = 'haven_journal_home_seed_v1';
@@ -168,6 +173,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const { confirm } = useConfirm();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const readSurfaceRef = useRef<HTMLDivElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<JournalLexicalComposerHandle | null>(null);
   const autoDraftBootstrapRef = useRef(false);
@@ -220,6 +226,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const [desktopImagesOpen, setDesktopImagesOpen] = useState(false);
   const [desktopShareOpen, setDesktopShareOpen] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<'format' | 'images' | 'share' | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
   const currentJournalId = activeJournal?.id ?? hydratedJournalIdRef.current ?? journalId ?? null;
   const currentSnapshot = useMemo(
@@ -233,6 +240,23 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   const paragraphCount = content.trim() ? content.trim().split(/\n{2,}/g).length : 0;
   const insertedAttachmentIds = useMemo(() => findInsertedAttachmentIds(content), [content]);
   const activeTitle = title.trim() || (activeJournal ? deriveJournalTitle(activeJournal) : '未命名的一頁');
+  const journalOutline = useMemo(
+    () =>
+      buildJournalOutline({
+        content,
+        title,
+      }),
+    [content, title],
+  );
+  const titleEntry = useMemo(
+    () => journalOutline.find((entry) => entry.kind === 'title') ?? null,
+    [journalOutline],
+  );
+  const headingEntries = useMemo(
+    () => journalOutline.filter((entry) => entry.kind === 'heading'),
+    [journalOutline],
+  );
+  const showDocumentMap = journalOutline.length >= 2;
   const showStudio = Boolean(journalId) || draftOpen;
   const draftBootstrapPending = !currentJournalId && createJournalMutation.isPending;
   const editorKey = `${currentJournalId ?? `draft:${draftOpen ? 'open' : 'closed'}`}:${editorSeed}`;
@@ -278,6 +302,15 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
   useEffect(() => {
     visibilityRef.current = visibility;
   }, [visibility]);
+
+  useEffect(() => {
+    setActiveSectionId((current) => {
+      if (current && journalOutline.some((entry) => entry.id === current)) {
+        return current;
+      }
+      return journalOutline[0]?.id ?? null;
+    });
+  }, [journalOutline]);
 
   useEffect(() => {
     hasExplicitVisibilitySelectionRef.current = hasExplicitVisibilitySelection;
@@ -1126,6 +1159,34 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     fileInputRef.current?.click();
   }, [canCompare, currentJournalId, draftBootstrapPending, ensureJournalExistsForUpload, showToast, studioMode]);
 
+  const scrollReadSurfaceToSection = useCallback((sectionId: string) => {
+    const container = readSurfaceRef.current;
+    if (!container) return false;
+    const target = Array.from(
+      container.querySelectorAll<HTMLElement>('[data-journal-section-id]'),
+    ).find((element) => element.dataset.journalSectionId === sectionId);
+    if (!target) return false;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
+  }, []);
+
+  const handleSelectDocumentMapEntry = useCallback((entry: JournalOutlineEntry) => {
+    setActiveSectionId(entry.id);
+
+    if (studioMode === 'read' || studioMode === 'compare') {
+      scrollReadSurfaceToSection(entry.id);
+      return;
+    }
+
+    if (entry.kind === 'title') {
+      titleInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      titleInputRef.current?.focus();
+      return;
+    }
+
+    editorRef.current?.scrollToSection(entry.id);
+  }, [scrollReadSurfaceToSection, studioMode]);
+
   if (journalId && journalDetailQuery.isError) {
     return (
       <JournalStatePanel
@@ -1450,21 +1511,29 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             <span>{content.length}/{MAX_JOURNAL_CONTENT_LENGTH}</span>
           </div>
 
-          <input
-            aria-label="Journal title"
-            type="text"
-            value={title}
-            onChange={(event) => {
-              const nextTitle = event.target.value;
-              titleRef.current = nextTitle;
-              setTitle(nextTitle);
-              markUnsaved({ nextTitle, nextIsDraft: isDraft });
-            }}
-            placeholder="這一頁，想被叫作什麼？"
-            maxLength={120}
-            ref={titleInputRef}
-            className="w-full bg-transparent font-art text-[2.8rem] leading-[0.98] tracking-[-0.035em] text-card-foreground outline-none placeholder:text-muted-foreground/42 md:text-[4rem]"
-          />
+          <div
+            id={titleEntry ? `journal-write-section-${titleEntry.id}` : undefined}
+            data-journal-section-id={titleEntry?.id ?? undefined}
+            data-journal-surface={titleEntry ? 'write' : undefined}
+            data-testid={titleEntry ? `journal-write-section-${titleEntry.id}` : undefined}
+            className="scroll-mt-32 md:scroll-mt-40"
+          >
+            <input
+              aria-label="Journal title"
+              type="text"
+              value={title}
+              onChange={(event) => {
+                const nextTitle = event.target.value;
+                titleRef.current = nextTitle;
+                setTitle(nextTitle);
+                markUnsaved({ nextTitle, nextIsDraft: isDraft });
+              }}
+              placeholder="這一頁，想被叫作什麼？"
+              maxLength={120}
+              ref={titleInputRef}
+              className="w-full bg-transparent font-art text-[2.8rem] leading-[0.98] tracking-[-0.035em] text-card-foreground outline-none placeholder:text-muted-foreground/42 md:text-[4rem]"
+            />
+          </div>
 
           <p className="max-w-[34rem] text-sm leading-7 text-muted-foreground">
             {currentJournalId
@@ -1472,6 +1541,16 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               : '你可以先留下文字，也可以先放進圖片。這裡會先幫你建立草稿，慢慢把這一頁寫完整，而 Relationship System 只會保留你願意留下的結構化反思。'}
           </p>
         </section>
+
+        {showDocumentMap ? (
+          <div className="mx-auto w-full max-w-[42rem]">
+            <JournalDocumentMap
+              activeSectionId={activeSectionId}
+              entries={journalOutline}
+              onSelect={handleSelectDocumentMapEntry}
+            />
+          </div>
+        ) : null}
 
         <div
           className={
@@ -1505,6 +1584,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                   ref={editorRef}
                   attachments={attachments}
                   autoFocus
+                  headingEntries={headingEntries}
                   initialMarkdown={content}
                   onChange={syncEditorMarkdown}
                   onFilesDropped={handleAttachmentUpload}
@@ -1521,12 +1601,18 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           ) : null}
 
           {studioMode !== 'write' ? (
-            <div className={studioMode === 'compare' ? 'w-full' : 'mx-auto w-full max-w-[46rem]'}>
+            <div
+              ref={readSurfaceRef}
+              className={studioMode === 'compare' ? 'w-full' : 'mx-auto w-full max-w-[46rem]'}
+            >
               <JournalReadSurface
                 attachments={attachments}
                 content={content}
+                headingEntries={headingEntries}
                 meta={`${currentDateLabel} · ${visibilityLabel}`}
+                surface="read"
                 title={activeTitle}
+                titleSectionId={titleEntry?.id ?? null}
                 variant={studioMode === 'compare' ? 'compare' : 'default'}
               />
             </div>

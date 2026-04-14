@@ -56,6 +56,10 @@ import {
   JOURNAL_MARKDOWN_TRANSFORMERS,
 } from '@/features/journal/editor/journal-markdown-transformers';
 import { JournalSlashMenu } from '@/features/journal/editor/JournalSlashMenu';
+import {
+  buildJournalSectionDomId,
+  type JournalOutlineEntry,
+} from '@/lib/journal-outline';
 
 const editorTheme = {
   heading: {
@@ -91,6 +95,7 @@ export interface JournalLexicalComposerHandle {
   focus: () => void;
   getMarkdown: () => string;
   insertImage: (payload: InsertJournalImagePayload) => string;
+  scrollToSection: (sectionId: string) => boolean;
 }
 
 export type JournalEditorBlockAction =
@@ -110,6 +115,7 @@ interface JournalLexicalComposerProps {
   attachments: JournalAttachmentPublic[];
   autoFocus?: boolean;
   className?: string;
+  headingEntries?: JournalOutlineEntry[];
   initialMarkdown: string;
   onChange: (markdown: string) => void;
   onFilesDropped: (files: File[]) => void;
@@ -221,6 +227,56 @@ function InitialMarkdownPlugin({
     const result = importJournalMarkdown(editor, initialMarkdown);
     onImportWarning?.(result.warning);
   }, [editor, initialMarkdown, onImportWarning]);
+
+  return null;
+}
+
+function syncHeadingAnchors(
+  editor: LexicalEditor,
+  headingEntries: JournalOutlineEntry[],
+) {
+  const rootElement = editor.getRootElement();
+  if (!rootElement) return;
+
+  const headingElements = Array.from(
+    rootElement.querySelectorAll<HTMLElement>('h1, h2'),
+  );
+
+  headingElements.forEach((element, index) => {
+    const entry = headingEntries[index] ?? null;
+    if (!entry) {
+      element.removeAttribute('id');
+      element.removeAttribute('data-journal-section-id');
+      element.removeAttribute('data-journal-surface');
+      element.removeAttribute('data-testid');
+      element.style.scrollMarginTop = '';
+      return;
+    }
+
+    element.id = buildJournalSectionDomId('write', entry.id);
+    element.dataset.journalSectionId = entry.id;
+    element.dataset.journalSurface = 'write';
+    element.dataset.testid = `journal-write-section-${entry.id}`;
+    element.style.scrollMarginTop = '160px';
+  });
+}
+
+function JournalHeadingAnchorPlugin({
+  headingEntries,
+}: {
+  headingEntries: JournalOutlineEntry[];
+}) {
+  const [editor] = useLexicalComposerContext();
+  const syncAnchors = useCallback(() => {
+    syncHeadingAnchors(editor, headingEntries);
+  }, [editor, headingEntries]);
+
+  useEffect(() => {
+    syncAnchors();
+    return editor.registerUpdateListener(() => {
+      syncAnchors();
+    });
+  }, [editor, syncAnchors]);
 
   return null;
 }
@@ -343,6 +399,7 @@ const JournalLexicalComposer = forwardRef<
     attachments,
     autoFocus = false,
     className,
+    headingEntries = [],
     initialMarkdown,
     onChange,
     onFilesDropped,
@@ -393,6 +450,17 @@ const JournalLexicalComposer = forwardRef<
         }, { discrete: true });
         return nextMarkdown;
       },
+      scrollToSection: (sectionId) => {
+        if (!editor) return false;
+        const rootElement = editor.getRootElement();
+        if (!rootElement) return false;
+        const target = Array.from(
+          rootElement.querySelectorAll<HTMLElement>('[data-journal-section-id]'),
+        ).find((element) => element.dataset.journalSectionId === sectionId);
+        if (!target) return false;
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
+      },
     }),
     [editor],
   );
@@ -429,6 +497,7 @@ const JournalLexicalComposer = forwardRef<
             initialMarkdown={initialMarkdown}
             onImportWarning={onImportWarning}
           />
+          <JournalHeadingAnchorPlugin headingEntries={headingEntries} />
           <HistoryPlugin />
           <ListPlugin />
           <LinkPlugin />

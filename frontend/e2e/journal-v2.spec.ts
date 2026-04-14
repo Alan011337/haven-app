@@ -28,13 +28,50 @@ async function fulfillJson(route: Route, data: unknown, status = 200) {
   });
 }
 
-async function mockJournalApi(page: Page, options?: { withExistingJournal?: boolean }) {
+type MockJournal = {
+  action_for_partner: string;
+  action_for_user: string;
+  advice_for_partner: string;
+  advice_for_user: string;
+  attachments: Array<{
+    id: string;
+    file_name: string;
+    mime_type: string;
+    size_bytes: number;
+    created_at: string;
+    caption: string | null;
+    url: string | null;
+  }>;
+  card_recommendation: null;
+  content: string;
+  content_format: string;
+  created_at: string;
+  emotional_needs: string;
+  id: string;
+  is_draft: boolean;
+  mood_label: string;
+  partner_translated_content: string;
+  partner_translation_status: string;
+  safety_tier: number;
+  title: string;
+  updated_at: string;
+  user_id: string;
+  visibility: string;
+};
+
+async function mockJournalApi(
+  page: Page,
+  options?: {
+    journalOverrides?: Partial<MockJournal>;
+    withExistingJournal?: boolean;
+  },
+) {
   const now = Date.now();
   const createPayloads: Array<Record<string, unknown>> = [];
   const updatePayloads: Array<Record<string, unknown>> = [];
   let attachmentUploadCount = 0;
   let hasJournal = Boolean(options?.withExistingJournal);
-  let journal = {
+  const baseJournal: MockJournal = {
     id: 'journal-1',
     user_id: 'me',
     title: '夜裡想留下的一頁',
@@ -63,6 +100,10 @@ async function mockJournalApi(page: Page, options?: { withExistingJournal?: bool
     safety_tier: 0,
     created_at: hoursAgo(now, 4),
     updated_at: hoursAgo(now, 1),
+  };
+  let journal: MockJournal = {
+    ...baseJournal,
+    ...options?.journalOverrides,
   };
 
   await page.route('**/api/**', async (route) => {
@@ -373,6 +414,57 @@ test.describe('Journal 書房 v3', () => {
     await expect(slashMenu).toBeVisible();
     await page.keyboard.press('Enter');
     await expect(visibleJournalEditor(page)).toContainText('連結文字');
+  });
+
+  test('document map keeps long-form structure navigable across write, read, and compare modes', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 780 });
+    const longMiddleSection = Array.from({ length: 18 }, (_, index) => {
+      return `這是中段第 ${index + 1} 段，讓長文真的拉開距離。`;
+    }).join('\n\n');
+
+    await mockJournalApi(page, {
+      withExistingJournal: true,
+      journalOverrides: {
+        title: 'Map Flow Check',
+        content: [
+          '# Opening Scene',
+          '',
+          '先把第一節寫成真正的起點。',
+          '',
+          longMiddleSection,
+          '',
+          '## What I Need',
+          '',
+          '最後把真正想留下的重點安放下來。',
+        ].join('\n'),
+      },
+    });
+    await login(page);
+
+    await page.goto('/journal/journal-1');
+    await expect(page.getByTestId('journal-document-map')).toBeVisible();
+    await expect(page.getByTestId('journal-document-map-entry-map-flow-check')).toBeVisible();
+    await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toBeVisible();
+    await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toBeVisible();
+
+    const writeTarget = page.getByTestId('journal-write-section-what-i-need');
+    await expect(writeTarget).not.toBeInViewport();
+    await page.getByTestId('journal-document-map-entry-what-i-need').click();
+    await expect(writeTarget).toBeInViewport();
+
+    await page.getByRole('button', { name: '閱讀' }).click();
+    const readTarget = page.getByTestId('journal-read-section-what-i-need');
+    await expect(readTarget).not.toBeInViewport();
+    await page.getByTestId('journal-document-map-entry-what-i-need').click();
+    await expect(readTarget).toBeInViewport();
+
+    await page.getByRole('button', { name: '對照' }).click();
+    await expect(visibleJournalEditor(page)).toBeVisible();
+    await expect(readTarget).not.toBeInViewport();
+    await page.getByTestId('journal-document-map-entry-what-i-need').click();
+    await expect(readTarget).toBeInViewport();
   });
 
   test('home journal composer hands off into Journal 書房 instead of publishing directly', async ({

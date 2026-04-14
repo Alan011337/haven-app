@@ -28,6 +28,7 @@ import {
   buildJournalTranslationStatusPresentation,
   type JournalTranslationStatusPresentation,
 } from '@/app/journal/journal-translation-status';
+import type { JournalOutlineEntry } from '@/lib/journal-outline';
 import { JournalRichMarkdown } from '@/lib/journal-markdown';
 import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
 import { formatTranslationReadyAt } from '@/lib/format';
@@ -473,19 +474,87 @@ export function JournalCanvasFrame({
   );
 }
 
+export function JournalDocumentMap({
+  activeSectionId,
+  entries,
+  onSelect,
+}: {
+  activeSectionId: string | null;
+  entries: JournalOutlineEntry[];
+  onSelect: (entry: JournalOutlineEntry) => void;
+}) {
+  return (
+    <section
+      data-testid="journal-document-map"
+      className="rounded-[1.9rem] border border-white/56 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(248,243,236,0.78))] p-4 shadow-soft md:p-5"
+    >
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
+          <LayoutPanelTop className="h-4 w-4 text-primary/80" aria-hidden />
+          Document Map
+        </div>
+        <p className="text-sm leading-7 text-muted-foreground">
+          讓這一頁的段落有可返回的結構，不用每次都重新找位置。
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {entries.map((entry) => {
+          const active = entry.id === activeSectionId;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              data-testid={`journal-document-map-entry-${entry.id}`}
+              aria-pressed={active}
+              onClick={() => onSelect(entry)}
+              className={cn(
+                'flex w-full items-center justify-between gap-3 rounded-[1.2rem] border px-3.5 py-3 text-left text-sm transition-all duration-haven ease-haven',
+                active
+                  ? 'border-primary/18 bg-primary/[0.075] text-card-foreground shadow-soft'
+                  : 'border-white/56 bg-white/72 text-card-foreground hover:bg-white/84',
+              )}
+            >
+              <span
+                className={cn(
+                  'truncate',
+                  entry.depth === 0 ? 'font-semibold' : '',
+                  entry.depth === 1 ? 'pl-3' : '',
+                  entry.depth === 2 ? 'pl-6 text-muted-foreground' : '',
+                )}
+              >
+                {entry.label}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.24em] text-primary/70">
+                {entry.depth === 0 ? 'Title' : entry.depth === 1 ? 'H1' : 'H2'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function JournalReadSurface({
   attachments,
   content,
+  headingEntries = [],
   meta,
   note,
+  surface = 'read',
   title,
+  titleSectionId = null,
   variant = 'default',
 }: {
   attachments: JournalAttachmentPublic[];
   content: string;
+  headingEntries?: JournalOutlineEntry[];
   meta?: string;
   note?: string;
+  surface?: 'read' | 'write';
   title: string;
+  titleSectionId?: string | null;
   variant?: 'compare' | 'default';
 }) {
   return (
@@ -499,7 +568,13 @@ export function JournalReadSurface({
         {meta ? (
           <p className="text-sm leading-7 text-muted-foreground">{meta}</p>
         ) : null}
-        <h2 className="mt-2 font-art text-[2.45rem] leading-[0.98] tracking-[-0.03em] text-card-foreground md:text-[3.45rem]">
+        <h2
+          id={titleSectionId ? `journal-${surface}-section-${titleSectionId}` : undefined}
+          data-journal-section-id={titleSectionId ?? undefined}
+          data-journal-surface={titleSectionId ? surface : undefined}
+          data-testid={titleSectionId ? `journal-${surface}-section-${titleSectionId}` : undefined}
+          className="mt-2 scroll-mt-32 font-art text-[2.45rem] leading-[0.98] tracking-[-0.03em] text-card-foreground md:scroll-mt-40 md:text-[3.45rem]"
+        >
           {title}
         </h2>
         {note ? (
@@ -509,6 +584,8 @@ export function JournalReadSurface({
           <JournalRichMarkdown
             attachments={attachments}
             content={content}
+            headingEntries={headingEntries}
+            surface={surface}
             variant="read"
             className={variant === 'compare' ? 'max-w-[42rem]' : ''}
           />
