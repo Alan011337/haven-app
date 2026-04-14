@@ -40,6 +40,20 @@ class JournalAttachmentPublic(BaseModel):
     caption: str | None = None
     url: str | None = None
 
+
+class JournalAttachmentCaptionUpdate(BaseModel):
+    caption: str | None = Field(default=None, max_length=280)
+    model_config = {"extra": "forbid"}
+
+    @field_validator("caption")
+    @classmethod
+    def normalize_caption(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
 # 1. 前端傳進來的資料 (Create)
 class JournalCreate(BaseModel):
     title: str | None = Field(default=None, max_length=120)

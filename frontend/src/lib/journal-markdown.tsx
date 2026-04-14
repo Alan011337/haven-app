@@ -205,6 +205,17 @@ function buildMarkdownComponents(
     ),
     img: ({ alt, src }) => {
       const resolvedSrc = resolveAttachmentUrl(src, attachments);
+      const rawTarget = typeof src === 'string' ? src.trim() : '';
+      const attachmentId = rawTarget.startsWith('attachment:')
+        ? rawTarget.replace('attachment:', '').trim() || null
+        : null;
+      const attachment = attachmentId
+        ? attachments.find((item) => item.id === attachmentId)
+        : null;
+      const authoredCaption = attachment?.caption?.trim() || null;
+      const fallbackAltText = alt ? alt.trim() || null : null;
+      const figcaptionText = authoredCaption;
+
       if (!resolvedSrc) {
         return (
           <div className="my-8 rounded-[1.7rem] border border-dashed border-border/80 bg-[linear-gradient(180deg,rgba(255,250,246,0.9),rgba(246,240,233,0.84))] px-5 py-8 text-sm leading-7 text-muted-foreground">
@@ -217,13 +228,13 @@ function buildMarkdownComponents(
         <figure className={figureClass}>
           {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
           <img
-            alt={alt || 'journal image'}
+            alt={figcaptionText || fallbackAltText || 'journal image'}
             className="max-h-[42rem] w-full bg-[rgba(246,239,231,0.72)] object-contain"
             src={resolvedSrc}
           />
-          {alt ? (
+          {figcaptionText ? (
             <figcaption className="border-t border-white/58 px-5 py-3.5 text-sm leading-7 text-muted-foreground md:px-6">
-              {alt}
+              {figcaptionText}
             </figcaption>
           ) : null}
         </figure>

@@ -246,6 +246,22 @@ export const deleteJournalAttachment = async (
   await api.delete(`/journals/${journalId}/attachments/${attachmentId}`);
 };
 
+export const updateJournalAttachmentCaption = async (
+  journalId: string,
+  attachmentId: string,
+  caption: string | null,
+): Promise<JournalAttachmentPublic> => {
+  try {
+    const response = await api.patch<JournalAttachmentPublic>(
+      `/journals/${journalId}/attachments/${attachmentId}`,
+      { caption },
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(extractJournalApiErrorMessage(error, '這張圖片的說明這次沒有順利儲存，稍後再試一次。'));
+  }
+};
+
 export const deleteJournal = async (id: string | number) => {
   await api.delete(`/journals/${id}`);
 };

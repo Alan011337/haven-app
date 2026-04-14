@@ -14,6 +14,7 @@ from app.models.journal import Journal
 from app.models.journal_attachment import JournalAttachment
 from app.models.analysis import Analysis 
 from app.schemas.journal import (
+    JournalAttachmentCaptionUpdate,
     JournalAttachmentPublic,
     JournalCreate,
     JournalCreateResponse,
@@ -1538,6 +1539,46 @@ async def delete_journal_attachment(
         failure_detail="刪除附件失敗，請稍後再試。",
     )
     return None
+
+
+@router.patch(
+    "/{journal_id}/attachments/{attachment_id}",
+    response_model=JournalAttachmentPublic,
+)
+async def update_journal_attachment_caption(
+    journal_id: str,
+    attachment_id: str,
+    payload: JournalAttachmentCaptionUpdate,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    journal_uuid = _parse_journal_uuid(journal_id)
+    attachment_uuid = _parse_journal_uuid(attachment_id)
+    journal = _get_owned_journal_or_error(
+        session=session,
+        journal_id=journal_uuid,
+        current_user=current_user,
+    )
+    attachment = session.get(JournalAttachment, attachment_uuid)
+    if not attachment or attachment.deleted_at is not None or attachment.journal_id != journal.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到這個附件")
+    if attachment.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="你沒有權限編輯這個附件")
+
+    attachment.caption = payload.caption
+    attachment.updated_at = utcnow()
+    session.add(attachment)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Update journal attachment caption",
+        conflict_detail="更新圖片說明時發生衝突，請重試。",
+        failure_detail="更新圖片說明失敗，請稍後再試。",
+    )
+
+    attachment_payload = await _serialize_attachments([attachment])
+    return attachment_payload[0]
+
 
 # 4. 刪除日記 — 🚀 改用 soft-delete，與系統 DATA_SOFT_DELETE lifecycle 一致
 @router.delete("/{journal_id}", status_code=status.HTTP_204_NO_CONTENT)

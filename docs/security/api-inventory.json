@@ -771,6 +771,20 @@
     },
     {
       "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.journals.update_journal_attachment_caption",
+      "method": "PATCH",
+      "name": "update_journal_attachment_caption",
+      "owner_team": "backend-core",
+      "path": "/api/journals/{journal_id}/attachments/{attachment_id}",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md#p0-b-security-gate-v1-owaspbola",
+      "tags": [
+        "journals"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
       "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_language.get_preference",
       "method": "GET",

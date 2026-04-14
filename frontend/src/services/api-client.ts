@@ -18,6 +18,7 @@ export {
   JOURNALS_INITIAL_LIMIT,
   MAX_JOURNAL_CONTENT_LENGTH,
   updateJournal,
+  updateJournalAttachmentCaption,
   uploadJournalAttachment,
 } from '@/services/journals-api';
 export type {

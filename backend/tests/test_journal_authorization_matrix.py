@@ -2,11 +2,13 @@
 # AUTHZ_MATRIX: POST /api/journals/
 # AUTHZ_MATRIX: PATCH /api/journals/{journal_id}
 # AUTHZ_MATRIX: POST /api/journals/{journal_id}/attachments
+# AUTHZ_MATRIX: PATCH /api/journals/{journal_id}/attachments/{attachment_id}
 # AUTHZ_MATRIX: DELETE /api/journals/{journal_id}/attachments/{attachment_id}
 # AUTHZ_MATRIX: DELETE /api/journals/{journal_id}
 # AUTHZ_DENY_MATRIX: GET /api/journals/{journal_id}
 # AUTHZ_DENY_MATRIX: PATCH /api/journals/{journal_id}
 # AUTHZ_DENY_MATRIX: POST /api/journals/{journal_id}/attachments
+# AUTHZ_DENY_MATRIX: PATCH /api/journals/{journal_id}/attachments/{attachment_id}
 # AUTHZ_DENY_MATRIX: DELETE /api/journals/{journal_id}/attachments/{attachment_id}
 # AUTHZ_DENY_MATRIX: DELETE /api/journals/{journal_id}
 
@@ -265,6 +267,68 @@ class JournalAuthorizationMatrixTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["detail"], "你沒有權限查看這篇日記")
+
+    def test_update_attachment_caption_allows_owner(self) -> None:
+        with patch(
+            "app.api.journals.create_signed_journal_attachment_url",
+            return_value="https://example.com/owner-photo.jpg",
+        ):
+            response = self.client.patch(
+                f"/api/journals/{self.journal_id}/attachments/{self.owner_attachment_id}",
+                json={"caption": "  那一天的海風  "},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["caption"], "那一天的海風")
+
+        with Session(self.engine) as session:
+            stored = session.get(JournalAttachment, self.owner_attachment_id)
+            assert stored is not None
+            self.assertEqual(stored.caption, "那一天的海風")
+
+    def test_update_attachment_caption_clears_when_empty(self) -> None:
+        with Session(self.engine) as session:
+            attachment = session.get(JournalAttachment, self.owner_attachment_id)
+            assert attachment is not None
+            attachment.caption = "舊的說明"
+            session.add(attachment)
+            session.commit()
+
+        with patch(
+            "app.api.journals.create_signed_journal_attachment_url",
+            return_value="https://example.com/owner-photo.jpg",
+        ):
+            response = self.client.patch(
+                f"/api/journals/{self.journal_id}/attachments/{self.owner_attachment_id}",
+                json={"caption": "   "},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["caption"])
+
+        with Session(self.engine) as session:
+            stored = session.get(JournalAttachment, self.owner_attachment_id)
+            assert stored is not None
+            self.assertIsNone(stored.caption)
+
+    def test_update_attachment_caption_rejects_non_owner(self) -> None:
+        self.current_user_id = self.user_b_id
+        response = self.client.patch(
+            f"/api/journals/{self.journal_id}/attachments/{self.owner_attachment_id}",
+            json={"caption": "partner 偷改"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["detail"], "你沒有權限查看這篇日記")
+
+    def test_update_attachment_caption_rejects_oversize(self) -> None:
+        response = self.client.patch(
+            f"/api/journals/{self.journal_id}/attachments/{self.owner_attachment_id}",
+            json={"caption": "字" * 281},
+        )
+
+        self.assertEqual(response.status_code, 422)
 
     def test_delete_journal_allows_owner(self) -> None:
         response = self.client.delete(f"/api/journals/{self.journal_id}")

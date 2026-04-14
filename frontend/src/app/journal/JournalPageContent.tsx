@@ -36,7 +36,7 @@ import type {
 import { queryKeys } from '@/lib/query-keys';
 import { deriveJournalTitle } from '@/lib/journal-format';
 import { logClientError } from '@/lib/safe-error-log';
-import { MAX_JOURNAL_CONTENT_LENGTH } from '@/services/api-client';
+import { MAX_JOURNAL_CONTENT_LENGTH, updateJournalAttachmentCaption } from '@/services/api-client';
 import {
   JournalAssetTray,
   JournalBackLink,
@@ -1066,6 +1066,26 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     ],
   );
 
+  const handleAttachmentCaptionChange = useCallback(
+    async (attachmentId: string, caption: string | null) => {
+      if (!currentJournalId) return;
+      try {
+        const updated = await updateJournalAttachmentCaption(
+          currentJournalId,
+          attachmentId,
+          caption,
+        );
+        setAttachments((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } catch (error) {
+        logClientError('journal_attachment_caption_update_failed', error);
+        showToast('這次沒有順利儲存圖片說明，稍後再試一次。', 'error');
+      }
+    },
+    [currentJournalId, showToast],
+  );
+
   const ensureJournalExistsForUpload = useCallback(async () => {
     if (currentJournalId) return currentJournalId;
     const persisted = await persistDraft({
@@ -1586,6 +1606,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                   autoFocus
                   headingEntries={headingEntries}
                   initialMarkdown={content}
+                  onAttachmentCaptionChange={handleAttachmentCaptionChange}
                   onChange={syncEditorMarkdown}
                   onFilesDropped={handleAttachmentUpload}
                   onImportWarning={(warning) => {

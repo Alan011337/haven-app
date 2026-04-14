@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 117,
-  "route_digest": "91be8c2ca5a8b89af1b8e0283720c5d97b81ebabd1dd3ae35bb85ed0a12b1495",
+  "route_count": 118,
+  "route_digest": "4f41790ccfc99f0ff49b927ad2793e7dd235e6ecd0ddc7c60273a94c8f060cf1",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -281,6 +281,11 @@
     {
       "idempotency_policy": "required",
       "method": "DELETE",
+      "path": "/api/journals/{journal_id}/attachments/{attachment_id}"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PATCH",
       "path": "/api/journals/{journal_id}/attachments/{attachment_id}"
     },
     {

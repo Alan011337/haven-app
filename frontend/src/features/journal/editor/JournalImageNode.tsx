@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ImagePlus } from 'lucide-react';
 import {
   DecoratorNode,
@@ -21,9 +21,23 @@ export interface InsertJournalImagePayload {
 export const INSERT_JOURNAL_IMAGE_COMMAND: LexicalCommand<InsertJournalImagePayload> =
   createCommand('INSERT_JOURNAL_IMAGE_COMMAND');
 
+export const JOURNAL_ATTACHMENT_CAPTION_MAX_LENGTH = 280;
+
 type AttachmentMap = Record<string, JournalAttachmentPublic>;
 
-const JournalAttachmentMapContext = createContext<AttachmentMap>({});
+type CaptionChangeHandler = (
+  attachmentId: string,
+  caption: string | null,
+) => Promise<void> | void;
+
+interface JournalAttachmentContextValue {
+  attachmentMap: AttachmentMap;
+  onCaptionChange?: CaptionChangeHandler;
+}
+
+const JournalAttachmentContext = createContext<JournalAttachmentContextValue>({
+  attachmentMap: {},
+});
 
 export type SerializedJournalImageNode = Spread<
   {
@@ -37,9 +51,11 @@ export type SerializedJournalImageNode = Spread<
 
 export function JournalAttachmentProvider({
   attachments,
+  onCaptionChange,
   children,
 }: {
   attachments: JournalAttachmentPublic[];
+  onCaptionChange?: CaptionChangeHandler;
   children: ReactNode;
 }) {
   const attachmentMap = useMemo<AttachmentMap>(() => {
@@ -49,11 +65,23 @@ export function JournalAttachmentProvider({
     }, {});
   }, [attachments]);
 
-  return (
-    <JournalAttachmentMapContext.Provider value={attachmentMap}>
-      {children}
-    </JournalAttachmentMapContext.Provider>
+  const value = useMemo<JournalAttachmentContextValue>(
+    () => ({ attachmentMap, onCaptionChange }),
+    [attachmentMap, onCaptionChange],
   );
+
+  return (
+    <JournalAttachmentContext.Provider value={value}>
+      {children}
+    </JournalAttachmentContext.Provider>
+  );
+}
+
+function parseAttachmentIdFromSrc(src: string): string | null {
+  const trimmed = src.trim();
+  if (!trimmed.startsWith('attachment:')) return null;
+  const id = trimmed.replace('attachment:', '').trim();
+  return id || null;
 }
 
 function resolveJournalImageSource(src: string, attachmentMap: AttachmentMap): string | null {
@@ -70,8 +98,32 @@ function resolveJournalImageSource(src: string, attachmentMap: AttachmentMap): s
 }
 
 function JournalImageCard({ alt, src }: InsertJournalImagePayload) {
-  const attachmentMap = useContext(JournalAttachmentMapContext);
+  const { attachmentMap, onCaptionChange } = useContext(JournalAttachmentContext);
+  const attachmentId = parseAttachmentIdFromSrc(src);
+  const attachment = attachmentId ? attachmentMap[attachmentId] : null;
   const resolvedSrc = resolveJournalImageSource(src, attachmentMap);
+  const serverCaption = attachment?.caption ?? '';
+  const canAuthor = Boolean(attachmentId && onCaptionChange);
+
+  const [draft, setDraft] = useState<string>(serverCaption);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft(serverCaption);
+  }, [serverCaption]);
+
+  const handleBlur = async () => {
+    if (!canAuthor || !attachmentId || !onCaptionChange) return;
+    const trimmed = draft.trim();
+    const previous = (serverCaption ?? '').trim();
+    if (trimmed === previous) return;
+    try {
+      setSaving(true);
+      await onCaptionChange(attachmentId, trimmed.length > 0 ? trimmed : null);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!resolvedSrc) {
     return (
@@ -93,17 +145,50 @@ function JournalImageCard({ alt, src }: InsertJournalImagePayload) {
     );
   }
 
+  const altForImage = (draft.trim() || serverCaption || alt || 'journal image').trim();
+
   return (
     <figure className="group my-8 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.45)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(249,244,237,0.9))] shadow-soft">
       {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
       <img
-        alt={alt || 'journal image'}
+        alt={altForImage}
         className="max-h-[520px] w-full object-contain"
         src={resolvedSrc}
       />
-      <figcaption className="border-t border-white/58 px-5 py-3 text-sm leading-7 text-muted-foreground">
-        {alt || '這張圖片會跟著這一頁一起被閱讀。'}
-      </figcaption>
+      {canAuthor ? (
+        <figcaption className="border-t border-white/58 px-5 py-3">
+          <label className="sr-only" htmlFor={`journal-image-caption-${attachmentId}`}>
+            為這張照片寫一句話
+          </label>
+          <textarea
+            id={`journal-image-caption-${attachmentId}`}
+            value={draft}
+            onChange={(event) => {
+              const next = event.target.value.slice(0, JOURNAL_ATTACHMENT_CAPTION_MAX_LENGTH);
+              setDraft(next);
+            }}
+            onBlur={handleBlur}
+            placeholder="為這張照片寫一句話（選填）"
+            rows={1}
+            maxLength={JOURNAL_ATTACHMENT_CAPTION_MAX_LENGTH}
+            disabled={saving}
+            className="w-full resize-none bg-transparent text-sm leading-7 text-muted-foreground placeholder:text-muted-foreground/55 focus:outline-none focus:text-card-foreground disabled:opacity-60"
+            aria-describedby={`journal-image-caption-${attachmentId}-hint`}
+          />
+          <p
+            id={`journal-image-caption-${attachmentId}-hint`}
+            className="mt-1 text-[0.68rem] tracking-[0.12em] text-muted-foreground/55 tabular-nums"
+          >
+            {draft.length > 0
+              ? `${draft.length} / ${JOURNAL_ATTACHMENT_CAPTION_MAX_LENGTH}`
+              : '失焦時會自動儲存'}
+          </p>
+        </figcaption>
+      ) : serverCaption ? (
+        <figcaption className="border-t border-white/58 px-5 py-3 text-sm leading-7 text-muted-foreground">
+          {serverCaption}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

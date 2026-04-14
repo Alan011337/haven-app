@@ -117,6 +117,10 @@ interface JournalLexicalComposerProps {
   className?: string;
   headingEntries?: JournalOutlineEntry[];
   initialMarkdown: string;
+  onAttachmentCaptionChange?: (
+    attachmentId: string,
+    caption: string | null,
+  ) => Promise<void> | void;
   onChange: (markdown: string) => void;
   onFilesDropped: (files: File[]) => void;
   onImportWarning?: (warning: string | null) => void;
@@ -401,6 +405,7 @@ const JournalLexicalComposer = forwardRef<
     className,
     headingEntries = [],
     initialMarkdown,
+    onAttachmentCaptionChange,
     onChange,
     onFilesDropped,
     onImportWarning,
@@ -478,7 +483,10 @@ const JournalLexicalComposer = forwardRef<
   );
 
   return (
-    <JournalAttachmentProvider attachments={attachments}>
+    <JournalAttachmentProvider
+      attachments={attachments}
+      onCaptionChange={onAttachmentCaptionChange}
+    >
       <div
         className={cn(
           'relative overflow-hidden rounded-[2rem] bg-transparent',
