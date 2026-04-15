@@ -25,16 +25,19 @@ from app.schemas.baseline import BaselineSummaryPublic, CoupleGoalPublic, Relati
 from app.schemas.blueprint import WishlistItemPublic
 from app.schemas.love_map import (
     LoveMapCardSummary,
+    LoveMapCarePreferencesPublic,
     LoveMapCardsResponse,
     LoveMapNoteCreate,
     LoveMapNotePublic,
     LoveMapStoryCapsulePublic,
     LoveMapStoryMomentPublic,
     LoveMapStoryPublic,
+    LoveMapSystemEssentialsPublic,
     LoveMapSystemMePublic,
     LoveMapSystemPartnerPublic,
     LoveMapSystemResponse,
     LoveMapSystemStatsPublic,
+    LoveMapWeeklyTaskPublic,
     LoveMapNoteUpdate,
     RelationshipKnowledgeSuggestionEvidencePublic,
     RelationshipKnowledgeSuggestionPublic,
@@ -51,6 +54,12 @@ from app.services.ai import (
     supports_shared_future_cadence_refinement,
 )
 from app.services.ai_errors import HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError
+from app.services.love_language_runtime import (
+    LoveLanguagePreferenceSummary,
+    WeeklyTaskResolution,
+    load_love_language_preference_summary,
+    resolve_pair_weekly_task,
+)
 from app.services.memory_archive import get_relationship_story_slice, get_relationship_story_time_capsule
 
 logger = logging.getLogger(__name__)
@@ -159,6 +168,32 @@ def _truncate_preview(value: str, limit: int) -> str:
     if len(normalized) <= limit:
         return normalized
     return normalized[: max(0, limit - 1)].rstrip() + "…"
+
+
+def _to_care_preferences_public(
+    summary: LoveLanguagePreferenceSummary | None,
+) -> LoveMapCarePreferencesPublic | None:
+    if summary is None:
+        return None
+    return LoveMapCarePreferencesPublic(
+        primary=summary.primary,
+        secondary=summary.secondary,
+        updated_at=summary.updated_at.isoformat() + "Z" if summary.updated_at else None,
+    )
+
+
+def _to_weekly_task_public(
+    resolution: WeeklyTaskResolution | None,
+) -> LoveMapWeeklyTaskPublic | None:
+    if resolution is None:
+        return None
+    return LoveMapWeeklyTaskPublic(
+        task_slug=resolution.task_slug,
+        task_label=resolution.task_label,
+        assigned_at=resolution.assigned_at.isoformat() + "Z" if resolution.assigned_at else None,
+        completed=resolution.completed,
+        completed_at=resolution.completed_at.isoformat() + "Z" if resolution.completed_at else None,
+    )
 
 
 def _pair_scope_ids(user_id: UUID, partner_id: UUID) -> tuple[UUID, UUID]:
@@ -587,6 +622,12 @@ def get_love_map_system(
     note_rows: list[LoveMapNote] = []
     wishlist_rows: list[WishlistItem] = []
     story = LoveMapStoryPublic()
+    my_care_preferences = load_love_language_preference_summary(
+        session=session,
+        user_id=current_user.id,
+    )
+    partner_care_preferences = None
+    weekly_task = None
 
     if verified_partner_id:
         uid1, uid2 = _pair_scope_ids(current_user.id, verified_partner_id)
@@ -620,6 +661,16 @@ def get_love_map_system(
                 partner_id=verified_partner_id,
             )
         )
+        partner_care_preferences = load_love_language_preference_summary(
+            session=session,
+            user_id=verified_partner_id,
+        )
+        weekly_task = resolve_pair_weekly_task(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+            ensure_assignment=False,
+        )
 
     timestamps = []
     if mine_baseline:
@@ -630,6 +681,12 @@ def get_love_map_system(
         timestamps.append(couple_goal.chosen_at)
     timestamps.extend(row.updated_at for row in note_rows)
     timestamps.extend(row.created_at for row in wishlist_rows)
+    if my_care_preferences and my_care_preferences.updated_at:
+        timestamps.append(my_care_preferences.updated_at)
+    if partner_care_preferences and partner_care_preferences.updated_at:
+        timestamps.append(partner_care_preferences.updated_at)
+    if weekly_task and weekly_task.completed_at:
+        timestamps.append(weekly_task.completed_at)
 
     last_activity_at = max(timestamps).isoformat() + "Z" if timestamps else None
 
@@ -662,6 +719,11 @@ def get_love_map_system(
             baseline_ready_partner=partner_baseline is not None,
             wishlist_count=len(wishlist_items),
             last_activity_at=last_activity_at,
+        ),
+        essentials=LoveMapSystemEssentialsPublic(
+            my_care_preferences=_to_care_preferences_public(my_care_preferences),
+            partner_care_preferences=_to_care_preferences_public(partner_care_preferences),
+            weekly_task=_to_weekly_task_public(weekly_task),
         ),
     )
 

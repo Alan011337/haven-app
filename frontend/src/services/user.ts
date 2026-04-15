@@ -34,6 +34,16 @@ export const fetchUserMe = async (): Promise<UserMeResponse> => {
   return data;
 };
 
+export interface UpdateUserMePayload {
+  full_name?: string | null;
+  legacy_contact_email?: string | null;
+}
+
+export const updateUserMe = async (body: UpdateUserMePayload): Promise<UserMeResponse> => {
+  const { data } = await api.patch<UserMeResponse>('/users/me', body);
+  return data;
+};
+
 // --- Module A1: Onboarding consent ---
 export interface OnboardingConsentPublic {
   privacy_scope_accepted: boolean;

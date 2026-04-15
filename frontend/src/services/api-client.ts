@@ -131,25 +131,68 @@ export const fetchPartnerStatus = async (
 };
 
 // --- Module B3: Love Languages ---
+export const LOVE_LANGUAGE_OPTIONS = ['words', 'acts', 'gifts', 'time', 'touch'] as const;
+export type LoveLanguagePreferenceKey = (typeof LOVE_LANGUAGE_OPTIONS)[number];
+
+export interface LoveLanguagePreferenceRecord {
+  primary: LoveLanguagePreferenceKey | null;
+  secondary: LoveLanguagePreferenceKey | null;
+}
+
 export interface LoveLanguagePreferencePublic {
-  preference: Record<string, unknown>;
+  preference: LoveLanguagePreferenceRecord;
   updated_at: string;
 }
 
 export interface WeeklyTaskPublic {
   task_slug: string;
   task_label: string;
-  assigned_at: string;
+  assigned_at: string | null;
   completed: boolean;
   completed_at: string | null;
 }
 
+function isLoveLanguagePreferenceKey(value: unknown): value is LoveLanguagePreferenceKey {
+  return typeof value === 'string' && LOVE_LANGUAGE_OPTIONS.includes(value as LoveLanguagePreferenceKey);
+}
+
+export function normalizeLoveLanguagePreference(
+  value?: LoveLanguagePreferenceRecord | Record<string, unknown> | null,
+): LoveLanguagePreferenceRecord {
+  const primary = isLoveLanguagePreferenceKey(value?.primary) ? value.primary : null;
+  const secondaryCandidate = isLoveLanguagePreferenceKey(value?.secondary) ? value.secondary : null;
+  return {
+    primary,
+    secondary: secondaryCandidate && secondaryCandidate !== primary ? secondaryCandidate : null,
+  };
+}
+
 export const fetchLoveLanguagePreference = async (): Promise<LoveLanguagePreferencePublic | null> => {
-  return apiGet<LoveLanguagePreferencePublic | null>('/love-languages/preference');
+  const response = await apiGet<LoveLanguagePreferencePublic | null>('/love-languages/preference');
+  if (!response) {
+    return null;
+  }
+  return {
+    ...response,
+    preference: normalizeLoveLanguagePreference(response.preference),
+  };
 };
 
-export const putLoveLanguagePreference = async (preference: Record<string, unknown>): Promise<LoveLanguagePreferencePublic> => {
-  return apiPut<LoveLanguagePreferencePublic>('/love-languages/preference', { preference });
+export const putLoveLanguagePreference = async (
+  preference: LoveLanguagePreferenceRecord,
+): Promise<LoveLanguagePreferencePublic> => {
+  const normalizedPreference = normalizeLoveLanguagePreference(preference);
+  const payload = {
+    primary: normalizedPreference.primary,
+    secondary: normalizedPreference.secondary,
+  };
+  const response = await apiPut<LoveLanguagePreferencePublic>('/love-languages/preference', {
+    preference: payload,
+  });
+  return {
+    ...response,
+    preference: normalizeLoveLanguagePreference(response.preference),
+  };
 };
 
 export const fetchWeeklyTask = async (
@@ -303,6 +346,10 @@ export interface LoveMapSystemPartnerPublic {
   partner_name: string | null;
 }
 
+export interface LoveMapCarePreferencesPublic extends LoveLanguagePreferenceRecord {
+  updated_at: string | null;
+}
+
 export interface LoveMapStoryMomentPublic {
   kind: 'card' | 'appreciation' | 'journal';
   title: string;
@@ -336,6 +383,12 @@ export interface LoveMapSystemStatsPublic {
   last_activity_at: string | null;
 }
 
+export interface LoveMapSystemEssentialsPublic {
+  my_care_preferences: LoveMapCarePreferencesPublic | null;
+  partner_care_preferences: LoveMapCarePreferencesPublic | null;
+  weekly_task: WeeklyTaskPublic | null;
+}
+
 export interface LoveMapSystemResponse {
   has_partner: boolean;
   me: LoveMapSystemMePublic;
@@ -346,6 +399,7 @@ export interface LoveMapSystemResponse {
   notes: LoveMapNotePublic[];
   wishlist_items: WishlistItemPublic[];
   stats: LoveMapSystemStatsPublic;
+  essentials: LoveMapSystemEssentialsPublic;
 }
 
 export interface RelationshipKnowledgeSuggestionEvidencePublic {
@@ -378,7 +432,25 @@ export const fetchLoveMapNotes = async (): Promise<LoveMapNotePublic[]> => {
 };
 
 export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
-  return apiGet<LoveMapSystemResponse>('/love-map/system');
+  const response = await apiGet<LoveMapSystemResponse>('/love-map/system');
+  return {
+    ...response,
+    essentials: {
+      my_care_preferences: response.essentials?.my_care_preferences
+        ? {
+            ...response.essentials.my_care_preferences,
+            ...normalizeLoveLanguagePreference(response.essentials.my_care_preferences),
+          }
+        : null,
+      partner_care_preferences: response.essentials?.partner_care_preferences
+        ? {
+            ...response.essentials.partner_care_preferences,
+            ...normalizeLoveLanguagePreference(response.essentials.partner_care_preferences),
+          }
+        : null,
+      weekly_task: response.essentials?.weekly_task ?? null,
+    },
+  };
 };
 
 export const fetchLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {

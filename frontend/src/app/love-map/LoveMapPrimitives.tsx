@@ -295,6 +295,48 @@ interface LoveMapSectionProps {
   children: ReactNode;
 }
 
+interface LoveMapKnowledgeBlockProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  badge?: ReactNode;
+  dataTestId?: string;
+}
+
+export function LoveMapKnowledgeBlock({
+  eyebrow,
+  title,
+  description,
+  children,
+  footer,
+  badge,
+  dataTestId,
+}: LoveMapKnowledgeBlockProps) {
+  return (
+    <GlassCard
+      className="overflow-hidden rounded-[2.2rem] border-white/58 bg-white/82 p-5 shadow-lift backdrop-blur-md md:p-6"
+      data-testid={dataTestId}
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">{description}</p>
+          </div>
+          {badge}
+        </div>
+
+        {children}
+
+        {footer}
+      </div>
+    </GlassCard>
+  );
+}
+
 export function LoveMapSection({
   id,
   eyebrow,

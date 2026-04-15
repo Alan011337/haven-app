@@ -1,32 +1,24 @@
 # Module B3: Love Languages preference and weekly task.
 
 import logging
-from datetime import datetime, timezone
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep, verify_active_partner_id
 from app.api.error_handling import commit_with_error_handling
-from app.models.love_language import LoveLanguagePreference, LoveLanguageTaskAssignment
+from app.models.love_language import LoveLanguagePreference
 from app.schemas.love_language import (
-    LOVE_LANGUAGE_TASKS,
     LoveLanguagePreferenceCreate,
     LoveLanguagePreferencePublic,
     WeeklyTaskPublic,
 )
+from app.services.love_language_runtime import (
+    normalize_love_language_preference,
+    resolve_pair_weekly_task,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["love-languages"])
-
-
-def _canonical(u1: UUID, u2: UUID) -> tuple[UUID, UUID]:
-    return (min(u1, u2), max(u1, u2))
-
-
-def _week_number() -> int:
-    return datetime.now(timezone.utc).isocalendar()[1]
 
 
 @router.get("/preference", response_model=LoveLanguagePreferencePublic | None)
@@ -38,7 +30,11 @@ def get_preference(
     row = session.get(LoveLanguagePreference, current_user.id)
     if not row:
         return None
-    return LoveLanguagePreferencePublic(preference=row.preference, updated_at=row.updated_at)
+    normalized = normalize_love_language_preference(row.preference)
+    return LoveLanguagePreferencePublic(
+        preference={key: value for key, value in normalized.items() if value is not None},
+        updated_at=row.updated_at,
+    )
 
 
 @router.put("/preference", response_model=LoveLanguagePreferencePublic)
@@ -74,36 +70,34 @@ def get_weekly_task(
     partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not partner_id:
         return None
-    uid1, uid2 = _canonical(current_user.id, partner_id)
-    week = _week_number()
-    task_idx = week % len(LOVE_LANGUAGE_TASKS)
-    task_slug, task_label = LOVE_LANGUAGE_TASKS[task_idx]
-    row = session.exec(
-        select(LoveLanguageTaskAssignment).where(
-            LoveLanguageTaskAssignment.user_id == uid1,
-            LoveLanguageTaskAssignment.partner_id == uid2,
-            LoveLanguageTaskAssignment.task_slug == task_slug,
-        )
-    ).first()
-    if not row:
-        row = LoveLanguageTaskAssignment(
-            user_id=uid1,
-            partner_id=uid2,
-            task_slug=task_slug,
-        )
-        session.add(row)
+    task = resolve_pair_weekly_task(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+        ensure_assignment=True,
+    )
+    if task.created_assignment and task.assignment is not None:
         commit_with_error_handling(
-            session, logger=logger, action="Create weekly task assignment",
-            conflict_detail="建立時發生衝突。", failure_detail="建立失敗。",
+            session,
+            logger=logger,
+            action="Create weekly task assignment",
+            conflict_detail="建立時發生衝突。",
+            failure_detail="建立失敗。",
         )
-        session.refresh(row)
-    completed = row.completed_at is not None
+        session.refresh(task.assignment)
+        task = resolve_pair_weekly_task(
+            session=session,
+            user_id=current_user.id,
+            partner_id=partner_id,
+            ensure_assignment=False,
+        )
+
     return WeeklyTaskPublic(
-        task_slug=row.task_slug,
-        task_label=task_label,
-        assigned_at=row.assigned_at,
-        completed=completed,
-        completed_at=row.completed_at,
+        task_slug=task.task_slug,
+        task_label=task.task_label,
+        assigned_at=task.assigned_at,
+        completed=task.completed,
+        completed_at=task.completed_at,
     )
 
 
@@ -114,27 +108,23 @@ def complete_weekly_task(
     current_user: CurrentUser,
 ) -> WeeklyTaskPublic:
     from app.core.datetime_utils import utcnow
+
     partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not partner_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要先完成雙向綁定",
         )
-    uid1, uid2 = _canonical(current_user.id, partner_id)
-    week = _week_number()
-    task_idx = week % len(LOVE_LANGUAGE_TASKS)
-    task_slug, task_label = LOVE_LANGUAGE_TASKS[task_idx]
-    row = session.exec(
-        select(LoveLanguageTaskAssignment).where(
-            LoveLanguageTaskAssignment.user_id == uid1,
-            LoveLanguageTaskAssignment.partner_id == uid2,
-            LoveLanguageTaskAssignment.task_slug == task_slug,
-        )
-    ).first()
-    if not row:
-        row = LoveLanguageTaskAssignment(user_id=uid1, partner_id=uid2, task_slug=task_slug)
-        session.add(row)
-        session.flush()
+    task = resolve_pair_weekly_task(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+        ensure_assignment=True,
+    )
+    row = task.assignment
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="本週任務尚未初始化")
+
     row.completed_by_user_id = current_user.id
     row.completed_at = utcnow()
     session.add(row)
@@ -145,7 +135,7 @@ def complete_weekly_task(
     session.refresh(row)
     return WeeklyTaskPublic(
         task_slug=row.task_slug,
-        task_label=task_label,
+        task_label=task.task_label,
         assigned_at=row.assigned_at,
         completed=True,
         completed_at=row.completed_at,

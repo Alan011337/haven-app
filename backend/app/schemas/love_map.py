@@ -106,6 +106,26 @@ class LoveMapSystemStatsPublic(BaseModel):
     last_activity_at: str | None = None
 
 
+class LoveMapCarePreferencesPublic(BaseModel):
+    primary: str | None = None
+    secondary: str | None = None
+    updated_at: str | None = None
+
+
+class LoveMapWeeklyTaskPublic(BaseModel):
+    task_slug: str
+    task_label: str
+    assigned_at: str | None = None
+    completed: bool
+    completed_at: str | None = None
+
+
+class LoveMapSystemEssentialsPublic(BaseModel):
+    my_care_preferences: LoveMapCarePreferencesPublic | None = None
+    partner_care_preferences: LoveMapCarePreferencesPublic | None = None
+    weekly_task: LoveMapWeeklyTaskPublic | None = None
+
+
 class LoveMapSystemResponse(BaseModel):
     has_partner: bool
     me: LoveMapSystemMePublic
@@ -116,3 +136,4 @@ class LoveMapSystemResponse(BaseModel):
     notes: list[LoveMapNotePublic] = Field(default_factory=list)
     wishlist_items: list[WishlistItemPublic] = Field(default_factory=list)
     stats: LoveMapSystemStatsPublic
+    essentials: LoveMapSystemEssentialsPublic = Field(default_factory=LoveMapSystemEssentialsPublic)

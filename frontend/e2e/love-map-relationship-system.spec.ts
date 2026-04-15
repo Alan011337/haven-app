@@ -44,6 +44,9 @@ async function mockLoveMapApi(page: Page) {
   const goalPayloads: Array<Record<string, unknown>> = [];
   const notePayloads: Array<Record<string, unknown>> = [];
   const wishlistPayloads: Array<Record<string, unknown>> = [];
+  const identityPayloads: Array<Record<string, unknown>> = [];
+  const carePreferencePayloads: Array<Record<string, unknown>> = [];
+  let weeklyTaskCompletionCount = 0;
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
   const generatedStoryRitualCalls: Array<Record<string, unknown>> = [];
   const generatedRefinementCalls: string[] = [];
@@ -181,6 +184,25 @@ async function mockLoveMapApi(page: Page) {
       wishlist_count: 3,
       last_activity_at: new Date(now - 8 * 60 * 60 * 1000).toISOString(),
     },
+    essentials: {
+      my_care_preferences: {
+        primary: 'words',
+        secondary: 'time',
+        updated_at: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+      },
+      partner_care_preferences: {
+        primary: 'acts',
+        secondary: 'touch',
+        updated_at: new Date(now - 14 * 60 * 60 * 1000).toISOString(),
+      },
+      weekly_task: {
+        task_slug: 'task_note',
+        task_label: '寫一張小紙條謝謝他/她',
+        assigned_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        completed: false,
+        completed_at: null,
+      },
+    },
   };
 
   const cards = {
@@ -277,7 +299,23 @@ async function mockLoveMapApi(page: Page) {
       await fulfillJson(route, {
         id: 'me',
         email: 'alice@example.com',
-        full_name: 'Alice Chen',
+        full_name: system.me.full_name,
+        is_active: true,
+        partner_id: 'partner-1',
+        partner_name: 'Bob',
+        savings_score: 42,
+      });
+      return;
+    }
+
+    if (path.endsWith('/users/me') && method === 'PATCH') {
+      const payload = route.request().postDataJSON() as { full_name?: string | null };
+      identityPayloads.push(payload);
+      system.me.full_name = payload.full_name?.trim() || null;
+      await fulfillJson(route, {
+        id: 'me',
+        email: 'alice@example.com',
+        full_name: system.me.full_name,
         is_active: true,
         partner_id: 'partner-1',
         partner_name: 'Bob',
@@ -288,6 +326,41 @@ async function mockLoveMapApi(page: Page) {
 
     if (path.endsWith('/love-map/system') && method === 'GET') {
       await fulfillJson(route, system);
+      return;
+    }
+
+    if (path.endsWith('/love-languages/preference') && method === 'PUT') {
+      const payload = route.request().postDataJSON() as {
+        preference: { primary?: string | null; secondary?: string | null };
+      };
+      carePreferencePayloads.push(payload);
+      system.essentials.my_care_preferences = {
+        primary: payload.preference.primary ?? null,
+        secondary: payload.preference.secondary ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      await fulfillJson(route, {
+        preference: {
+          primary: system.essentials.my_care_preferences.primary,
+          secondary: system.essentials.my_care_preferences.secondary,
+        },
+        updated_at: system.essentials.my_care_preferences.updated_at,
+      });
+      return;
+    }
+
+    if (path.endsWith('/love-languages/weekly-task/complete') && method === 'POST') {
+      weeklyTaskCompletionCount += 1;
+      system.essentials.weekly_task = {
+        ...(system.essentials.weekly_task ?? {
+          task_slug: 'task_note',
+          task_label: '寫一張小紙條謝謝他/她',
+          assigned_at: new Date(now).toISOString(),
+        }),
+        completed: true,
+        completed_at: new Date().toISOString(),
+      };
+      await fulfillJson(route, system.essentials.weekly_task);
       return;
     }
 
@@ -711,6 +784,11 @@ async function mockLoveMapApi(page: Page) {
 
   return {
     baselinePayloads,
+    identityPayloads,
+    carePreferencePayloads,
+    get weeklyTaskCompletionCount() {
+      return weeklyTaskCompletionCount;
+    },
     generatedSuggestionCalls,
     goalPayloads,
     notePayloads,
@@ -773,54 +851,75 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '把你們現在的關係狀態、被記住的故事、私人反思與共同未來，放進同一個地方。',
+        name: '把關係的 Identity、Heart、Story 與 Future，放進同一個可維護的系統裡。',
       }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: '先知道這張頁面怎麼運作。' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Identity / Heart / Story / Future' })).toBeVisible();
     await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Blueprint 工作台' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '進入 Memory（完整 Shared Archive）' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '進入 Journal（完整反思書房）' })).toBeVisible();
-    await expect(page.getByTestId('relationship-system-guide-pulse')).toContainText('目前的共同方向');
-    await expect(page.getByTestId('relationship-system-guide-pulse')).toContainText('Shared truth');
-    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('被留下的關係故事');
+    await expect(page.getByRole('link', { name: '進入 Memory（完整 Story archive）' })).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('我們是誰，現在往哪裡走。');
+    await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('System home');
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('我們怎麼照顧彼此，現在感覺如何。');
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('Layered trust');
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('哪些記憶真正定義了我們。');
     await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
-    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('你的私人理解');
-    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('Personal reflection');
-    await expect(page.getByTestId('relationship-system-guide-shared-future')).toContainText('你們正在一起靠近的生活');
-    await expect(page.getByTestId('relationship-system-guide-shared-future')).toContainText('Shared truth');
-    await expectGuidePrimaryHref(page, 'relationship-system-guide-pulse', '#relationship-pulse');
+    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('你們正在一起建造什麼生活。');
+    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('Shared truth');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-identity', '#identity');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-heart', '#heart');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
-    await expectGuidePrimaryHref(page, 'relationship-system-guide-inner-landscape', '#inner-landscape');
-    await expectGuidePrimaryHref(page, 'relationship-system-guide-shared-future', '#shared-future');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-future', '#future');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-identity', '/settings#settings-relationship');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-heart', '/journal');
     await expectGuideSecondaryHref(page, 'relationship-system-guide-story', '/memory');
-    await expectGuideSecondaryHref(page, 'relationship-system-guide-inner-landscape', '/journal');
-    await expectGuideSecondaryHref(page, 'relationship-system-guide-shared-future', '/blueprint');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-future', '/blueprint');
 
-    await page.getByTestId('relationship-system-guide-pulse-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#relationship-pulse$/);
+    await page.getByTestId('relationship-system-guide-identity-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#identity$/);
+    await page.goto('/love-map');
+    await page.getByTestId('relationship-system-guide-heart-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#heart$/);
     await page.goto('/love-map');
     await page.getByTestId('relationship-system-guide-story-primary-action').click();
     await expect(page).toHaveURL(/\/love-map#story$/);
     await page.goto('/love-map');
-    await page.getByTestId('relationship-system-guide-inner-landscape-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#inner-landscape$/);
-    await page.goto('/love-map');
-    await page.getByTestId('relationship-system-guide-shared-future-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#shared-future$/);
+    await page.getByTestId('relationship-system-guide-future-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#future$/);
     await page.goto('/love-map');
 
-    await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: '把真正被留下來的 shared memory，放回你們的關係故事裡。' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: '把你的 relationship reflections 留成可回讀的內在地圖。' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: '把你們想一起靠近的生活，放進同一張藍圖裡。' })).toBeVisible();
-    await expect(page.getByText('目前的關係脈動與北極星方向')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '把你們是誰、目前在往哪裡走，固定成系統首頁。' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '把關係現在的感受、照顧方式與私人理解，放回同一層。' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '讓真正被留下來的 shared memory，變成可回來看的關係敘事。' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '把你們想一起靠近的生活，留在能持續維護的共享藍圖裡。' })).toBeVisible();
+    await expect(page.getByText('共享、pair-visible 與私人反思，分開呈現。')).toBeVisible();
     await expect(page.getByText('謝謝你每天早上幫我準備咖啡')).toBeVisible();
     await expect(page.getByText('一年前的這幾天（3/21 – 3/27）：1 則日記、1 則共同卡片回憶、1 則感恩。')).toBeVisible();
-    await expect(page.getByText('共享真相、私人反思與 AI 提案審核，分開呈現。')).toBeVisible();
-    await expect(page.getByText('Personal review', { exact: true })).toBeVisible();
     await expect(page.getByText('目前沒有待你審核的 Shared Future 提案。')).toBeVisible();
     await expect(page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' })).toBeVisible();
+
+    await page.getByLabel('My name in Haven').fill('Alice System');
+    await page.getByRole('button', { name: '保存名稱' }).click();
+    await expect.poll(() => apiState.identityPayloads.length).toBe(1);
+    expect(apiState.identityPayloads[0]).toEqual({ full_name: 'Alice System' });
+    await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('Alice System × Bob');
+
+    await page.locator('#love-map-care-primary').selectOption('acts');
+    await page.locator('#love-map-care-secondary').selectOption('time');
+    await page.getByRole('button', { name: '保存 care preferences' }).click();
+    await expect.poll(() => apiState.carePreferencePayloads.length).toBe(1);
+    expect(apiState.carePreferencePayloads[0]).toEqual({
+      preference: {
+        primary: 'acts',
+        secondary: 'time',
+      },
+    });
+    await expect(page.getByText('伴侶目前留下的 care preference')).toBeVisible();
+    await expect(page.getByText('服務行動 · 次要是 專注陪伴')).toBeVisible();
+
+    await page.getByRole('button', { name: '標記本週任務完成' }).click();
+    await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
+    await expect(page.getByText('本週任務已完成')).toBeVisible();
 
     const intimacySelect = page.locator('#love-map-baseline-intimacy');
     await intimacySelect.evaluate((node) => {
