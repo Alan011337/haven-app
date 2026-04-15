@@ -47,6 +47,7 @@ from .appreciation import Appreciation
 from .love_language import LoveLanguagePreference, LoveLanguageTaskAssignment
 from .cool_down_session import CoolDownSession
 from .love_map_note import LoveMapNote, LoveMapLayer
+from .relationship_care_profile import RelationshipCareProfile
 from .relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from .wishlist_item import WishlistItem
 
@@ -102,6 +103,7 @@ __all__ = [
     "OfflineOperationLog",
     "PushSubscription",
     "PushSubscriptionState",
+    "RelationshipCareProfile",
     "RelationshipKnowledgeSuggestion",
     "RelationshipBaseline",
     "User",

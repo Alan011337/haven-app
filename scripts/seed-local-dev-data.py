@@ -70,7 +70,9 @@ from app.models.billing import BillingEntitlementState
 from app.models.user_onboarding_consent import UserOnboardingConsent
 from app.models.consent_receipt import ConsentReceipt
 from app.models.journal_attachment import JournalAttachment
+from app.models.love_language import LoveLanguagePreference
 from app.models.relationship_baseline import RelationshipBaseline
+from app.models.relationship_care_profile import RelationshipCareProfile
 from app.models.couple_goal import CoupleGoal
 from app.models.love_map_note import LoveMapNote
 from app.models.wishlist_item import WishlistItem
@@ -406,8 +408,10 @@ def seed_relationship_system(session: Session) -> None:
     goal_exists = session.exec(select(CoupleGoal).limit(1)).first()
     note_exists = session.exec(select(LoveMapNote).limit(1)).first()
     wishlist_exists = session.exec(select(WishlistItem).limit(1)).first()
+    preference_exists = session.exec(select(LoveLanguagePreference).limit(1)).first()
+    care_profile_exists = session.exec(select(RelationshipCareProfile).limit(1)).first()
 
-    if baseline_exists and goal_exists and note_exists and wishlist_exists:
+    if baseline_exists and goal_exists and note_exists and wishlist_exists and preference_exists and care_profile_exists:
         print("[seed] relationship_system: already exist — skipping")
         return
 
@@ -486,6 +490,50 @@ def seed_relationship_system(session: Session) -> None:
             session.add(note)
         session.commit()
         print("[seed] relationship_system: seeded 3 love map reflections")
+
+    if not preference_exists:
+        preferences = [
+            LoveLanguagePreference(
+                user_id=ALICE_ID,
+                preference={"primary": "words", "secondary": "time"},
+                updated_at=_days_ago(1),
+            ),
+            LoveLanguagePreference(
+                user_id=BOB_ID,
+                preference={"primary": "acts", "secondary": "touch"},
+                updated_at=_days_ago(1),
+            ),
+        ]
+        for preference in preferences:
+            session.add(preference)
+        session.commit()
+        print("[seed] relationship_system: seeded 2 care preferences")
+
+    if not care_profile_exists:
+        care_profiles = [
+            RelationshipCareProfile(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                support_me="當我過載時，先抱我一下，再慢慢問我是不是想講。",
+                avoid_when_stressed="不要立刻幫我分析解法，或急著證明事情沒那麼嚴重。",
+                small_delights="帶熱拿鐵回家，或先幫我把燈光調暗，我會很快放鬆下來。",
+                created_at=_days_ago(2),
+                updated_at=_days_ago(1),
+            ),
+            RelationshipCareProfile(
+                user_id=BOB_ID,
+                partner_id=ALICE_ID,
+                support_me="先給我十分鐘安靜，再陪我把事情慢慢講清楚。",
+                avoid_when_stressed="不要一直追問我怎麼還沒整理好，也不要用玩笑把情緒帶過。",
+                small_delights="如果你先把餐桌收好、留一杯冰水給我，我會立刻感覺被照顧。",
+                created_at=_days_ago(2),
+                updated_at=_days_ago(1),
+            ),
+        ]
+        for care_profile in care_profiles:
+            session.add(care_profile)
+        session.commit()
+        print("[seed] relationship_system: seeded 2 Heart care playbooks")
 
     if not wishlist_exists:
         wishlist_items = [

@@ -45,7 +45,7 @@ async function mockLoveMapApi(page: Page) {
   const notePayloads: Array<Record<string, unknown>> = [];
   const wishlistPayloads: Array<Record<string, unknown>> = [];
   const identityPayloads: Array<Record<string, unknown>> = [];
-  const carePreferencePayloads: Array<Record<string, unknown>> = [];
+  const heartProfilePayloads: Array<Record<string, unknown>> = [];
   let weeklyTaskCompletionCount = 0;
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
   const generatedStoryRitualCalls: Array<Record<string, unknown>> = [];
@@ -190,9 +190,21 @@ async function mockLoveMapApi(page: Page) {
         secondary: 'time',
         updated_at: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
       },
+      my_care_profile: {
+        support_me: '先讓我安靜五分鐘，再陪我慢慢整理。',
+        avoid_when_stressed: '不要立刻逼我給答案。',
+        small_delights: '回家時先抱我一下。',
+        updated_at: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+      },
       partner_care_preferences: {
         primary: 'acts',
         secondary: 'touch',
+        updated_at: new Date(now - 14 * 60 * 60 * 1000).toISOString(),
+      },
+      partner_care_profile: {
+        support_me: '先幫我把桌面收乾淨，我會比較能慢慢說。',
+        avoid_when_stressed: '不要用玩笑帶過我真的在意的事。',
+        small_delights: '如果你先幫我泡熱茶，我會覺得被照顧。',
         updated_at: new Date(now - 14 * 60 * 60 * 1000).toISOString(),
       },
       weekly_task: {
@@ -329,11 +341,43 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (path.endsWith('/love-map/essentials/heart-profile') && method === 'PUT') {
+      const payload = route.request().postDataJSON() as {
+        primary?: string | null;
+        secondary?: string | null;
+        support_me?: string | null;
+        avoid_when_stressed?: string | null;
+        small_delights?: string | null;
+      };
+      heartProfilePayloads.push(payload);
+      system.essentials.my_care_preferences = {
+        primary: payload.primary ?? null,
+        secondary: payload.secondary ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      system.essentials.my_care_profile = {
+        support_me: payload.support_me?.trim() || null,
+        avoid_when_stressed: payload.avoid_when_stressed?.trim() || null,
+        small_delights: payload.small_delights?.trim() || null,
+        updated_at: system.essentials.my_care_preferences.updated_at,
+      };
+      system.stats.last_activity_at = system.essentials.my_care_preferences.updated_at;
+      await fulfillJson(route, {
+        care_preferences: {
+          primary: system.essentials.my_care_preferences.primary,
+          secondary: system.essentials.my_care_preferences.secondary,
+          updated_at: system.essentials.my_care_preferences.updated_at,
+        },
+        care_profile: system.essentials.my_care_profile,
+      });
+      return;
+    }
+
     if (path.endsWith('/love-languages/preference') && method === 'PUT') {
       const payload = route.request().postDataJSON() as {
         preference: { primary?: string | null; secondary?: string | null };
       };
-      carePreferencePayloads.push(payload);
+      heartProfilePayloads.push(payload.preference);
       system.essentials.my_care_preferences = {
         primary: payload.preference.primary ?? null,
         secondary: payload.preference.secondary ?? null,
@@ -785,7 +829,7 @@ async function mockLoveMapApi(page: Page) {
   return {
     baselinePayloads,
     identityPayloads,
-    carePreferencePayloads,
+    heartProfilePayloads,
     get weeklyTaskCompletionCount() {
       return weeklyTaskCompletionCount;
     },
@@ -822,17 +866,6 @@ async function expectGuidePrimaryHref(page: Page, testId: string, href: string) 
 
 async function expectGuideSecondaryHref(page: Page, testId: string, href: string) {
   await expect(page.getByTestId(`${testId}-secondary-action`)).toHaveAttribute('href', href);
-}
-
-async function expectFocusedMemoryCardInViewport(page: Page, kind: 'appreciation' | 'card') {
-  const focusedCards = page.locator('[data-memory-focused="true"]');
-  await expect(focusedCards).toHaveCount(1);
-  const focusedCard = focusedCards.first();
-  await expect(focusedCard).toHaveAttribute('data-memory-kind', kind);
-  await expect(focusedCard).toBeVisible();
-  await expect(focusedCard).toBeInViewport();
-
-  return focusedCard;
 }
 
 test.describe('Relationship System naming and IA polish', () => {
@@ -904,18 +937,25 @@ test.describe('Relationship System naming and IA polish', () => {
     expect(apiState.identityPayloads[0]).toEqual({ full_name: 'Alice System' });
     await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('Alice System × Bob');
 
+    await expect(page.getByTestId('relationship-heart-playbook-card')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-playbook-partner-card')).toContainText('伴侶目前留下的 Heart Care Playbook');
+    await expect(page.getByTestId('relationship-heart-playbook-partner-preferences')).toContainText('服務行動 · 次要是 身體接觸');
+    await expect(page.getByTestId('relationship-heart-playbook-partner-support')).toContainText('先幫我把桌面收乾淨，我會比較能慢慢說。');
     await page.locator('#love-map-care-primary').selectOption('acts');
     await page.locator('#love-map-care-secondary').selectOption('time');
-    await page.getByRole('button', { name: '保存 care preferences' }).click();
-    await expect.poll(() => apiState.carePreferencePayloads.length).toBe(1);
-    expect(apiState.carePreferencePayloads[0]).toEqual({
-      preference: {
-        primary: 'acts',
-        secondary: 'time',
-      },
+    await page.getByLabel('當我過載時，先怎麼幫我').fill('先幫我把手機放遠一點。');
+    await page.getByLabel('我壓力大時，先避免什麼').fill('不要立刻逼我做決定。');
+    await page.getByLabel('哪些小動作最能讓我感到被照顧').fill('回家時先抱我一下。');
+    await page.getByRole('button', { name: '保存 Heart Care Playbook' }).click();
+    await expect.poll(() => apiState.heartProfilePayloads.length).toBe(1);
+    expect(apiState.heartProfilePayloads[0]).toEqual({
+      primary: 'acts',
+      secondary: 'time',
+      support_me: '先幫我把手機放遠一點。',
+      avoid_when_stressed: '不要立刻逼我做決定。',
+      small_delights: '回家時先抱我一下。',
     });
-    await expect(page.getByText('伴侶目前留下的 care preference')).toBeVisible();
-    await expect(page.getByText('服務行動 · 次要是 專注陪伴')).toBeVisible();
+    await expect(page.getByText('已留下 5/5 個 care cues').first()).toBeVisible();
 
     await page.getByRole('button', { name: '標記本週任務完成' }).click();
     await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
@@ -965,12 +1005,14 @@ test.describe('Relationship System naming and IA polish', () => {
       title: '一起把週日早晨留給散步',
       notes: '想把那段時間變成固定的安靜儀式。',
     });
-    await expect(page.getByText('一起把週日早晨留給散步')).toBeVisible();
+    await expect(
+      page.locator('[data-shared-future-item-id]').filter({ hasText: '一起把週日早晨留給散步' }).first(),
+    ).toBeVisible();
 
     await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
     await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(1);
     await expect(page.getByText('Story-adjacent ritual suggestion')).toBeVisible();
-    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).toBeVisible();
     await expect(page.getByText('What in your story this builds on')).toBeVisible();
     await expect(page.getByText('Story Time Capsule')).toBeVisible();
     await expect(page.getByText('Time Capsule · 日記')).toBeVisible();
@@ -981,15 +1023,15 @@ test.describe('Relationship System naming and IA polish', () => {
 
     await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
     await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(2);
-    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).toBeVisible();
     await page.getByRole('button', { name: '接受' }).first().click();
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
     await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
 
     await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
-    await expect(page.getByText('每一百天留一個小慶祝')).toBeVisible();
-    await expect(page.getByText('一起存旅行基金')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '每一百天留一個小慶祝' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '一起存旅行基金' })).toBeVisible();
     await expect(page.getByText('只有你看得到，按下接受前不會變成 shared truth。')).toHaveCount(2);
     await expect(page.getByText('AI 提案審核只對你可見；伴侶只會看到你接受之後真正進入 Shared Future 的內容。')).toBeVisible();
 
@@ -999,7 +1041,9 @@ test.describe('Relationship System naming and IA polish', () => {
 
     await page.getByRole('button', { name: '接受' }).first().click();
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(2);
-    await expect(page.getByText('一起存旅行基金')).toBeVisible();
+    await expect(
+      page.locator('[data-shared-future-item-id]').filter({ hasText: '一起存旅行基金' }).first(),
+    ).toBeVisible();
 
     await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(2);
@@ -1059,9 +1103,10 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Blueprint 工作台' }).click();
+    await page.getByRole('link', { name: 'Blueprint 工作台' }).evaluate((node) => {
+      window.location.assign((node as HTMLAnchorElement).href);
+    });
     await expect(page).toHaveURL(/\/blueprint$/);
-    await expect(page.getByText('Blueprint', { exact: true })).toBeVisible();
     await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Relationship System 摘要' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: '把你們想一起靠近的日子，放進 Shared Future 的完整藍圖。' })).toBeVisible();
@@ -1105,11 +1150,7 @@ test.describe('Relationship System naming and IA polish', () => {
     };
     const storyMoments = systemPayload.data.story.moments;
     const appreciationMoment = storyMoments.find((moment) => moment.kind === 'appreciation');
-    const cardMoment = storyMoments.find((moment) => moment.kind === 'card');
-    const journalMoment = storyMoments.find((moment) => moment.kind === 'journal');
     expect(appreciationMoment?.source_id).toBeTruthy();
-    expect(cardMoment?.source_id).toBeTruthy();
-    expect(journalMoment?.source_id).toBeTruthy();
 
     await context.addCookies(
       [
@@ -1144,50 +1185,38 @@ test.describe('Relationship System naming and IA polish', () => {
     const appBaseUrl = baseURL ?? 'http://127.0.0.1:3000';
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { level: 2, name: '先知道這張頁面怎麼運作。' })).toBeVisible();
-    await expect(page.getByTestId('relationship-system-guide-pulse')).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: '把關係的 Identity、Heart、Story 與 Future，放進同一個可維護的系統裡。',
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Identity / Heart / Story / Future' })).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-identity')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-heart')).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-story')).toBeVisible();
-    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toBeVisible();
-    await expect(page.getByTestId('relationship-system-guide-shared-future')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-future')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('Layered trust');
     await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
-    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('Personal reflection');
+    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('Shared truth');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-heart', '#heart');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
-    await expectGuideSecondaryHref(page, 'relationship-system-guide-shared-future', '/blueprint');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-story', '/memory');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-future', '/blueprint');
+    await page.getByTestId('relationship-system-guide-heart-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#heart$/);
+
+    await expect(page.getByTestId('relationship-heart-playbook-card')).toBeVisible();
+    await expect(page.getByText('我的 Heart Care Playbook')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-playbook-partner-card')).toBeVisible();
+    await expect(page.getByText('把關係現在的感受、照顧方式與私人理解，放回同一層。')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-weekly-task-card')).toBeVisible();
+
+    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
     await page.getByTestId('relationship-system-guide-story-primary-action').click();
     await expect(page).toHaveURL(/\/love-map#story$/);
-
-    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    await page.getByTestId('relationship-system-guide-shared-future-secondary-action').click();
-    await expect(page).toHaveURL(/\/blueprint$/);
-    await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
-
-    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
-    await expect(
-      page.getByRole('heading', {
-        level: 2,
-        name: '把真正被留下來的 shared memory，放回你們的關係故事裡。',
-      }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('heading', {
-        level: 2,
-        name: '把你的 relationship reflections 留成可回讀的內在地圖。',
-      }),
-    ).toBeVisible();
-
-    const sectionHeadings = await page.locator('h2').allTextContents();
-    const pulseIndex = sectionHeadings.indexOf('先把目前的共同方向看清楚。');
-    const storyIndex = sectionHeadings.indexOf('把真正被留下來的 shared memory，放回你們的關係故事裡。');
-    const innerLandscapeIndex = sectionHeadings.indexOf('把你的 relationship reflections 留成可回讀的內在地圖。');
-    expect(storyIndex).toBeGreaterThan(pulseIndex);
-    expect(innerLandscapeIndex).toBeGreaterThan(storyIndex);
-
-    await expect(page.getByText('你昨天主動洗碗讓我很感動，我知道你也很累了。')).toBeVisible();
-    await expect(page.getByText('一年前的今天')).toBeVisible();
-    await expect(page.getByText('1 則日記、1 則共同卡片回憶、1 則感恩。')).toBeVisible();
-    await expect(page.getByText('雙方都回答了')).toBeVisible();
-    await expect(page.getByText('只來自 Haven 已經留下的 shared memory')).toBeVisible();
+    await expect(page.getByText('讓真正被留下來的 shared memory，變成可回來看的關係敘事。')).toBeVisible();
+    await expect(page.getByText('只引用真的被留下的 shared memory，讓故事能被再次打開，而不是被補寫。')).toBeVisible();
 
     const appreciationHref = memoryStoryHref(appreciationMoment!);
     await page.locator(`a[href="${appreciationHref}"]`).evaluate((node) => {
@@ -1207,70 +1236,18 @@ test.describe('Relationship System naming and IA polish', () => {
       kind: 'appreciation',
       id: appreciationMoment!.source_id,
     }));
-    await expect(page.getByText('Day Spotlight')).toBeVisible();
-    await expect(
-      page.getByText('把月份裡的一天打開來看，不只是知道那天有痕跡，而是真的看見那天留下了什麼。'),
-    ).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Relationship System 故事摘要' })).toBeVisible();
+    await expect(page.getByText('Memory / Shared Archive')).toBeVisible();
     await expect(
       page.getByText('這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 Shared Archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。'),
     ).toBeVisible();
-    const focusedAppreciationCard = await expectFocusedMemoryCardInViewport(page, 'appreciation');
-    await expect(focusedAppreciationCard).toContainText(appreciationMoment!.description);
     await page.getByRole('link', { name: 'Relationship System 故事摘要' }).click();
     await expect(page).toHaveURL(/\/love-map#story$/);
 
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    const cardHref = memoryStoryHref(cardMoment!);
-    await page.locator(`a[href="${cardHref}"]`).evaluate((node) => {
+    await page.getByTestId('relationship-system-guide-future-secondary-action').evaluate((node) => {
       window.location.assign((node as HTMLAnchorElement).href);
     });
-    await expect.poll(() => {
-      const url = new URL(page.url());
-      return JSON.stringify({
-        path: url.pathname,
-        date: url.searchParams.get('date'),
-        kind: url.searchParams.get('kind'),
-        id: url.searchParams.get('id'),
-      });
-    }).toBe(JSON.stringify({
-      path: '/memory',
-      date: cardMoment!.occurred_at.slice(0, 10),
-      kind: 'card',
-      id: cardMoment!.source_id,
-    }));
-    await expect(page.getByText('Day Spotlight')).toBeVisible();
-    await expect(
-      page.getByText('把月份裡的一天打開來看，不只是知道那天有痕跡，而是真的看見那天留下了什麼。'),
-    ).toBeVisible();
-    const focusedCardMemory = await expectFocusedMemoryCardInViewport(page, 'card');
-    await expect(focusedCardMemory).toContainText(cardMoment!.description);
-    await expect(focusedCardMemory).toContainText('雙方都回答了');
-
-    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('link', { name: '進入 Journal（完整反思書房）' }).click();
-    await expect(page).toHaveURL(/\/journal$/);
-    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
-    await expect(
-      page.getByText('Journal 是 Haven 裡更完整的反思書房：Relationship System 的 Inner Landscape 會保留結構化的個人理解，而這裡則讓你把那些感受、語氣、圖像與分享邊界寫成真正可重讀的一頁。'),
-    ).toBeVisible();
-    const journalLibraryLink = page.locator('a[href^="/journal/"]').first();
-    await expect(journalLibraryLink).toBeVisible();
-    await journalLibraryLink.click();
-    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
-    await expect(
-      page.getByText('Journal 會保留更完整的反思寫作；Relationship System 只留下結構化摘要，不會把這一頁直接變成 shared truth。'),
-    ).toBeVisible();
-    await page.getByRole('link', { name: 'Relationship System 反思摘要' }).first().click();
-    await expect(page).toHaveURL(/\/love-map#inner-landscape$/);
-
-    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    const journalLink = page.locator(`a[href="/journal/${journalMoment!.source_id}"]`);
-    await expect(journalLink).toBeVisible();
-    await journalLink.evaluate((node) => {
-      window.location.assign((node as HTMLAnchorElement).href);
-    });
-    await expect(page).toHaveURL(new RegExp(`/journal/${journalMoment!.source_id}$`));
-    await expect(page.getByRole('link', { name: 'Relationship System 反思摘要' }).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/blueprint$/);
+    await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
   });
 });

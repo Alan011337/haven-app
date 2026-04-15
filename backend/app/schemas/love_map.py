@@ -1,6 +1,7 @@
 # Module D1: Love Map API schemas.
 
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from app.schemas.baseline import BaselineSummaryPublic, CoupleGoalPublic
 from app.schemas.blueprint import WishlistItemPublic
@@ -112,6 +113,29 @@ class LoveMapCarePreferencesPublic(BaseModel):
     updated_at: str | None = None
 
 
+class LoveMapCareProfilePublic(BaseModel):
+    support_me: str | None = None
+    avoid_when_stressed: str | None = None
+    small_delights: str | None = None
+    updated_at: str | None = None
+
+
+LoveLanguageChoice = Literal["words", "acts", "gifts", "time", "touch"]
+
+
+class LoveMapHeartProfileUpsert(BaseModel):
+    primary: LoveLanguageChoice
+    secondary: LoveLanguageChoice | None = None
+    support_me: str = Field(default="", max_length=500)
+    avoid_when_stressed: str = Field(default="", max_length=500)
+    small_delights: str = Field(default="", max_length=500)
+
+
+class LoveMapHeartProfileSavePublic(BaseModel):
+    care_preferences: LoveMapCarePreferencesPublic
+    care_profile: LoveMapCareProfilePublic
+
+
 class LoveMapWeeklyTaskPublic(BaseModel):
     task_slug: str
     task_label: str
@@ -123,6 +147,8 @@ class LoveMapWeeklyTaskPublic(BaseModel):
 class LoveMapSystemEssentialsPublic(BaseModel):
     my_care_preferences: LoveMapCarePreferencesPublic | None = None
     partner_care_preferences: LoveMapCarePreferencesPublic | None = None
+    my_care_profile: LoveMapCareProfilePublic | None = None
+    partner_care_profile: LoveMapCareProfilePublic | None = None
     weekly_task: LoveMapWeeklyTaskPublic | None = None
 
 

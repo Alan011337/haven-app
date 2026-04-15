@@ -19,6 +19,7 @@ from app.api.deps import get_current_user  # noqa: E402
 from app.api.routers import love_language, love_map  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.love_language import LoveLanguagePreference  # noqa: E402
+from app.models.relationship_care_profile import RelationshipCareProfile  # noqa: E402
 from app.models.user import User  # noqa: E402
 
 
@@ -105,6 +106,33 @@ class LoveMapSystemApiTests(unittest.TestCase):
                     preference={"primary": "time", "secondary": "words"},
                 )
             )
+            session.add(
+                RelationshipCareProfile(
+                    user_id=alice.id,
+                    partner_id=bob.id,
+                    support_me="先抱我一下，再慢慢問我怎麼了。",
+                    avoid_when_stressed="不要急著幫我下結論。",
+                    small_delights="下班時帶熱拿鐵會讓我瞬間放鬆。",
+                )
+            )
+            session.add(
+                RelationshipCareProfile(
+                    user_id=bob.id,
+                    partner_id=alice.id,
+                    support_me="先給我十分鐘安靜，再來陪我說。",
+                    avoid_when_stressed="不要一直追問我為什麼還沒整理好。",
+                    small_delights="如果你先把餐桌整理好，我會覺得被照顧。",
+                )
+            )
+            session.add(
+                RelationshipCareProfile(
+                    user_id=carol.id,
+                    partner_id=dave.id,
+                    support_me="幫我把燈關暗一點。",
+                    avoid_when_stressed="不要一直講大道理。",
+                    small_delights="提醒我去陽台透氣。",
+                )
+            )
             session.commit()
 
             self.alice_id = alice.id
@@ -116,7 +144,7 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.client.close()
         self.engine.dispose()
 
-    def test_paired_user_sees_pair_visible_care_preferences(self) -> None:
+    def test_paired_user_sees_pair_visible_care_preferences_and_profiles(self) -> None:
         self.current_user_id = self.alice_id
 
         response = self.client.get("/api/love-map/system")
@@ -128,6 +156,14 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertEqual(essentials["my_care_preferences"]["secondary"], "time")
         self.assertEqual(essentials["partner_care_preferences"]["primary"], "acts")
         self.assertEqual(essentials["partner_care_preferences"]["secondary"], "touch")
+        self.assertEqual(
+            essentials["my_care_profile"]["support_me"],
+            "先抱我一下，再慢慢問我怎麼了。",
+        )
+        self.assertEqual(
+            essentials["partner_care_profile"]["small_delights"],
+            "如果你先把餐桌整理好，我會覺得被照顧。",
+        )
 
     def test_unpaired_user_gets_no_partner_essentials_or_weekly_task(self) -> None:
         self.current_user_id = self.solo_id
@@ -141,6 +177,8 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertEqual(essentials["my_care_preferences"]["primary"], "time")
         self.assertEqual(essentials["my_care_preferences"]["secondary"], "words")
         self.assertIsNone(essentials["partner_care_preferences"])
+        self.assertIsNone(essentials["my_care_profile"])
+        self.assertIsNone(essentials["partner_care_profile"])
         self.assertIsNone(essentials["weekly_task"])
 
     def test_weekly_task_completion_is_reflected_in_love_map_system(self) -> None:
@@ -168,6 +206,14 @@ class LoveMapSystemApiTests(unittest.TestCase):
         essentials = payload["essentials"]
         self.assertEqual(essentials["partner_care_preferences"]["primary"], "acts")
         self.assertNotEqual(essentials["partner_care_preferences"]["primary"], "gifts")
+        self.assertEqual(
+            essentials["partner_care_profile"]["support_me"],
+            "先給我十分鐘安靜，再來陪我說。",
+        )
+        self.assertNotEqual(
+            essentials["partner_care_profile"]["support_me"],
+            "幫我把燈關暗一點。",
+        )
 
 
 if __name__ == "__main__":

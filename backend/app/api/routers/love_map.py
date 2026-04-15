@@ -16,7 +16,9 @@ from app.models.card_response import CardResponse, ResponseStatus
 from app.models.card_session import CardSession, CardSessionStatus
 from app.models.couple_goal import CoupleGoal
 from app.models.journal import Journal
+from app.models.love_language import LoveLanguagePreference
 from app.models.love_map_note import LoveMapNote
+from app.models.relationship_care_profile import RelationshipCareProfile
 from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.user import User
@@ -25,8 +27,11 @@ from app.schemas.baseline import BaselineSummaryPublic, CoupleGoalPublic, Relati
 from app.schemas.blueprint import WishlistItemPublic
 from app.schemas.love_map import (
     LoveMapCardSummary,
+    LoveMapCareProfilePublic,
     LoveMapCarePreferencesPublic,
     LoveMapCardsResponse,
+    LoveMapHeartProfileSavePublic,
+    LoveMapHeartProfileUpsert,
     LoveMapNoteCreate,
     LoveMapNotePublic,
     LoveMapStoryCapsulePublic,
@@ -58,6 +63,7 @@ from app.services.love_language_runtime import (
     LoveLanguagePreferenceSummary,
     WeeklyTaskResolution,
     load_love_language_preference_summary,
+    normalize_love_language_preference,
     resolve_pair_weekly_task,
 )
 from app.services.memory_archive import get_relationship_story_slice, get_relationship_story_time_capsule
@@ -194,6 +200,40 @@ def _to_weekly_task_public(
         completed=resolution.completed,
         completed_at=resolution.completed_at.isoformat() + "Z" if resolution.completed_at else None,
     )
+
+
+def _to_care_profile_public(
+    row: RelationshipCareProfile | None,
+) -> LoveMapCareProfilePublic | None:
+    if row is None:
+        return None
+    return LoveMapCareProfilePublic(
+        support_me=row.support_me,
+        avoid_when_stressed=row.avoid_when_stressed,
+        small_delights=row.small_delights,
+        updated_at=row.updated_at.isoformat() + "Z" if row.updated_at else None,
+    )
+
+
+def _normalize_short_text(value: str | None) -> str | None:
+    trimmed = (value or "").strip()
+    if not trimmed:
+        return None
+    return trimmed[:500]
+
+
+def _load_care_profile(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+) -> RelationshipCareProfile | None:
+    return session.exec(
+        select(RelationshipCareProfile).where(
+            RelationshipCareProfile.user_id == user_id,
+            RelationshipCareProfile.partner_id == partner_id,
+        )
+    ).first()
 
 
 def _pair_scope_ids(user_id: UUID, partner_id: UUID) -> tuple[UUID, UUID]:
@@ -627,6 +667,8 @@ def get_love_map_system(
         user_id=current_user.id,
     )
     partner_care_preferences = None
+    my_care_profile = None
+    partner_care_profile = None
     weekly_task = None
 
     if verified_partner_id:
@@ -665,6 +707,16 @@ def get_love_map_system(
             session=session,
             user_id=verified_partner_id,
         )
+        my_care_profile = _load_care_profile(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        partner_care_profile = _load_care_profile(
+            session=session,
+            user_id=verified_partner_id,
+            partner_id=current_user.id,
+        )
         weekly_task = resolve_pair_weekly_task(
             session=session,
             user_id=current_user.id,
@@ -685,6 +737,10 @@ def get_love_map_system(
         timestamps.append(my_care_preferences.updated_at)
     if partner_care_preferences and partner_care_preferences.updated_at:
         timestamps.append(partner_care_preferences.updated_at)
+    if my_care_profile and my_care_profile.updated_at:
+        timestamps.append(my_care_profile.updated_at)
+    if partner_care_profile and partner_care_profile.updated_at:
+        timestamps.append(partner_care_profile.updated_at)
     if weekly_task and weekly_task.completed_at:
         timestamps.append(weekly_task.completed_at)
 
@@ -723,7 +779,78 @@ def get_love_map_system(
         essentials=LoveMapSystemEssentialsPublic(
             my_care_preferences=_to_care_preferences_public(my_care_preferences),
             partner_care_preferences=_to_care_preferences_public(partner_care_preferences),
+            my_care_profile=_to_care_profile_public(my_care_profile),
+            partner_care_profile=_to_care_profile_public(partner_care_profile),
             weekly_task=_to_weekly_task_public(weekly_task),
+        ),
+    )
+
+
+@router.put("/essentials/heart-profile", response_model=LoveMapHeartProfileSavePublic)
+def upsert_heart_care_profile(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: LoveMapHeartProfileUpsert,
+) -> LoveMapHeartProfileSavePublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    normalized_preference = normalize_love_language_preference(
+        {
+            "primary": body.primary,
+            "secondary": body.secondary,
+        }
+    )
+    care_profile = _load_care_profile(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    if care_profile is None:
+        care_profile = RelationshipCareProfile(
+            user_id=current_user.id,
+            partner_id=partner_id,
+        )
+
+    care_profile.support_me = _normalize_short_text(body.support_me)
+    care_profile.avoid_when_stressed = _normalize_short_text(body.avoid_when_stressed)
+    care_profile.small_delights = _normalize_short_text(body.small_delights)
+    care_profile.updated_at = utcnow()
+    session.add(care_profile)
+
+    preference_row = session.get(LoveLanguagePreference, current_user.id)
+    if preference_row is None:
+        preference_row = LoveLanguagePreference(
+            user_id=current_user.id,
+            preference=normalized_preference,
+        )
+    else:
+        preference_row.preference = normalized_preference
+        preference_row.updated_at = utcnow()
+    session.add(preference_row)
+
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Upsert love map heart care profile",
+        conflict_detail="儲存 Heart care playbook 時發生衝突。",
+        failure_detail="儲存 Heart care playbook 失敗。",
+    )
+    session.refresh(care_profile)
+    session.refresh(preference_row)
+    return LoveMapHeartProfileSavePublic(
+        care_preferences=LoveMapCarePreferencesPublic(
+            primary=normalized_preference["primary"],
+            secondary=normalized_preference["secondary"],
+            updated_at=preference_row.updated_at.isoformat() + "Z",
+        ),
+        care_profile=LoveMapCareProfilePublic(
+            support_me=care_profile.support_me,
+            avoid_when_stressed=care_profile.avoid_when_stressed,
+            small_delights=care_profile.small_delights,
+            updated_at=care_profile.updated_at.isoformat() + "Z",
         ),
     )
 

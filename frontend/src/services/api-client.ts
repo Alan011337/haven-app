@@ -350,6 +350,13 @@ export interface LoveMapCarePreferencesPublic extends LoveLanguagePreferenceReco
   updated_at: string | null;
 }
 
+export interface LoveMapCareProfilePublic {
+  support_me: string | null;
+  avoid_when_stressed: string | null;
+  small_delights: string | null;
+  updated_at: string | null;
+}
+
 export interface LoveMapStoryMomentPublic {
   kind: 'card' | 'appreciation' | 'journal';
   title: string;
@@ -386,6 +393,8 @@ export interface LoveMapSystemStatsPublic {
 export interface LoveMapSystemEssentialsPublic {
   my_care_preferences: LoveMapCarePreferencesPublic | null;
   partner_care_preferences: LoveMapCarePreferencesPublic | null;
+  my_care_profile: LoveMapCareProfilePublic | null;
+  partner_care_profile: LoveMapCareProfilePublic | null;
   weekly_task: WeeklyTaskPublic | null;
 }
 
@@ -448,8 +457,41 @@ export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
             ...normalizeLoveLanguagePreference(response.essentials.partner_care_preferences),
           }
         : null,
+      my_care_profile: response.essentials?.my_care_profile ?? null,
+      partner_care_profile: response.essentials?.partner_care_profile ?? null,
       weekly_task: response.essentials?.weekly_task ?? null,
     },
+  };
+};
+
+export interface LoveMapHeartProfileUpsertPayload extends LoveLanguagePreferenceRecord {
+  support_me: string;
+  avoid_when_stressed: string;
+  small_delights: string;
+}
+
+export interface LoveMapHeartProfileSavePublic {
+  care_preferences: LoveMapCarePreferencesPublic;
+  care_profile: LoveMapCareProfilePublic;
+}
+
+export const upsertLoveMapHeartProfile = async (
+  payload: LoveMapHeartProfileUpsertPayload,
+): Promise<LoveMapHeartProfileSavePublic> => {
+  const normalizedPreference = normalizeLoveLanguagePreference(payload);
+  const response = await apiPut<LoveMapHeartProfileSavePublic>('/love-map/essentials/heart-profile', {
+    primary: normalizedPreference.primary,
+    secondary: normalizedPreference.secondary,
+    support_me: payload.support_me,
+    avoid_when_stressed: payload.avoid_when_stressed,
+    small_delights: payload.small_delights,
+  });
+  return {
+    care_preferences: {
+      ...response.care_preferences,
+      ...normalizeLoveLanguagePreference(response.care_preferences),
+    },
+    care_profile: response.care_profile,
   };
 };
 

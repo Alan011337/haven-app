@@ -241,8 +241,8 @@
       "method": "PATCH",
       "owner_team": "backend-core",
       "path": "/api/journals/{journal_id}/attachments/{attachment_id}",
-      "subject_scope": "current_user",
-      "test_ref": "backend/tests/test_core_read_authorization_matrix.py"
+      "subject_scope": "resource_owner",
+      "test_ref": "backend/tests/test_journal_authorization_matrix.py"
     },
     {
       "auth_mode": "authenticated",
@@ -261,6 +261,15 @@
       "path": "/api/love-languages/weekly-task/complete",
       "subject_scope": "pair_member",
       "test_ref": "backend/tests/test_platform_mutating_authorization_matrix.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "PUT",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/heart-profile",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
     },
     {
       "auth_mode": "authenticated",

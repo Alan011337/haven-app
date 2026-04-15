@@ -86,6 +86,8 @@ def _resolve_data_sensitivity(*, path: str, protocol: str) -> str:
         return "relationship_sensitive"
     if path.startswith("/api/billing"):
         return "billing_sensitive"
+    if path == "/api/love-map/essentials/heart-profile":
+        return "relationship_sensitive"
     if path.startswith("/api/users/me/data"):
         return "relationship_sensitive"
     if path.startswith("/api/journals"):

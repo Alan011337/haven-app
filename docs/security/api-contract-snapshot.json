@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 118,
-  "route_digest": "4f41790ccfc99f0ff49b927ad2793e7dd235e6ecd0ddc7c60273a94c8f060cf1",
+  "route_count": 119,
+  "route_digest": "867c863289343df667df159a9d01090d5fb454a74356b0635b2c9ec12fceb5c1",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -312,6 +312,11 @@
       "idempotency_policy": "n/a",
       "method": "GET",
       "path": "/api/love-map/cards"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PUT",
+      "path": "/api/love-map/essentials/heart-profile"
     },
     {
       "idempotency_policy": "n/a",

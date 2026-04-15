@@ -855,6 +855,20 @@
     },
     {
       "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.love_map.upsert_heart_care_profile",
+      "method": "PUT",
+      "name": "upsert_heart_care_profile",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/heart-profile",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
       "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_map.list_love_map_notes",
       "method": "GET",

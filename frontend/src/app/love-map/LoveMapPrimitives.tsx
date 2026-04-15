@@ -337,6 +337,35 @@ export function LoveMapKnowledgeBlock({
   );
 }
 
+interface LoveMapEssentialFieldProps {
+  label: string;
+  value?: ReactNode;
+  emptyLabel?: string;
+  dataTestId?: string;
+}
+
+export function LoveMapEssentialField({
+  label,
+  value,
+  emptyLabel = '尚未留下',
+  dataTestId,
+}: LoveMapEssentialFieldProps) {
+  const hasValue =
+    typeof value === 'string'
+      ? value.trim().length > 0
+      : value !== null && value !== undefined;
+
+  return (
+    <div
+      className="rounded-[1.35rem] border border-white/60 bg-white/80 px-4 py-4 shadow-soft"
+      data-testid={dataTestId}
+    >
+      <p className="type-micro uppercase text-primary/80">{label}</p>
+      <p className="mt-2 type-body text-card-foreground">{hasValue ? value : emptyLabel}</p>
+    </div>
+  );
+}
+
 export function LoveMapSection({
   id,
   eyebrow,

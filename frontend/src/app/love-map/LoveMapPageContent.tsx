@@ -29,7 +29,8 @@ import {
   generateLoveMapStoryAdjacentRitualSuggestion,
   LOVE_LANGUAGE_OPTIONS,
   normalizeLoveLanguagePreference,
-  putLoveLanguagePreference,
+  upsertLoveMapHeartProfile,
+  type LoveMapHeartProfileUpsertPayload,
   type LoveLanguagePreferenceKey,
   type LoveLanguagePreferenceRecord,
   type LoveMapCardSummary,
@@ -43,6 +44,7 @@ import {
 import { updateUserMe } from '@/services/user';
 import LoveMapSkeleton from './LoveMapSkeleton';
 import {
+  LoveMapEssentialField,
   LoveMapFutureComposer,
   LoveMapKnowledgeBlock,
   LoveMapPromptCard,
@@ -99,9 +101,12 @@ const LOVE_LANGUAGE_LABELS: Record<LoveLanguagePreferenceKey, string> = {
   touch: '身體接觸',
 };
 
-const EMPTY_PREFERENCE_DRAFT: LoveLanguagePreferenceRecord = {
+const EMPTY_HEART_PLAYBOOK_DRAFT: LoveMapHeartProfileUpsertPayload = {
   primary: null,
   secondary: null,
+  support_me: '',
+  avoid_when_stressed: '',
+  small_delights: '',
 };
 
 type SharedFutureRefinementKind = 'next_step' | 'cadence';
@@ -204,6 +209,45 @@ function describeLoveLanguagePreference(
     : getLoveLanguageLabel(preference.primary);
 }
 
+function buildHeartPlaybookDraft(
+  preference?: LoveLanguagePreferenceRecord | null,
+  profile?: {
+    support_me?: string | null;
+    avoid_when_stressed?: string | null;
+    small_delights?: string | null;
+  } | null,
+): LoveMapHeartProfileUpsertPayload {
+  const normalizedPreference = normalizeLoveLanguagePreference(preference);
+  return {
+    primary: normalizedPreference.primary,
+    secondary: normalizedPreference.secondary,
+    support_me: profile?.support_me ?? '',
+    avoid_when_stressed: profile?.avoid_when_stressed ?? '',
+    small_delights: profile?.small_delights ?? '',
+  };
+}
+
+function countCareCueCompletion(
+  preference?: LoveLanguagePreferenceRecord | null,
+  profile?: {
+    support_me?: string | null;
+    avoid_when_stressed?: string | null;
+    small_delights?: string | null;
+  } | null,
+) {
+  let count = 0;
+  if (preference?.primary) count += 1;
+  if (preference?.secondary) count += 1;
+  if (profile?.support_me?.trim()) count += 1;
+  if (profile?.avoid_when_stressed?.trim()) count += 1;
+  if (profile?.small_delights?.trim()) count += 1;
+  return count;
+}
+
+function formatCareCueCountLabel(count: number) {
+  return `已留下 ${count}/5 個 care cues`;
+}
+
 function normalizeCadenceEligibilityText(value: string) {
   return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -268,7 +312,7 @@ export default function LoveMapPageContent() {
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingWishlist, setSavingWishlist] = useState(false);
   const [savingIdentity, setSavingIdentity] = useState(false);
-  const [savingCarePreferences, setSavingCarePreferences] = useState(false);
+  const [savingHeartPlaybook, setSavingHeartPlaybook] = useState(false);
   const [completingWeeklyTask, setCompletingWeeklyTask] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [generatingStoryRitual, setGeneratingStoryRitual] = useState(false);
@@ -288,8 +332,8 @@ export default function LoveMapPageContent() {
   const [wishTitle, setWishTitle] = useState('');
   const [wishNotes, setWishNotes] = useState('');
   const [displayNameDraft, setDisplayNameDraft] = useState('');
-  const [carePreferenceDraft, setCarePreferenceDraft] =
-    useState<LoveLanguagePreferenceRecord>(EMPTY_PREFERENCE_DRAFT);
+  const [heartPlaybookDraft, setHeartPlaybookDraft] =
+    useState<LoveMapHeartProfileUpsertPayload>(EMPTY_HEART_PLAYBOOK_DRAFT);
 
   useEffect(() => {
     if (!systemQuery.data) {
@@ -310,8 +354,11 @@ export default function LoveMapPageContent() {
     });
     setGoalDraft(systemQuery.data.couple_goal?.goal_slug ?? '');
     setDisplayNameDraft(systemQuery.data.me.full_name ?? '');
-    setCarePreferenceDraft(
-      normalizeLoveLanguagePreference(systemQuery.data.essentials?.my_care_preferences),
+    setHeartPlaybookDraft(
+      buildHeartPlaybookDraft(
+        systemQuery.data.essentials?.my_care_preferences,
+        systemQuery.data.essentials?.my_care_profile,
+      ),
     );
   }, [systemQuery.data]);
 
@@ -363,21 +410,21 @@ export default function LoveMapPageContent() {
     }
   };
 
-  const handleSaveCarePreferences = async () => {
-    if (!carePreferenceDraft.primary) {
+  const handleSaveHeartPlaybook = async () => {
+    if (!heartPlaybookDraft.primary) {
       showToast('先選一個最主要的 care preference。', 'error');
       return;
     }
-    setSavingCarePreferences(true);
+    setSavingHeartPlaybook(true);
     try {
-      await putLoveLanguagePreference(carePreferenceDraft);
+      await upsertLoveMapHeartProfile(heartPlaybookDraft);
       await invalidateRelationshipViews();
-      showToast('Care preferences 已更新。', 'success');
+      showToast('Heart Care Playbook 已更新。', 'success');
     } catch (error) {
-      logClientError('love-map-care-preferences-save-failed', error);
-      showToast('這次沒有順利更新 care preferences，稍後再試一次。', 'error');
+      logClientError('love-map-heart-profile-save-failed', error);
+      showToast('這次沒有順利更新 Heart Care Playbook，稍後再試一次。', 'error');
     } finally {
-      setSavingCarePreferences(false);
+      setSavingHeartPlaybook(false);
     }
   };
 
@@ -610,23 +657,34 @@ export default function LoveMapPageContent() {
   const activeGoalLabel = goalDraft ? getGoalLabel(goalDraft) : getGoalLabel(system.couple_goal?.goal_slug);
   const myCarePreferences = normalizeLoveLanguagePreference(system.essentials?.my_care_preferences);
   const partnerCarePreferences = normalizeLoveLanguagePreference(system.essentials?.partner_care_preferences);
+  const myCareProfile = system.essentials?.my_care_profile ?? null;
+  const partnerCareProfile = system.essentials?.partner_care_profile ?? null;
   const weeklyTask = system.essentials?.weekly_task ?? null;
+  const currentHeartPlaybook = buildHeartPlaybookDraft(myCarePreferences, myCareProfile);
+  const myCareCueCount = countCareCueCompletion(myCarePreferences, myCareProfile);
+  const partnerCareCueCount = countCareCueCompletion(partnerCarePreferences, partnerCareProfile);
+  const myCarePlaybookUpdatedAt = formatShortDateTime(
+    myCareProfile?.updated_at ?? system.essentials?.my_care_preferences?.updated_at,
+  );
+  const partnerCarePlaybookUpdatedAt = formatShortDateTime(
+    partnerCareProfile?.updated_at ?? system.essentials?.partner_care_preferences?.updated_at,
+  );
   const identityMetricValue = system.has_partner
     ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'}`
     : '等待雙向配對';
   const identityMetricFootnote = system.has_partner
     ? `目前方向：${activeGoalLabel} · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
     : '先完成雙向伴侶連結，這裡才會變成真正的共享 Relationship System。';
-  const heartMetricValue = weeklyTask?.completed
-    ? '本週 care task 已完成'
-    : weeklyTask?.task_label ?? describeLoveLanguagePreference(myCarePreferences, '先設定 care preferences');
+  const heartMetricValue = !system.has_partner
+    ? '等待雙向配對'
+    : formatCareCueCountLabel(myCareCueCount);
   const heartMetricFootnote = !system.has_partner
-    ? '完成配對後，care preferences 會變成 pair-visible，本週任務也會開始出現。'
+    ? '完成配對後，Heart Care Playbook 會變成 pair-visible，本週任務也會開始出現。'
     : weeklyTask?.completed
-      ? '這週的照顧節奏已被完成，Heart 會留下這個狀態。'
+      ? `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。這週的照顧節奏也已完成。`
       : weeklyTask?.task_label
-        ? 'Relationship Pulse、care preferences 與本週照顧節奏會一起放在 Heart。'
-        : '先留下 care preferences，Heart 才能逐漸變成可維護的照顧系統。';
+        ? `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。本週任務：${weeklyTask.task_label}`
+        : `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。先把 Heart playbook 留完整，Heart 才會真的變成可維護的照顧系統。`;
   const storyMetricFootnote = storyHasCapsule
     ? 'Time Capsule 已浮現，這段故事已經有可回來看的回聲。'
     : '目前已留下故事錨點，但還沒有形成 Time Capsule 回聲。';
@@ -634,7 +692,8 @@ export default function LoveMapPageContent() {
     ? `目前有 ${aiPendingCount} 則待你審核的提案。`
     : '目前沒有待審核提案，已接受的片段仍會留在這裡。';
   const displayNameChanged = displayNameDraft.trim() !== (system.me.full_name?.trim() ?? '');
-  const carePreferencesChanged = JSON.stringify(carePreferenceDraft) !== JSON.stringify(myCarePreferences);
+  const heartPlaybookChanged =
+    JSON.stringify(heartPlaybookDraft) !== JSON.stringify(currentHeartPlaybook);
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
@@ -644,7 +703,7 @@ export default function LoveMapPageContent() {
         description="這裡不只是 Love Map，也不只是被導覽得更清楚的長頁。它是 Haven 的 shared relationship knowledge center：把你們是誰、現在怎麼樣、哪些故事值得被記住，以及正在一起靠近的未來，放進同一張系統首頁。"
         pulse={
           system.has_partner
-            ? `Haven 現在會用四個長期域來整理你們的關係：Identity、Heart、Story、Future。這裡已經有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層 Inner Landscape 筆記、${system.stats.wishlist_count} 個 Shared Future 片段；而 care preferences 與本週照顧任務也會一起放回 Heart。`
+            ? `Haven 現在會用四個長期域來整理你們的關係：Identity、Heart、Story、Future。這裡已經有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層 Inner Landscape 筆記、${system.stats.wishlist_count} 個 Shared Future 片段；而 Heart Care Playbook 與本週照顧任務也會一起放回 Heart。`
             : '你還沒有完成雙向伴侶連結，所以 Haven 目前只能先保留你的單邊脈動與可編輯 profile。完成連結後，這裡才會變成真正的 shared relationship system。'
         }
         primaryHref={system.has_partner ? '#identity' : '/settings#settings-relationship'}
@@ -662,9 +721,9 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/78">Heart</p>
               <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
-                {weeklyTask?.completed ? '完成中' : '進行中'}
+                {myCareCueCount}/5
               </p>
-              <p className="mt-2 type-caption text-muted-foreground">Relationship Pulse、care preferences、本週任務與 Inner Landscape 都在這裡對齊。</p>
+              <p className="mt-2 type-caption text-muted-foreground">Relationship Pulse、Care Playbook、本週任務與 Inner Landscape 都在這裡對齊。</p>
             </div>
 
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
@@ -706,7 +765,7 @@ export default function LoveMapPageContent() {
             <LoveMapSnapshotCard
               eyebrow="Trust boundaries"
               title="共享、pair-visible 與私人反思，分開呈現。"
-              description="Identity 與 Future 是系統層的共享輪廓；Heart 裡的 care preferences 會變成 pair-visible，而 Inner Landscape 仍只屬於你；Story 則只引用已被記住的 shared memory。"
+              description="Identity 與 Future 是系統層的共享輪廓；Heart 裡的 Care Playbook 會變成 pair-visible，而 Inner Landscape 仍只屬於你；Story 則只引用已被記住的 shared memory。"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
@@ -761,7 +820,7 @@ export default function LoveMapPageContent() {
           metricLabel="Heart status"
           metricValue={heartMetricValue}
           metricFootnote={heartMetricFootnote}
-          belongsHere="Relationship Pulse、pair-visible care preferences、本週 care task，以及只屬於你的 Inner Landscape。"
+          belongsHere="Relationship Pulse、pair-visible Heart Care Playbook、本週 care task，以及只屬於你的 Inner Landscape。"
           primaryHref="#heart"
           primaryLabel="查看 Heart"
           secondaryHref="/journal"
@@ -960,7 +1019,7 @@ export default function LoveMapPageContent() {
         id="heart"
         eyebrow="Heart"
         title="把關係現在的感受、照顧方式與私人理解，放回同一層。"
-        description="Heart 不是單一欄位，而是 Relationship System 裡最常被維護的一層：Relationship Pulse 負責共享狀態，care preferences 與每週照顧任務讓這一層更可執行，而 Inner Landscape 仍然保留你的私人反思。"
+        description="Heart 不是單一欄位，而是 Relationship System 裡最常被維護的一層：Relationship Pulse 負責共享狀態，Heart Care Playbook 與每週照顧任務讓這一層更可執行，而 Inner Landscape 仍然保留你的私人反思。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -974,8 +1033,8 @@ export default function LoveMapPageContent() {
               </p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Care preference</p>
-              <p className="mt-2 type-section-title text-card-foreground">{getLoveLanguageLabel(myCarePreferences.primary)}</p>
+              <p className="type-micro uppercase text-primary/80">Care Playbook</p>
+              <p className="mt-2 type-section-title text-card-foreground">{formatCareCueCountLabel(myCareCueCount)}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">Weekly task</p>
@@ -1054,34 +1113,38 @@ export default function LoveMapPageContent() {
 
           <div className="space-y-4">
             <LoveMapKnowledgeBlock
-              dataTestId="relationship-heart-preferences-card"
-              eyebrow="Care preferences"
-              title="把彼此偏好的照顧方式，留成 pair-visible essentials。"
-              description="這一層不是深度人格測驗，而是 Relationship System V1 的 essentials：讓 Haven 至少知道你最容易被哪種照顧方式接住，並且在已配對時把它變成伴侶可見。"
+              dataTestId="relationship-heart-playbook-card"
+              eyebrow="Heart Care Playbook"
+              title="把真正有用的照顧線索，留成 pair-visible 的 Heart playbook。"
+              description="Heart 不只該知道你偏好哪種照顧語言，也該知道當你過載時怎麼先接住你、什麼會讓你更糟，以及哪些小動作最容易真的讓你感到被照顧。"
               badge={<Badge variant={system.has_partner ? 'success' : 'metadata'} size="sm">{system.has_partner ? 'Pair-visible' : 'Starts with you'}</Badge>}
               footer={
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="type-caption text-muted-foreground">
                     {system.has_partner
-                      ? '當你更新 care preference，伴侶在 Relationship System 裡會看到更新後的版本。'
-                      : '先設定也沒關係；完成配對後，它會變成 pair-visible 的 relationship essential。'}
+                      ? '每個人都只能編輯自己的 Heart Care Playbook；伴侶會在同一塊 Heart 裡看到你最新留下的版本。'
+                      : '先寫下來也沒關係；完成配對後，它會變成 pair-visible 的 relationship essential。'}
                   </p>
                   <Button
-                    loading={savingCarePreferences}
-                    disabled={savingCarePreferences || !carePreferenceDraft.primary || !carePreferencesChanged}
-                    onClick={() => void handleSaveCarePreferences()}
+                    loading={savingHeartPlaybook}
+                    disabled={savingHeartPlaybook || !heartPlaybookDraft.primary || !heartPlaybookChanged}
+                    onClick={() => void handleSaveHeartPlaybook()}
                   >
-                    保存 care preferences
+                    保存 Heart Care Playbook
                   </Button>
                 </div>
               }
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-4 rounded-[1.55rem] border border-white/58 bg-white/78 p-4 shadow-soft">
+                <div
+                  className="space-y-4 rounded-[1.55rem] border border-white/58 bg-white/78 p-4 shadow-soft"
+                  data-testid="relationship-heart-playbook-editor-card"
+                >
                   <div className="space-y-1">
-                    <p className="type-section-title text-card-foreground">我的 care preference</p>
+                    <p className="type-section-title text-card-foreground">我的 Heart Care Playbook</p>
                     <p className="type-caption text-muted-foreground">
-                      目前：{describeLoveLanguagePreference(myCarePreferences)}
+                      {formatCareCueCountLabel(myCareCueCount)}
+                      {myCarePlaybookUpdatedAt ? ` · 最近更新 ${myCarePlaybookUpdatedAt}` : ''}
                     </p>
                   </div>
 
@@ -1091,12 +1154,15 @@ export default function LoveMapPageContent() {
                     </label>
                     <select
                       id="love-map-care-primary"
-                      value={carePreferenceDraft.primary ?? ''}
+                      value={heartPlaybookDraft.primary ?? ''}
                       onChange={(event) => {
                         const nextPrimary = (event.target.value || null) as LoveLanguagePreferenceKey | null;
-                        setCarePreferenceDraft((current) => ({
+                        setHeartPlaybookDraft((current) => ({
                           primary: nextPrimary,
                           secondary: current.secondary === nextPrimary ? null : current.secondary,
+                          support_me: current.support_me,
+                          avoid_when_stressed: current.avoid_when_stressed,
+                          small_delights: current.small_delights,
                         }));
                       }}
                       className="select-premium w-full"
@@ -1116,9 +1182,9 @@ export default function LoveMapPageContent() {
                     </label>
                     <select
                       id="love-map-care-secondary"
-                      value={carePreferenceDraft.secondary ?? ''}
+                      value={heartPlaybookDraft.secondary ?? ''}
                       onChange={(event) =>
-                        setCarePreferenceDraft((current) => ({
+                        setHeartPlaybookDraft((current) => ({
                           ...current,
                           secondary: (event.target.value || null) as LoveLanguagePreferenceKey | null,
                         }))
@@ -1126,38 +1192,109 @@ export default function LoveMapPageContent() {
                       className="select-premium w-full"
                     >
                       <option value="">先留空也可以</option>
-                      {LOVE_LANGUAGE_OPTIONS.filter((option) => option !== carePreferenceDraft.primary).map((option) => (
+                      {LOVE_LANGUAGE_OPTIONS.filter((option) => option !== heartPlaybookDraft.primary).map((option) => (
                         <option key={option} value={option}>
                           {getLoveLanguageLabel(option)}
                         </option>
                       ))}
                     </select>
                   </div>
+
+                  <Textarea
+                    id="love-map-heart-support-me"
+                    label="當我過載時，先怎麼幫我"
+                    value={heartPlaybookDraft.support_me}
+                    onChange={(event) =>
+                      setHeartPlaybookDraft((current) => ({
+                        ...current,
+                        support_me: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：先幫我把手機放遠一點，再慢慢陪我整理。"
+                    maxLength={500}
+                    helperText="留下一個伴侶真的可以照做的版本，不需要寫成完整理論。"
+                  />
+
+                  <Textarea
+                    id="love-map-heart-avoid-when-stressed"
+                    label="我壓力大時，先避免什麼"
+                    value={heartPlaybookDraft.avoid_when_stressed}
+                    onChange={(event) =>
+                      setHeartPlaybookDraft((current) => ({
+                        ...current,
+                        avoid_when_stressed: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：不要立刻追問、不要先幫我下結論。"
+                    maxLength={500}
+                    helperText="這會讓 Heart 不只知道你喜歡什麼，也知道什麼會讓情況更糟。"
+                  />
+
+                  <Textarea
+                    id="love-map-heart-small-delights"
+                    label="哪些小動作最能讓我感到被照顧"
+                    value={heartPlaybookDraft.small_delights}
+                    onChange={(event) =>
+                      setHeartPlaybookDraft((current) => ({
+                        ...current,
+                        small_delights: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：回家時先抱我一下，或是幫我留一杯熱飲。"
+                    maxLength={500}
+                    helperText="越小、越具體，越容易變成真的可維護關係知識。"
+                  />
                 </div>
 
-                <div className="space-y-4 rounded-[1.55rem] border border-primary/10 bg-primary/8 p-4 shadow-soft">
+                <div
+                  className="space-y-4 rounded-[1.55rem] border border-primary/10 bg-primary/8 p-4 shadow-soft"
+                  data-testid="relationship-heart-playbook-partner-card"
+                >
                   <div className="space-y-1">
-                    <p className="type-section-title text-card-foreground">伴侶目前留下的 care preference</p>
+                    <p className="type-section-title text-card-foreground">伴侶目前留下的 Heart Care Playbook</p>
                     <p className="type-caption text-muted-foreground">
                       {system.has_partner
-                        ? partnerCarePreferences.primary
-                          ? describeLoveLanguagePreference(partnerCarePreferences)
-                          : '伴侶還沒有在 Relationship System 裡留下 care preferences。'
-                        : '完成雙向伴侶連結後，這裡才會顯示 pair-visible 的 partner preference。'}
+                        ? partnerCareCueCount > 0
+                          ? `${formatCareCueCountLabel(partnerCareCueCount)}${partnerCarePlaybookUpdatedAt ? ` · 最近更新 ${partnerCarePlaybookUpdatedAt}` : ''}`
+                          : '伴侶還沒有在 Relationship System 裡留下 Heart Care Playbook。'
+                        : '完成雙向伴侶連結後，這裡才會顯示 pair-visible 的 partner playbook。'}
                     </p>
                   </div>
 
-                  {partnerCarePreferences.primary ? (
-                    <div className="rounded-[1.35rem] border border-white/60 bg-white/80 px-4 py-4">
-                      <p className="type-micro uppercase text-primary/80">Partner preference</p>
-                      <p className="mt-2 type-section-title text-card-foreground">
-                        {describeLoveLanguagePreference(partnerCarePreferences)}
-                      </p>
+                  {system.has_partner && partnerCareCueCount > 0 ? (
+                    <div className="space-y-3">
+                      <LoveMapEssentialField
+                        label="Partner care preference"
+                        value={describeLoveLanguagePreference(partnerCarePreferences)}
+                        dataTestId="relationship-heart-playbook-partner-preferences"
+                      />
+                      <LoveMapEssentialField
+                        label="當對方過載時，先怎麼幫他/她"
+                        value={partnerCareProfile?.support_me}
+                        dataTestId="relationship-heart-playbook-partner-support"
+                      />
+                      <LoveMapEssentialField
+                        label="對方壓力大時，先避免什麼"
+                        value={partnerCareProfile?.avoid_when_stressed}
+                        dataTestId="relationship-heart-playbook-partner-avoid"
+                      />
+                      <LoveMapEssentialField
+                        label="哪些小動作最能讓對方感到被照顧"
+                        value={partnerCareProfile?.small_delights}
+                        dataTestId="relationship-heart-playbook-partner-delights"
+                      />
                     </div>
-                  ) : null}
+                  ) : (
+                    <LoveMapStatePanel
+                      eyebrow="Partner playbook"
+                      title="伴侶還沒有留下這一塊。"
+                      description="Heart Care Playbook 不是自動生成的 shared truth。對方實際寫下來之前，這裡會保持空白，而不是讓 Haven 假裝自己已經知道。"
+                      tone="quiet"
+                    />
+                  )}
 
                   <p className="type-caption text-muted-foreground">
-                    這是 V1 的 pair-visible essentials：不是把所有關係知識都公開，而是讓最基本、最可執行的 care preference 能夠被看見。
+                    這是 pair-visible 的 Heart essentials：每個人都只寫自己的版本，但一旦留下來，就會變成伴侶平常能回來看的照顧參考。
                   </p>
                 </div>
               </div>
@@ -1167,7 +1304,7 @@ export default function LoveMapPageContent() {
               dataTestId="relationship-heart-weekly-task-card"
               eyebrow="Weekly care loop"
               title="把這週最小、最可執行的照顧行動放進系統裡。"
-              description="這不是新的獨立功能頁，而是 Heart 的當週操作層。完成它時，Relationship System 會直接知道這週的 care loop 是否已被照顧。"
+              description="這不是新的獨立功能頁，而是 Heart 的當週操作層。現在它會直接貼著 Heart Care Playbook 出現，讓本週的行動不是抽象習慣，而是有上下文的照顧動作。"
               badge={
                 <Badge variant={weeklyTask?.completed ? 'success' : 'metadata'} size="sm">
                   {weeklyTask?.completed ? 'Completed' : 'This week'}

@@ -8,6 +8,7 @@
 # AUTHZ_MATRIX: POST /api/daily-sync
 # AUTHZ_MATRIX: PUT /api/love-languages/preference
 # AUTHZ_MATRIX: POST /api/love-languages/weekly-task/complete
+# AUTHZ_MATRIX: PUT /api/love-map/essentials/heart-profile
 # AUTHZ_MATRIX: POST /api/love-map/notes
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate-story-ritual
@@ -110,6 +111,17 @@ class PlatformMutatingAuthRequirementTests(unittest.TestCase):
             ("POST", "/api/daily-sync", {"mood_score": 3, "question_id": "q0", "answer_text": "check-in"}),
             ("PUT", "/api/love-languages/preference", {"preference": {"primary": "words", "secondary": "time"}}),
             ("POST", "/api/love-languages/weekly-task/complete", None),
+            (
+                "PUT",
+                "/api/love-map/essentials/heart-profile",
+                {
+                    "primary": "words",
+                    "secondary": "time",
+                    "support_me": "先抱我一下。",
+                    "avoid_when_stressed": "不要急著解釋。",
+                    "small_delights": "帶熱飲給我。",
+                },
+            ),
             ("POST", "/api/love-map/notes", {"layer": "safe", "content": "note"}),
             ("POST", "/api/love-map/suggestions/shared-future/generate", None),
             ("POST", "/api/love-map/suggestions/shared-future/generate-story-ritual", None),
