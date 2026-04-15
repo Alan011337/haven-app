@@ -12,6 +12,7 @@ import {
   type Spread,
 } from 'lexical';
 import type { JournalAttachmentPublic } from '@/types';
+import { JOURNAL_RHYTHM } from '@/features/journal/journal-document-rhythm';
 
 export interface InsertJournalImagePayload {
   alt: string;
@@ -148,11 +149,11 @@ function JournalImageCard({ alt, src }: InsertJournalImagePayload) {
   const altForImage = (draft.trim() || serverCaption || alt || 'journal image').trim();
 
   return (
-    <figure className="group my-8 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.45)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(249,244,237,0.9))] shadow-soft">
+    <figure className={`group ${JOURNAL_RHYTHM.figure}`}>
       {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
       <img
         alt={altForImage}
-        className="max-h-[520px] w-full object-contain"
+        className={JOURNAL_RHYTHM.figureImage}
         src={resolvedSrc}
       />
       {canAuthor ? (

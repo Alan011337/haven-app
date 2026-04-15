@@ -45,6 +45,8 @@ import {
   LoveMapSuggestedUpdateCard,
   LoveMapStoryCapsuleCard,
   LoveMapStoryMomentCard,
+  LoveMapSystemGuide,
+  LoveMapSystemGuideCard,
   LoveMapSnapshotCard,
   LoveMapStatePanel,
   LoveMapSystemCover,
@@ -507,6 +509,26 @@ export default function LoveMapPageContent() {
   const aiPendingCount = system.has_partner ? pendingSuggestions.length + pendingRefinements.length : 0;
   const storyRitualActionDisabled =
     generatingStoryRitual || suggestionQuery.isLoading || refinementQuery.isLoading || aiPendingCount > 0;
+  const activeGoalLabel = goalDraft ? getGoalLabel(goalDraft) : getGoalLabel(system.couple_goal?.goal_slug);
+  const relationshipPulseMetricValue = system.has_partner
+    ? activeGoalLabel
+    : '待完成連結';
+  const relationshipPulseMetricFootnote = !system.has_partner
+    ? '完成雙向配對後，這裡才會累積真正的共同脈動。'
+    : system.stats.baseline_ready_mine && system.stats.baseline_ready_partner
+      ? '雙方的五維脈動都已建立。'
+      : system.stats.baseline_ready_mine
+        ? '你的五維脈動已建立，伴侶端仍待補上。'
+        : '先用五維雷達替現在的關係留下一個位置。';
+  const storyMetricFootnote = storyHasCapsule
+    ? 'Time Capsule 已浮現，這段故事已經有可回來看的回聲。'
+    : '目前已留下故事錨點，但還沒有形成 Time Capsule 回聲。';
+  const innerLandscapeMetricFootnote = totalPromptCount > 0
+    ? `${totalPromptCount} 個 prompts 可以幫你把理解寫得更清楚。`
+    : '這裡會隨著關係資料慢慢長出更好的 prompts。';
+  const sharedFutureMetricFootnote = aiPendingCount > 0
+    ? `目前有 ${aiPendingCount} 則待你審核的提案。`
+    : '目前沒有待審核提案，已接受的片段仍會留在這裡。';
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
@@ -601,6 +623,74 @@ export default function LoveMapPageContent() {
           </>
         }
       />
+
+      <LoveMapSystemGuide
+        eyebrow="System guide"
+        title="先知道這張頁面怎麼運作。"
+        description="Relationship System 不是把所有內容塞在同一頁，而是先告訴你哪些是共同狀態、哪些是被記住的故事、哪些是你的私人理解，以及哪些是你們正在一起靠近的未來。"
+      >
+        <LoveMapSystemGuideCard
+          dataTestId="relationship-system-guide-pulse"
+          eyebrow="Relationship Pulse"
+          title="目前的共同方向"
+          ownershipLabel="Shared truth"
+          ownershipTone="success"
+          metricLabel={system.has_partner ? '目前方向' : '配對狀態'}
+          metricValue={relationshipPulseMetricValue}
+          metricFootnote={relationshipPulseMetricFootnote}
+          belongsHere="共同脈動、五維雷達與你們最近最值得優先照顧的北極星方向。"
+          primaryHref={system.has_partner ? '#relationship-pulse' : '/settings#settings-relationship'}
+          primaryLabel={system.has_partner ? '查看 Relationship Pulse' : '完成伴侶連結'}
+        />
+
+        <LoveMapSystemGuideCard
+          dataTestId="relationship-system-guide-story"
+          eyebrow="Story"
+          title="被留下的關係故事"
+          ownershipLabel="Memory-backed"
+          ownershipTone="metadata"
+          metricLabel="Story anchors"
+          metricValue={`${storyAnchorCount} 個錨點`}
+          metricFootnote={storyMetricFootnote}
+          belongsHere="真正被留下、值得回頭重看的 shared memory 與故事回聲，不是 Haven 替你們補寫的總結。"
+          primaryHref="#story"
+          primaryLabel="查看 Story"
+          secondaryHref="/memory"
+          secondaryLabel="打開 Memory"
+        />
+
+        <LoveMapSystemGuideCard
+          dataTestId="relationship-system-guide-inner-landscape"
+          eyebrow="Inner Landscape"
+          title="你的私人理解"
+          ownershipLabel="Personal reflection"
+          ownershipTone="status"
+          metricLabel="已留下的層數"
+          metricValue={`${filledLayerCount} / 3`}
+          metricFootnote={innerLandscapeMetricFootnote}
+          belongsHere="只屬於你的結構化 relationship reflections。這些筆記會幫 Haven 分清 shared truth 和個人理解。"
+          primaryHref="#inner-landscape"
+          primaryLabel="查看 Inner Landscape"
+          secondaryHref="/journal"
+          secondaryLabel="打開 Journal"
+        />
+
+        <LoveMapSystemGuideCard
+          dataTestId="relationship-system-guide-shared-future"
+          eyebrow="Shared Future"
+          title="你們正在一起靠近的生活"
+          ownershipLabel="Shared truth"
+          ownershipTone="success"
+          metricLabel="共同未來片段"
+          metricValue={`${system.stats.wishlist_count} 個片段`}
+          metricFootnote={sharedFutureMetricFootnote}
+          belongsHere="真正被接受的共同未來片段，以及那些還在你的 personal review queue 裡等待決定的提案。"
+          primaryHref="#shared-future"
+          primaryLabel="查看 Shared Future"
+          secondaryHref="/blueprint"
+          secondaryLabel="打開 Blueprint"
+        />
+      </LoveMapSystemGuide>
 
       <LoveMapSection
         id="relationship-pulse"

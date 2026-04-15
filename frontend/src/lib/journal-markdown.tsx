@@ -8,6 +8,7 @@ import {
   buildJournalSectionDomId,
   type JournalOutlineEntry,
 } from '@/lib/journal-outline';
+import { JOURNAL_RHYTHM } from '@/features/journal/journal-document-rhythm';
 import { cn } from '@/lib/utils';
 
 export type JournalMarkdownVariant = 'partner' | 'read' | 'studio';
@@ -55,17 +56,15 @@ function buildMarkdownComponents(
   const paragraphClass = isPartner
     ? 'leading-[2] text-[1rem] text-card-foreground'
     : isRead
-      ? 'leading-[2.05] text-[1.08rem] text-card-foreground md:text-[1.1rem]'
+      ? JOURNAL_RHYTHM.paragraph
       : 'leading-[2.02] text-[1.04rem] text-card-foreground md:text-[1.06rem]';
   const listClass = isPartner
     ? 'my-6 ml-5 space-y-2.5 text-[1rem] leading-[2] text-card-foreground marker:text-primary/50'
-    : isRead
-      ? 'my-7 ml-6 space-y-3 text-[1.08rem] leading-[2] text-card-foreground marker:text-primary/52 md:text-[1.1rem]'
-      : 'my-6 ml-6 space-y-2.5 text-[1.04rem] leading-[2] text-card-foreground marker:text-primary/52 md:text-[1.06rem]';
+    : 'my-6 ml-6 space-y-2.5 text-[1.04rem] leading-[2] text-card-foreground marker:text-primary/52 md:text-[1.06rem]';
   const figureClass = isPartner
     ? 'my-9 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.32)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(249,244,237,0.9))] shadow-soft'
     : isRead
-      ? 'my-12 overflow-hidden rounded-[2.15rem] border border-[rgba(219,204,187,0.3)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(249,244,237,0.92))] shadow-soft md:mx-[-2.75rem]'
+      ? JOURNAL_RHYTHM.figure
       : 'my-10 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.34)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(249,244,237,0.9))] shadow-soft md:mx-[-1.25rem]';
   let headingEntryIndex = 0;
 
@@ -86,13 +85,15 @@ function buildMarkdownComponents(
           data-journal-section-id={entry?.id}
           data-journal-surface={entry ? surface : undefined}
           data-testid={entry ? `journal-${surface}-section-${entry.id}` : undefined}
-          className={cn(
-            headingBase,
-            'scroll-mt-32 md:scroll-mt-40',
+          className={
             isRead
-              ? 'mt-2 text-[2.55rem] leading-[0.98] md:text-[3.25rem]'
-              : 'mt-2 text-[2.3rem] leading-[1.02] md:text-[2.85rem]',
-          )}
+              ? cn(JOURNAL_RHYTHM.h1, JOURNAL_RHYTHM.scrollMarginClass, 'mt-2')
+              : cn(
+                  headingBase,
+                  'scroll-mt-32 md:scroll-mt-40',
+                  'mt-2 text-[2.3rem] leading-[1.02] md:text-[2.85rem]',
+                )
+          }
         >
           {children}
         </h1>
@@ -106,13 +107,15 @@ function buildMarkdownComponents(
           data-journal-section-id={entry?.id}
           data-journal-surface={entry ? surface : undefined}
           data-testid={entry ? `journal-${surface}-section-${entry.id}` : undefined}
-          className={cn(
-            headingBase,
-            'scroll-mt-32 md:scroll-mt-40',
+          className={
             isRead
-              ? 'mt-12 text-[1.9rem] leading-[1.08] md:text-[2.2rem]'
-              : 'mt-10 text-[1.76rem] leading-[1.1] md:text-[2rem]',
-          )}
+              ? cn(JOURNAL_RHYTHM.h2, JOURNAL_RHYTHM.scrollMarginClass)
+              : cn(
+                  headingBase,
+                  'scroll-mt-32 md:scroll-mt-40',
+                  'mt-10 text-[1.76rem] leading-[1.1] md:text-[2rem]',
+                )
+          }
         >
           {children}
         </h2>
@@ -120,12 +123,11 @@ function buildMarkdownComponents(
     },
     h3: ({ children }) => (
       <h3
-        className={cn(
-          headingBase,
+        className={
           isRead
-            ? 'mt-10 text-[1.45rem] leading-[1.16] md:text-[1.62rem]'
-            : 'mt-8 text-[1.36rem] leading-[1.2] md:text-[1.5rem]',
-        )}
+            ? cn(JOURNAL_RHYTHM.h3, JOURNAL_RHYTHM.scrollMarginClass)
+            : cn(headingBase, 'mt-8 text-[1.36rem] leading-[1.2] md:text-[1.5rem]')
+        }
       >
         {children}
       </h3>
@@ -148,16 +150,37 @@ function buildMarkdownComponents(
       }
 
       return (
-        <p className={cn(isRead ? 'my-7' : 'my-[1.35rem]', paragraphClass)}>
+        <p
+          className={cn(
+            isRead ? JOURNAL_RHYTHM.paragraphMargin : 'my-[1.35rem]',
+            paragraphClass,
+          )}
+        >
           {children}
         </p>
       );
     },
-    ul: ({ children }) => <ul className={cn('list-disc', listClass)}>{children}</ul>,
-    ol: ({ children }) => <ol className={cn('list-decimal', listClass)}>{children}</ol>,
-    li: ({ children }) => <li className="pl-1">{children}</li>,
+    ul: ({ children }) => (
+      <ul className={isRead ? JOURNAL_RHYTHM.ul : cn('list-disc', listClass)}>
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className={isRead ? JOURNAL_RHYTHM.ol : cn('list-decimal', listClass)}>
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => (
+      <li className={isRead ? JOURNAL_RHYTHM.listItem : 'pl-1'}>{children}</li>
+    ),
     blockquote: ({ children }) => (
-      <blockquote className="my-10 rounded-[1.8rem] border border-primary/12 bg-primary/[0.045] px-6 py-5 font-art text-[1.16rem] leading-[1.88] text-card-foreground md:px-8 md:py-6">
+      <blockquote
+        className={
+          isRead
+            ? JOURNAL_RHYTHM.quote
+            : 'my-10 rounded-[1.8rem] border border-primary/12 bg-primary/[0.045] px-6 py-5 font-art text-[1.16rem] leading-[1.88] text-card-foreground md:px-8 md:py-6'
+        }
+      >
         {children}
       </blockquote>
     ),
@@ -196,7 +219,9 @@ function buildMarkdownComponents(
       </pre>
     ),
     hr: () => (
-      <hr className="my-12 border-none h-px bg-primary/[0.12]" />
+      <hr
+        className={isRead ? JOURNAL_RHYTHM.hr : 'my-12 border-none h-px bg-primary/[0.12]'}
+      />
     ),
     del: ({ children }) => (
       <del className="text-muted-foreground/70 decoration-muted-foreground/36">
@@ -229,11 +254,15 @@ function buildMarkdownComponents(
           {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
           <img
             alt={figcaptionText || fallbackAltText || 'journal image'}
-            className="max-h-[42rem] w-full bg-[rgba(246,239,231,0.72)] object-contain"
+            className={
+              isRead
+                ? JOURNAL_RHYTHM.figureImage
+                : 'max-h-[42rem] w-full bg-[rgba(246,239,231,0.72)] object-contain'
+            }
             src={resolvedSrc}
           />
           {figcaptionText ? (
-            <figcaption className="border-t border-white/58 px-5 py-3.5 text-sm leading-7 text-muted-foreground md:px-6">
+            <figcaption className={JOURNAL_RHYTHM.figcaption}>
               {figcaptionText}
             </figcaption>
           ) : null}
@@ -262,7 +291,7 @@ export function JournalRichMarkdown({
     <div
       className={cn(
         'mx-auto w-full max-w-[42rem]',
-        variant === 'read' ? 'max-w-[46rem]' : '',
+        variant === 'read' ? JOURNAL_RHYTHM.containerMaxW : '',
         variant === 'partner' ? 'max-w-[43rem]' : '',
         className,
       )}

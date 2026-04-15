@@ -738,6 +738,14 @@ function memoryStoryHref(moment: LiveStoryMoment) {
   return `/memory?date=${date}&kind=${moment.kind}&id=${moment.source_id}`;
 }
 
+async function expectGuidePrimaryHref(page: Page, testId: string, href: string) {
+  await expect(page.getByTestId(`${testId}-primary-action`)).toHaveAttribute('href', href);
+}
+
+async function expectGuideSecondaryHref(page: Page, testId: string, href: string) {
+  await expect(page.getByTestId(`${testId}-secondary-action`)).toHaveAttribute('href', href);
+}
+
 async function expectFocusedMemoryCardInViewport(page: Page, kind: 'appreciation' | 'card') {
   const focusedCards = page.locator('[data-memory-focused="true"]');
   await expect(focusedCards).toHaveCount(1);
@@ -768,10 +776,40 @@ test.describe('Relationship System naming and IA polish', () => {
         name: '把你們現在的關係狀態、被記住的故事、私人反思與共同未來，放進同一個地方。',
       }),
     ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '先知道這張頁面怎麼運作。' })).toBeVisible();
     await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Blueprint 工作台' })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Memory（完整 Shared Archive）' })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Journal（完整反思書房）' })).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-pulse')).toContainText('目前的共同方向');
+    await expect(page.getByTestId('relationship-system-guide-pulse')).toContainText('Shared truth');
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('被留下的關係故事');
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
+    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('你的私人理解');
+    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('Personal reflection');
+    await expect(page.getByTestId('relationship-system-guide-shared-future')).toContainText('你們正在一起靠近的生活');
+    await expect(page.getByTestId('relationship-system-guide-shared-future')).toContainText('Shared truth');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-pulse', '#relationship-pulse');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-inner-landscape', '#inner-landscape');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-shared-future', '#shared-future');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-story', '/memory');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-inner-landscape', '/journal');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-shared-future', '/blueprint');
+
+    await page.getByTestId('relationship-system-guide-pulse-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#relationship-pulse$/);
+    await page.goto('/love-map');
+    await page.getByTestId('relationship-system-guide-story-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#story$/);
+    await page.goto('/love-map');
+    await page.getByTestId('relationship-system-guide-inner-landscape-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#inner-landscape$/);
+    await page.goto('/love-map');
+    await page.getByTestId('relationship-system-guide-shared-future-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#shared-future$/);
+    await page.goto('/love-map');
+
     await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把真正被留下來的 shared memory，放回你們的關係故事裡。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把你的 relationship reflections 留成可回讀的內在地圖。' })).toBeVisible();
@@ -1007,6 +1045,24 @@ test.describe('Relationship System naming and IA polish', () => {
     const appBaseUrl = baseURL ?? 'http://127.0.0.1:3000';
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
 
+    await expect(page.getByRole('heading', { level: 2, name: '先知道這張頁面怎麼運作。' })).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-pulse')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-story')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-shared-future')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
+    await expect(page.getByTestId('relationship-system-guide-inner-landscape')).toContainText('Personal reflection');
+    await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
+    await expectGuideSecondaryHref(page, 'relationship-system-guide-shared-future', '/blueprint');
+    await page.getByTestId('relationship-system-guide-story-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#story$/);
+
+    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('relationship-system-guide-shared-future-secondary-action').click();
+    await expect(page).toHaveURL(/\/blueprint$/);
+    await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
+
+    await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 2, name: '先把目前的共同方向看清楚。' })).toBeVisible();
     await expect(
       page.getByRole('heading', {

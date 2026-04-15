@@ -154,6 +154,138 @@ export function LoveMapSnapshotCard({
   );
 }
 
+interface LoveMapSystemGuideProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}
+
+export function LoveMapSystemGuide({
+  eyebrow,
+  title,
+  description,
+  children,
+}: LoveMapSystemGuideProps) {
+  return (
+    <section aria-labelledby="relationship-system-guide-title" className="space-y-5">
+      <div className="space-y-3">
+        <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
+        <div className="space-y-2">
+          <h2 id="relationship-system-guide-title" className="type-h2 text-card-foreground">
+            {title}
+          </h2>
+          <p className="max-w-[52rem] type-body-muted text-muted-foreground">{description}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">{children}</div>
+    </section>
+  );
+}
+
+type LoveMapGuideOwnershipTone = 'success' | 'metadata' | 'status';
+
+interface LoveMapSystemGuideCardProps {
+  eyebrow: string;
+  title: string;
+  ownershipLabel: string;
+  ownershipTone?: LoveMapGuideOwnershipTone;
+  metricLabel: string;
+  metricValue: ReactNode;
+  metricFootnote?: string;
+  belongsHere: string;
+  primaryHref: string;
+  primaryLabel: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+  dataTestId?: string;
+}
+
+export function LoveMapSystemGuideCard({
+  eyebrow,
+  title,
+  ownershipLabel,
+  ownershipTone = 'metadata',
+  metricLabel,
+  metricValue,
+  metricFootnote,
+  belongsHere,
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
+  dataTestId,
+}: LoveMapSystemGuideCardProps) {
+  const primaryActionClassName =
+    'inline-flex items-center gap-2 rounded-full border border-primary/18 bg-primary/10 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-primary/14 hover:shadow-lift focus-ring-premium';
+  const secondaryActionClassName =
+    'inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium';
+
+  return (
+    <GlassCard
+      className="overflow-hidden rounded-[2.1rem] border-white/56 bg-white/80 p-5 shadow-lift backdrop-blur-md md:p-6"
+      data-testid={dataTestId}
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="type-micro uppercase text-primary/80">{eyebrow}</p>
+            <h3 className="type-h3 text-card-foreground">{title}</h3>
+          </div>
+
+          <Badge variant={ownershipTone} size="sm">
+            {ownershipLabel}
+          </Badge>
+        </div>
+
+        <div className="rounded-[1.55rem] border border-white/58 bg-white/74 px-4 py-4 shadow-soft">
+          <p className="type-caption uppercase tracking-[0.18em] text-primary/72">{metricLabel}</p>
+          <p className="mt-2 type-section-title text-card-foreground">{metricValue}</p>
+          {metricFootnote ? <p className="mt-2 type-caption text-muted-foreground">{metricFootnote}</p> : null}
+        </div>
+
+        <div className="space-y-2">
+          <p className="type-caption uppercase tracking-[0.18em] text-primary/72">What belongs here</p>
+          <p className="type-body-muted text-muted-foreground">{belongsHere}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {primaryHref.startsWith('#') ? (
+            <a
+              href={primaryHref}
+              className={primaryActionClassName}
+              data-testid={dataTestId ? `${dataTestId}-primary-action` : undefined}
+            >
+              {primaryLabel}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+          ) : (
+            <Link
+              href={primaryHref}
+              className={primaryActionClassName}
+              data-testid={dataTestId ? `${dataTestId}-primary-action` : undefined}
+            >
+              {primaryLabel}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          )}
+
+          {secondaryHref && secondaryLabel ? (
+            <Link
+              href={secondaryHref}
+              className={secondaryActionClassName}
+              data-testid={dataTestId ? `${dataTestId}-secondary-action` : undefined}
+            >
+              {secondaryLabel}
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
 interface LoveMapSectionProps {
   id?: string;
   eyebrow: string;

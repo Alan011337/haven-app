@@ -60,25 +60,30 @@ import {
   buildJournalSectionDomId,
   type JournalOutlineEntry,
 } from '@/lib/journal-outline';
+import { JOURNAL_RHYTHM } from '@/features/journal/journal-document-rhythm';
 
+// Block-level rhythm is sourced from JOURNAL_RHYTHM so Lexical write mode and
+// the `'read'` variant of journal-markdown stay in lock-step. Inline character
+// formatting (link, bold/italic/code) is kept local — it is not part of the
+// write/read continuity contract.
 const editorTheme = {
   heading: {
-    h1: 'font-art text-[2.65rem] leading-[1.04] tracking-[-0.02em] text-card-foreground md:text-[3rem]',
-    h2: 'font-art text-[2rem] leading-[1.12] tracking-[-0.02em] text-card-foreground md:text-[2.2rem]',
+    h1: JOURNAL_RHYTHM.h1,
+    h2: JOURNAL_RHYTHM.h2,
   },
   link: 'text-primary underline decoration-primary/26 underline-offset-4 transition-colors duration-haven ease-haven hover:text-primary/80',
   list: {
-    listitem: 'ml-5 pl-1 text-[1.05rem] leading-[2] text-card-foreground marker:text-primary/55',
+    listitem: JOURNAL_RHYTHM.listItem,
     nested: {
       listitem: 'mt-2',
     },
     olDepth: ['list-decimal', 'list-decimal', 'list-decimal', 'list-decimal', 'list-decimal'],
-    ul: 'my-5 list-disc space-y-2',
+    ol: JOURNAL_RHYTHM.ol,
+    ul: JOURNAL_RHYTHM.ul,
     ulDepth: ['list-disc', 'list-disc', 'list-disc', 'list-disc', 'list-disc'],
   },
-  paragraph: 'text-[1.05rem] leading-[2] text-card-foreground',
-  quote:
-    'my-8 rounded-[1.6rem] border border-primary/14 bg-primary/[0.055] px-6 py-5 font-art text-[1.18rem] leading-[1.8] text-card-foreground',
+  paragraph: JOURNAL_RHYTHM.paragraph,
+  quote: JOURNAL_RHYTHM.quote,
   text: {
     bold: 'font-semibold text-card-foreground',
     code: 'rounded-md bg-[rgba(72,55,36,0.08)] px-1.5 py-0.5 font-mono text-[0.95em] text-card-foreground',
@@ -86,7 +91,7 @@ const editorTheme = {
     strikethrough: 'line-through decoration-card-foreground/40',
     underline: 'underline underline-offset-4',
   },
-  hr: 'my-10 border-none h-px bg-primary/[0.14]',
+  hr: JOURNAL_RHYTHM.hr,
 };
 
 export interface JournalLexicalComposerHandle {
@@ -261,7 +266,7 @@ function syncHeadingAnchors(
     element.dataset.journalSectionId = entry.id;
     element.dataset.journalSurface = 'write';
     element.dataset.testid = `journal-write-section-${entry.id}`;
-    element.style.scrollMarginTop = '160px';
+    element.style.scrollMarginTop = `${JOURNAL_RHYTHM.scrollMarginPx}px`;
   });
 }
 
@@ -527,7 +532,7 @@ const JournalLexicalComposer = forwardRef<
               contentEditable={
                 <ContentEditable
                   aria-label="Journal writing canvas"
-                  className="min-h-[560px] px-7 pb-20 pt-10 text-[1.06rem] leading-[2.02] text-card-foreground outline-none md:px-12 md:pb-24 md:pt-14"
+                  className="min-h-[560px] px-7 pb-20 pt-10 text-[1.07rem] leading-[2.02] text-card-foreground outline-none md:px-12 md:pb-24 md:pt-14 md:text-[1.08rem]"
                   spellCheck
                 />
               }
