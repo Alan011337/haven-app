@@ -73,6 +73,7 @@ from app.models.journal_attachment import JournalAttachment
 from app.models.love_language import LoveLanguagePreference
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.relationship_care_profile import RelationshipCareProfile
+from app.models.relationship_repair_agreement import RelationshipRepairAgreement
 from app.models.couple_goal import CoupleGoal
 from app.models.love_map_note import LoveMapNote
 from app.models.wishlist_item import WishlistItem
@@ -410,8 +411,17 @@ def seed_relationship_system(session: Session) -> None:
     wishlist_exists = session.exec(select(WishlistItem).limit(1)).first()
     preference_exists = session.exec(select(LoveLanguagePreference).limit(1)).first()
     care_profile_exists = session.exec(select(RelationshipCareProfile).limit(1)).first()
+    repair_agreement_exists = session.exec(select(RelationshipRepairAgreement).limit(1)).first()
 
-    if baseline_exists and goal_exists and note_exists and wishlist_exists and preference_exists and care_profile_exists:
+    if (
+        baseline_exists
+        and goal_exists
+        and note_exists
+        and wishlist_exists
+        and preference_exists
+        and care_profile_exists
+        and repair_agreement_exists
+    ):
         print("[seed] relationship_system: already exist — skipping")
         return
 
@@ -534,6 +544,22 @@ def seed_relationship_system(session: Session) -> None:
             session.add(care_profile)
         session.commit()
         print("[seed] relationship_system: seeded 2 Heart care playbooks")
+
+    if not repair_agreement_exists:
+        session.add(
+            RelationshipRepairAgreement(
+                user_id=min(ALICE_ID, BOB_ID),
+                partner_id=max(ALICE_ID, BOB_ID),
+                protect_what_matters="先保護彼此的安全感，不在情緒最高點把對方定型，也不讓那一刻變成整段關係的定論。",
+                avoid_in_conflict="先避免翻舊帳、替對方下結論，或在還沒冷靜前一直追著要答案。",
+                repair_reentry="如果明顯卡住，先留一段空氣，再在 24 小時內回來用較慢的語氣說感受、聽彼此真正卡住的地方。",
+                updated_by_user_id=ALICE_ID,
+                created_at=_days_ago(1),
+                updated_at=_days_ago(0),
+            )
+        )
+        session.commit()
+        print("[seed] relationship_system: seeded Repair Agreements")
 
     if not wishlist_exists:
         wishlist_items = [

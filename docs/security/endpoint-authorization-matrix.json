@@ -274,6 +274,24 @@
     {
       "auth_mode": "authenticated",
       "idempotency_policy": "required",
+      "method": "PUT",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/repair-agreements",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
       "method": "POST",
       "owner_team": "backend-platform",
       "path": "/api/love-map/notes",

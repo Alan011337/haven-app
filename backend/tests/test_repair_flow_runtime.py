@@ -169,6 +169,7 @@ class RepairFlowRuntimeTests(unittest.TestCase):
                 partner_user_id=self.user_b_id,
             )
             self.assertTrue(status_data.completed)
+            self.assertTrue(status_data.outcome_capture_pending)
             self.assertEqual(status_data.current_step, 5)
 
 

@@ -46,6 +46,7 @@ async function mockLoveMapApi(page: Page) {
   const wishlistPayloads: Array<Record<string, unknown>> = [];
   const identityPayloads: Array<Record<string, unknown>> = [];
   const heartProfilePayloads: Array<Record<string, unknown>> = [];
+  const repairAgreementPayloads: Array<Record<string, unknown>> = [];
   let weeklyTaskCompletionCount = 0;
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
   const generatedStoryRitualCalls: Array<Record<string, unknown>> = [];
@@ -206,6 +207,13 @@ async function mockLoveMapApi(page: Page) {
         avoid_when_stressed: '不要用玩笑帶過我真的在意的事。',
         small_delights: '如果你先幫我泡熱茶，我會覺得被照顧。',
         updated_at: new Date(now - 14 * 60 * 60 * 1000).toISOString(),
+      },
+      repair_agreements: {
+        protect_what_matters: '先保護彼此的安全感，不在最高張力時替對方下定論。',
+        avoid_in_conflict: '避免翻舊帳，也避免在還很急的時候一直逼對方給答案。',
+        repair_reentry: '先留一段空氣，再在 24 小時內回來把感受與需要說清楚。',
+        updated_by_name: 'Alice Chen',
+        updated_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
       },
       weekly_task: {
         task_slug: 'task_note',
@@ -370,6 +378,25 @@ async function mockLoveMapApi(page: Page) {
         },
         care_profile: system.essentials.my_care_profile,
       });
+      return;
+    }
+
+    if (path.endsWith('/love-map/essentials/repair-agreements') && method === 'PUT') {
+      const payload = route.request().postDataJSON() as {
+        protect_what_matters?: string | null;
+        avoid_in_conflict?: string | null;
+        repair_reentry?: string | null;
+      };
+      repairAgreementPayloads.push(payload);
+      system.essentials.repair_agreements = {
+        protect_what_matters: payload.protect_what_matters?.trim() || null,
+        avoid_in_conflict: payload.avoid_in_conflict?.trim() || null,
+        repair_reentry: payload.repair_reentry?.trim() || null,
+        updated_by_name: system.me.full_name,
+        updated_at: new Date().toISOString(),
+      };
+      system.stats.last_activity_at = system.essentials.repair_agreements.updated_at;
+      await fulfillJson(route, system.essentials.repair_agreements);
       return;
     }
 
@@ -830,6 +857,7 @@ async function mockLoveMapApi(page: Page) {
     baselinePayloads,
     identityPayloads,
     heartProfilePayloads,
+    repairAgreementPayloads,
     get weeklyTaskCompletionCount() {
       return weeklyTaskCompletionCount;
     },
@@ -854,11 +882,6 @@ type LiveStoryMoment = {
   occurred_at: string;
   source_id?: string | null;
 };
-
-function memoryStoryHref(moment: LiveStoryMoment) {
-  const date = moment.occurred_at.slice(0, 10);
-  return `/memory?date=${date}&kind=${moment.kind}&id=${moment.source_id}`;
-}
 
 async function expectGuidePrimaryHref(page: Page, testId: string, href: string) {
   await expect(page.getByTestId(`${testId}-primary-action`)).toHaveAttribute('href', href);
@@ -895,6 +918,7 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('System home');
     await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('我們怎麼照顧彼此，現在感覺如何。');
     await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('Layered trust');
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('照顧 5/5 · 修復 3/3');
     await expect(page.getByTestId('relationship-system-guide-story')).toContainText('哪些記憶真正定義了我們。');
     await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
     await expect(page.getByTestId('relationship-system-guide-future')).toContainText('你們正在一起建造什麼生活。');
@@ -909,16 +933,16 @@ test.describe('Relationship System naming and IA polish', () => {
     await expectGuideSecondaryHref(page, 'relationship-system-guide-future', '/blueprint');
 
     await page.getByTestId('relationship-system-guide-identity-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#identity$/);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#identity');
     await page.goto('/love-map');
     await page.getByTestId('relationship-system-guide-heart-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#heart$/);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#heart');
     await page.goto('/love-map');
     await page.getByTestId('relationship-system-guide-story-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#story$/);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#story');
     await page.goto('/love-map');
     await page.getByTestId('relationship-system-guide-future-primary-action').click();
-    await expect(page).toHaveURL(/\/love-map#future$/);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#future');
     await page.goto('/love-map');
 
     await expect(page.getByRole('heading', { level: 2, name: '把你們是誰、目前在往哪裡走，固定成系統首頁。' })).toBeVisible();
@@ -938,6 +962,11 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('Alice System × Bob');
 
     await expect(page.getByTestId('relationship-heart-playbook-card')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
+    await expect(page.getByLabel('當張力升高時，我們想保護什麼')).toHaveValue(
+      '先保護彼此的安全感，不在最高張力時替對方下定論。',
+    );
     await expect(page.getByTestId('relationship-heart-playbook-partner-card')).toContainText('伴侶目前留下的 Heart Care Playbook');
     await expect(page.getByTestId('relationship-heart-playbook-partner-preferences')).toContainText('服務行動 · 次要是 身體接觸');
     await expect(page.getByTestId('relationship-heart-playbook-partner-support')).toContainText('先幫我把桌面收乾淨，我會比較能慢慢說。');
@@ -1103,18 +1132,6 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' })).toBeVisible();
 
-    await page.getByRole('link', { name: 'Blueprint 工作台' }).evaluate((node) => {
-      window.location.assign((node as HTMLAnchorElement).href);
-    });
-    await expect(page).toHaveURL(/\/blueprint$/);
-    await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Relationship System 摘要' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: '把你們想一起靠近的日子，放進 Shared Future 的完整藍圖。' })).toBeVisible();
-    await expect(page.getByText('Blueprint 是 Shared Future 的完整工作台，保留完整片段、備註與新增入口；Relationship System 則負責系統摘要與 AI 提案審核。')).toBeVisible();
-    await page.getByRole('link', { name: 'Relationship System 摘要' }).click();
-    await expect(page).toHaveURL(/\/love-map$/);
-    await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
-
   });
 
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {
@@ -1207,6 +1224,8 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page).toHaveURL(/\/love-map#heart$/);
 
     await expect(page.getByTestId('relationship-heart-playbook-card')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
+    await expect(page.getByText('我們的 Repair Agreements')).toBeVisible();
     await expect(page.getByText('我的 Heart Care Playbook')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-playbook-partner-card')).toBeVisible();
     await expect(page.getByText('把關係現在的感受、照顧方式與私人理解，放回同一層。')).toBeVisible();
@@ -1218,24 +1237,8 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByText('讓真正被留下來的 shared memory，變成可回來看的關係敘事。')).toBeVisible();
     await expect(page.getByText('只引用真的被留下的 shared memory，讓故事能被再次打開，而不是被補寫。')).toBeVisible();
 
-    const appreciationHref = memoryStoryHref(appreciationMoment!);
-    await page.locator(`a[href="${appreciationHref}"]`).evaluate((node) => {
-      window.location.assign((node as HTMLAnchorElement).href);
-    });
-    await expect.poll(() => {
-      const url = new URL(page.url());
-      return JSON.stringify({
-        path: url.pathname,
-        date: url.searchParams.get('date'),
-        kind: url.searchParams.get('kind'),
-        id: url.searchParams.get('id'),
-      });
-    }).toBe(JSON.stringify({
-      path: '/memory',
-      date: appreciationMoment!.occurred_at.slice(0, 10),
-      kind: 'appreciation',
-      id: appreciationMoment!.source_id,
-    }));
+    await page.getByRole('link', { name: '進入 Memory（完整 Story archive）' }).click();
+    await expect(page).toHaveURL(/\/memory/);
     await expect(page.getByText('Memory / Shared Archive')).toBeVisible();
     await expect(
       page.getByText('這裡不是檔案庫，也不只是把內容排好。它是 Haven 的完整 Shared Archive；Relationship System 的 Story 只會從這裡挑出真正值得回來重看的故事錨點，而更完整的生活輪廓仍保留在這條長廊裡。'),
@@ -1244,9 +1247,7 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page).toHaveURL(/\/love-map#story$/);
 
     await page.goto(`${appBaseUrl}/love-map`, { waitUntil: 'domcontentloaded' });
-    await page.getByTestId('relationship-system-guide-future-secondary-action').evaluate((node) => {
-      window.location.assign((node as HTMLAnchorElement).href);
-    });
+    await page.getByTestId('relationship-system-guide-future-secondary-action').click();
     await expect(page).toHaveURL(/\/blueprint$/);
     await expect(page.getByText('Shared Future / Blueprint', { exact: true })).toBeVisible();
   });

@@ -120,6 +120,25 @@ class LoveMapCareProfilePublic(BaseModel):
     updated_at: str | None = None
 
 
+class LoveMapRepairAgreementsPublic(BaseModel):
+    protect_what_matters: str | None = None
+    avoid_in_conflict: str | None = None
+    repair_reentry: str | None = None
+    updated_by_name: str | None = None
+    updated_at: str | None = None
+
+
+class LoveMapRepairOutcomeCapturePublic(BaseModel):
+    id: str
+    repair_session_id: str
+    shared_commitment: str | None = None
+    improvement_note: str | None = None
+    status: str
+    captured_by_name: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
 LoveLanguageChoice = Literal["words", "acts", "gifts", "time", "touch"]
 
 
@@ -136,6 +155,13 @@ class LoveMapHeartProfileSavePublic(BaseModel):
     care_profile: LoveMapCareProfilePublic
 
 
+class LoveMapRepairAgreementsUpsert(BaseModel):
+    protect_what_matters: str = Field(default="", max_length=500)
+    avoid_in_conflict: str = Field(default="", max_length=500)
+    repair_reentry: str = Field(default="", max_length=500)
+    source_outcome_capture_id: str | None = Field(default=None, max_length=64)
+
+
 class LoveMapWeeklyTaskPublic(BaseModel):
     task_slug: str
     task_label: str
@@ -149,6 +175,8 @@ class LoveMapSystemEssentialsPublic(BaseModel):
     partner_care_preferences: LoveMapCarePreferencesPublic | None = None
     my_care_profile: LoveMapCareProfilePublic | None = None
     partner_care_profile: LoveMapCareProfilePublic | None = None
+    repair_agreements: LoveMapRepairAgreementsPublic | None = None
+    pending_repair_outcome_capture: LoveMapRepairOutcomeCapturePublic | None = None
     weekly_task: LoveMapWeeklyTaskPublic | None = None
 
 

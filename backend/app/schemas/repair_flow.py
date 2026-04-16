@@ -45,6 +45,7 @@ class RepairFlowStatusPublic(SQLModel):
     in_repair_flow: bool
     safety_mode_active: bool
     completed: bool
+    outcome_capture_pending: bool = False
     current_step: int = Field(ge=1, le=5)
     my_completed_steps: list[int] = Field(default_factory=list)
     partner_completed_steps: list[int] = Field(default_factory=list)

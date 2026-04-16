@@ -20,6 +20,8 @@ from app.models.love_language import LoveLanguagePreference
 from app.models.love_map_note import LoveMapNote
 from app.models.relationship_care_profile import RelationshipCareProfile
 from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
+from app.models.relationship_repair_agreement import RelationshipRepairAgreement
+from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.user import User
 from app.models.wishlist_item import WishlistItem
@@ -32,6 +34,9 @@ from app.schemas.love_map import (
     LoveMapCardsResponse,
     LoveMapHeartProfileSavePublic,
     LoveMapHeartProfileUpsert,
+    LoveMapRepairAgreementsPublic,
+    LoveMapRepairAgreementsUpsert,
+    LoveMapRepairOutcomeCapturePublic,
     LoveMapNoteCreate,
     LoveMapNotePublic,
     LoveMapStoryCapsulePublic,
@@ -67,6 +72,11 @@ from app.services.love_language_runtime import (
     resolve_pair_weekly_task,
 )
 from app.services.memory_archive import get_relationship_story_slice, get_relationship_story_time_capsule
+from app.services.repair_flow_runtime import (
+    OUTCOME_CAPTURE_STATUS_APPLIED,
+    OUTCOME_CAPTURE_STATUS_DISMISSED,
+    OUTCOME_CAPTURE_STATUS_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["love-map"])
@@ -122,6 +132,12 @@ def _to_wishlist_public(*, row: WishlistItem, current_user: CurrentUser) -> Wish
 
 def _resolve_partner_name(partner: User) -> str | None:
     return partner.full_name or partner.email.split("@")[0]
+
+
+def _resolve_user_name(user: User | None) -> str | None:
+    if user is None:
+        return None
+    return user.full_name or user.email.split("@")[0]
 
 
 def _to_iso_z(value: object) -> str:
@@ -215,6 +231,41 @@ def _to_care_profile_public(
     )
 
 
+def _to_repair_agreements_public(
+    row: RelationshipRepairAgreement | None,
+    *,
+    updated_by_name: str | None = None,
+) -> LoveMapRepairAgreementsPublic | None:
+    if row is None:
+        return None
+    return LoveMapRepairAgreementsPublic(
+        protect_what_matters=row.protect_what_matters,
+        avoid_in_conflict=row.avoid_in_conflict,
+        repair_reentry=row.repair_reentry,
+        updated_by_name=updated_by_name,
+        updated_at=row.updated_at.isoformat() + "Z" if row.updated_at else None,
+    )
+
+
+def _to_repair_outcome_capture_public(
+    row: RelationshipRepairOutcomeCapture | None,
+    *,
+    captured_by_name: str | None = None,
+) -> LoveMapRepairOutcomeCapturePublic | None:
+    if row is None:
+        return None
+    return LoveMapRepairOutcomeCapturePublic(
+        id=str(row.id),
+        repair_session_id=row.repair_session_id,
+        shared_commitment=row.shared_commitment,
+        improvement_note=row.improvement_note,
+        status=row.status,
+        captured_by_name=captured_by_name,
+        created_at=row.created_at.isoformat() + "Z" if row.created_at else None,
+        updated_at=row.updated_at.isoformat() + "Z" if row.updated_at else None,
+    )
+
+
 def _normalize_short_text(value: str | None) -> str | None:
     trimmed = (value or "").strip()
     if not trimmed:
@@ -233,6 +284,56 @@ def _load_care_profile(
             RelationshipCareProfile.user_id == user_id,
             RelationshipCareProfile.partner_id == partner_id,
         )
+    ).first()
+
+
+def _load_repair_agreements(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+) -> RelationshipRepairAgreement | None:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(RelationshipRepairAgreement).where(
+            RelationshipRepairAgreement.user_id == uid1,
+            RelationshipRepairAgreement.partner_id == uid2,
+        )
+    ).first()
+
+
+def _load_repair_outcome_capture(
+    *,
+    session,
+    capture_id: UUID,
+    user_id: UUID,
+    partner_id: UUID,
+    status: str | None = None,
+) -> RelationshipRepairOutcomeCapture | None:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    statement = select(RelationshipRepairOutcomeCapture).where(
+        RelationshipRepairOutcomeCapture.id == capture_id,
+        RelationshipRepairOutcomeCapture.user_id == uid1,
+        RelationshipRepairOutcomeCapture.partner_id == uid2,
+    )
+    if status:
+        statement = statement.where(RelationshipRepairOutcomeCapture.status == status)
+    return session.exec(statement).first()
+
+
+def _load_pending_repair_outcome_capture(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+) -> RelationshipRepairOutcomeCapture | None:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(RelationshipRepairOutcomeCapture).where(
+            RelationshipRepairOutcomeCapture.user_id == uid1,
+            RelationshipRepairOutcomeCapture.partner_id == uid2,
+            RelationshipRepairOutcomeCapture.status == OUTCOME_CAPTURE_STATUS_PENDING,
+        ).order_by(RelationshipRepairOutcomeCapture.updated_at.desc())
     ).first()
 
 
@@ -669,6 +770,10 @@ def get_love_map_system(
     partner_care_preferences = None
     my_care_profile = None
     partner_care_profile = None
+    repair_agreements_row = None
+    repair_agreements = None
+    pending_repair_outcome_capture_row = None
+    pending_repair_outcome_capture = None
     weekly_task = None
 
     if verified_partner_id:
@@ -717,6 +822,34 @@ def get_love_map_system(
             user_id=verified_partner_id,
             partner_id=current_user.id,
         )
+        repair_agreements_row = _load_repair_agreements(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        updated_by_user = (
+            session.get(User, repair_agreements_row.updated_by_user_id)
+            if repair_agreements_row and repair_agreements_row.updated_by_user_id
+            else None
+        )
+        repair_agreements = _to_repair_agreements_public(
+            repair_agreements_row,
+            updated_by_name=_resolve_user_name(updated_by_user),
+        )
+        pending_repair_outcome_capture_row = _load_pending_repair_outcome_capture(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        capture_author = (
+            session.get(User, pending_repair_outcome_capture_row.created_by_user_id)
+            if pending_repair_outcome_capture_row
+            else None
+        )
+        pending_repair_outcome_capture = _to_repair_outcome_capture_public(
+            pending_repair_outcome_capture_row,
+            captured_by_name=_resolve_user_name(capture_author),
+        )
         weekly_task = resolve_pair_weekly_task(
             session=session,
             user_id=current_user.id,
@@ -741,6 +874,10 @@ def get_love_map_system(
         timestamps.append(my_care_profile.updated_at)
     if partner_care_profile and partner_care_profile.updated_at:
         timestamps.append(partner_care_profile.updated_at)
+    if repair_agreements_row and repair_agreements_row.updated_at:
+        timestamps.append(repair_agreements_row.updated_at)
+    if pending_repair_outcome_capture_row and pending_repair_outcome_capture_row.updated_at:
+        timestamps.append(pending_repair_outcome_capture_row.updated_at)
     if weekly_task and weekly_task.completed_at:
         timestamps.append(weekly_task.completed_at)
 
@@ -781,6 +918,8 @@ def get_love_map_system(
             partner_care_preferences=_to_care_preferences_public(partner_care_preferences),
             my_care_profile=_to_care_profile_public(my_care_profile),
             partner_care_profile=_to_care_profile_public(partner_care_profile),
+            repair_agreements=repair_agreements,
+            pending_repair_outcome_capture=pending_repair_outcome_capture,
             weekly_task=_to_weekly_task_public(weekly_task),
         ),
     )
@@ -852,6 +991,122 @@ def upsert_heart_care_profile(
             small_delights=care_profile.small_delights,
             updated_at=care_profile.updated_at.isoformat() + "Z",
         ),
+    )
+
+
+@router.put("/essentials/repair-agreements", response_model=LoveMapRepairAgreementsPublic)
+def upsert_repair_agreements(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: LoveMapRepairAgreementsUpsert,
+) -> LoveMapRepairAgreementsPublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
+    source_capture = None
+    if body.source_outcome_capture_id:
+        try:
+            source_capture_id = UUID(body.source_outcome_capture_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid source_outcome_capture_id") from exc
+        source_capture = _load_repair_outcome_capture(
+            session=session,
+            capture_id=source_capture_id,
+            user_id=current_user.id,
+            partner_id=partner_id,
+            status=OUTCOME_CAPTURE_STATUS_PENDING,
+        )
+        if source_capture is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到待審核的修復結果")
+    repair_agreements = _load_repair_agreements(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    if repair_agreements is None:
+        repair_agreements = RelationshipRepairAgreement(
+            user_id=uid1,
+            partner_id=uid2,
+        )
+
+    repair_agreements.protect_what_matters = _normalize_short_text(body.protect_what_matters)
+    repair_agreements.avoid_in_conflict = _normalize_short_text(body.avoid_in_conflict)
+    repair_agreements.repair_reentry = _normalize_short_text(body.repair_reentry)
+    repair_agreements.updated_by_user_id = current_user.id
+    saved_at = utcnow()
+    repair_agreements.updated_at = saved_at
+    session.add(repair_agreements)
+
+    if source_capture is not None:
+        source_capture.status = OUTCOME_CAPTURE_STATUS_APPLIED
+        source_capture.reviewed_by_user_id = current_user.id
+        source_capture.reviewed_at = saved_at
+        source_capture.updated_at = saved_at
+        session.add(source_capture)
+
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Upsert love map repair agreements",
+        conflict_detail="儲存 Repair Agreements 時發生衝突。",
+        failure_detail="儲存 Repair Agreements 失敗。",
+    )
+    session.refresh(repair_agreements)
+    return _to_repair_agreements_public(
+        repair_agreements,
+        updated_by_name=_resolve_user_name(current_user),
+    )
+
+
+@router.post(
+    "/essentials/repair-outcome-captures/{capture_id}/dismiss",
+    response_model=LoveMapRepairOutcomeCapturePublic,
+)
+def dismiss_repair_outcome_capture(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    capture_id: UUID,
+) -> LoveMapRepairOutcomeCapturePublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    capture = _load_repair_outcome_capture(
+        session=session,
+        capture_id=capture_id,
+        user_id=current_user.id,
+        partner_id=partner_id,
+        status=OUTCOME_CAPTURE_STATUS_PENDING,
+    )
+    if capture is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到待審核的修復結果")
+
+    dismissed_at = utcnow()
+    capture.status = OUTCOME_CAPTURE_STATUS_DISMISSED
+    capture.reviewed_by_user_id = current_user.id
+    capture.reviewed_at = dismissed_at
+    capture.updated_at = dismissed_at
+    session.add(capture)
+
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Dismiss love map repair outcome capture",
+        conflict_detail="略過修復結果時發生衝突。",
+        failure_detail="略過修復結果失敗。",
+    )
+    session.refresh(capture)
+    return _to_repair_outcome_capture_public(
+        capture,
+        captured_by_name=_resolve_user_name(session.get(User, capture.created_by_user_id)),
+    ) or LoveMapRepairOutcomeCapturePublic(
+        id=str(capture.id),
+        repair_session_id=capture.repair_session_id,
+        status=capture.status,
     )
 
 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
@@ -161,7 +162,7 @@ function getRoomStateCopy(viewState: string, repairFlowEnabled: boolean) {
 
 export default function MediationPageContent() {
   const queryClient = useQueryClient();
-  const { data: featureFlags } = useFeatureFlags();
+  const { data: featureFlags, isFetched: featureFlagsFetched } = useFeatureFlags();
   const repairFlowEnabled = Boolean(featureFlags?.flags?.repair_flow_v1)
     && !Boolean(featureFlags?.kill_switches?.disable_repair_flow_v1);
   const {
@@ -200,6 +201,9 @@ export default function MediationPageContent() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!featureFlagsFetched) {
+      return;
+    }
     if (!repairFlowEnabled) {
       localStorage.removeItem(REPAIR_SESSION_STORAGE_KEY);
       setRepairSessionId(null);
@@ -210,7 +214,7 @@ export default function MediationPageContent() {
       return;
     }
     localStorage.removeItem(REPAIR_SESSION_STORAGE_KEY);
-  }, [repairFlowEnabled, repairSessionId]);
+  }, [featureFlagsFetched, repairFlowEnabled, repairSessionId]);
 
   const repairStatusCode = (repairStatusError as { response?: { status?: number } } | null)?.response?.status;
 
@@ -593,9 +597,20 @@ export default function MediationPageContent() {
             description="如果你們剛剛找到了一件能在 24 小時內完成的小承諾，現在最值得做的，就是安靜地把它做到。"
             tone="success"
             action={
-              <Button variant="outline" onClick={handleResetRepairFlow}>
-                結束目前流程
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                {repairStatus.outcome_capture_pending ? (
+                  <Link
+                    href="/love-map#heart"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-button border border-transparent bg-gradient-to-b from-primary to-primary/92 px-5 text-sm font-medium text-primary-foreground shadow-satin-button transition-[transform,box-shadow,background-color,border-color,color,opacity] duration-haven ease-haven hover:-translate-y-px hover:shadow-lift focus-ring-premium"
+                  >
+                    把這次修復帶回關係系統
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                ) : null}
+                <Button variant="outline" onClick={handleResetRepairFlow}>
+                  結束目前流程
+                </Button>
+              </div>
             }
           />
         </MediationStageFrame>

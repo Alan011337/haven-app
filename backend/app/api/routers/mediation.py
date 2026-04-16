@@ -158,6 +158,7 @@ def get_repair_flow_status_endpoint(
         in_repair_flow=True,
         safety_mode_active=status_data.safety_mode_active,
         completed=status_data.completed,
+        outcome_capture_pending=status_data.outcome_capture_pending,
         current_step=status_data.current_step,
         my_completed_steps=status_data.my_completed_steps,
         partner_completed_steps=status_data.partner_completed_steps,

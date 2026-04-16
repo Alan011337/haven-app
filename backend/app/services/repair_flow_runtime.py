@@ -8,7 +8,11 @@ from typing import Any
 
 from sqlmodel import Session, select, and_, or_
 
+from app.core.datetime_utils import utcnow
 from app.models.events_log import EventsLog
+from app.models.relationship_repair_outcome_capture import (
+    RelationshipRepairOutcomeCapture,
+)
 from app.services.events_log import record_core_loop_event
 
 logger = logging.getLogger(__name__)
@@ -19,6 +23,10 @@ EVENT_REPAIR_STEP_COMPLETED = "repair_step_completed"
 EVENT_REPAIR_COMPLETED = "repair_completed"
 EVENT_SAFETY_MODE_ENTERED = "safety_mode_entered"
 REPAIR_EVENT_SOURCE = "repair_flow_v1"
+OUTCOME_CAPTURE_STATUS_COLLECTING = "collecting"
+OUTCOME_CAPTURE_STATUS_PENDING = "pending"
+OUTCOME_CAPTURE_STATUS_APPLIED = "applied"
+OUTCOME_CAPTURE_STATUS_DISMISSED = "dismissed"
 
 _HIGH_RISK_KEYWORDS = (
     "自殺",
@@ -79,6 +87,7 @@ class RepairFlowStatus:
     current_step: int
     my_completed_steps: list[int]
     partner_completed_steps: list[int]
+    outcome_capture_pending: bool
 
 
 def _parse_json_payload(raw: str | None) -> dict[str, Any]:
@@ -177,6 +186,13 @@ def _contains_high_risk_phrase(*texts: str | None) -> bool:
     return any(keyword in merged for keyword in _HIGH_RISK_KEYWORDS)
 
 
+def _normalize_capture_text(value: str | None) -> str | None:
+    trimmed = (value or "").strip()
+    if not trimmed:
+        return None
+    return trimmed[:300]
+
+
 def _build_safe_step_props(
     *,
     step: int,
@@ -216,6 +232,66 @@ def _validate_step_payload(
         raise RepairFlowValidationError("Step 4 requires shared_commitment.")
     if step == 5 and not (improvement_note or "").strip():
         raise RepairFlowValidationError("Step 5 requires improvement_note.")
+
+
+def _pair_scope_ids(user_id: uuid.UUID, partner_user_id: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:
+    return min(user_id, partner_user_id), max(user_id, partner_user_id)
+
+
+def _load_outcome_capture(
+    *,
+    session: Session,
+    repair_session_id: str,
+    user_id: uuid.UUID,
+    partner_user_id: uuid.UUID,
+) -> RelationshipRepairOutcomeCapture | None:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_user_id)
+    return session.exec(
+        select(RelationshipRepairOutcomeCapture).where(
+            RelationshipRepairOutcomeCapture.user_id == uid1,
+            RelationshipRepairOutcomeCapture.partner_id == uid2,
+            RelationshipRepairOutcomeCapture.repair_session_id == repair_session_id,
+        )
+    ).first()
+
+
+def _upsert_outcome_capture(
+    *,
+    session: Session,
+    repair_session_id: str,
+    user_id: uuid.UUID,
+    partner_user_id: uuid.UUID,
+    shared_commitment: str | None = None,
+    improvement_note: str | None = None,
+    status: str = OUTCOME_CAPTURE_STATUS_COLLECTING,
+) -> RelationshipRepairOutcomeCapture:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_user_id)
+    row = _load_outcome_capture(
+        session=session,
+        repair_session_id=repair_session_id,
+        user_id=user_id,
+        partner_user_id=partner_user_id,
+    )
+    if row is None:
+        row = RelationshipRepairOutcomeCapture(
+            user_id=uid1,
+            partner_id=uid2,
+            repair_session_id=repair_session_id,
+            created_by_user_id=user_id,
+        )
+
+    if shared_commitment is not None:
+        row.shared_commitment = _normalize_capture_text(shared_commitment)
+    if improvement_note is not None:
+        row.improvement_note = _normalize_capture_text(improvement_note)
+
+    row.status = status
+    row.created_by_user_id = user_id
+    row.reviewed_by_user_id = None
+    row.reviewed_at = None
+    row.updated_at = utcnow()
+    session.add(row)
+    return row
 
 
 def start_repair_flow(
@@ -294,6 +370,12 @@ def get_repair_flow_status(
     partner_steps = _extract_steps(rows, user_id=partner_user_id)
     safety_mode_active = _is_safety_mode_active(rows)
     completed = _is_completed(rows, my_steps, partner_steps)
+    outcome_capture = _load_outcome_capture(
+        session=session,
+        repair_session_id=repair_session_id,
+        user_id=user_id,
+        partner_user_id=partner_user_id,
+    )
     return RepairFlowStatus(
         session_id=repair_session_id,
         safety_mode_active=safety_mode_active,
@@ -301,6 +383,11 @@ def get_repair_flow_status(
         current_step=_current_step(my_steps, partner_steps),
         my_completed_steps=sorted(my_steps),
         partner_completed_steps=sorted(partner_steps),
+        outcome_capture_pending=bool(
+            completed
+            and outcome_capture
+            and outcome_capture.status == OUTCOME_CAPTURE_STATUS_PENDING
+        ),
     )
 
 
@@ -388,6 +475,24 @@ def complete_repair_step(
         ),
     )
     changed = not record_result.deduped
+    if not record_result.deduped and step == 4:
+        _upsert_outcome_capture(
+            session=session,
+            repair_session_id=repair_session_id,
+            user_id=user_id,
+            partner_user_id=partner_user_id,
+            shared_commitment=shared_commitment,
+            status=OUTCOME_CAPTURE_STATUS_COLLECTING,
+        )
+    if not record_result.deduped and step == 5:
+        _upsert_outcome_capture(
+            session=session,
+            repair_session_id=repair_session_id,
+            user_id=user_id,
+            partner_user_id=partner_user_id,
+            improvement_note=improvement_note,
+            status=OUTCOME_CAPTURE_STATUS_COLLECTING,
+        )
 
     refreshed_status = get_repair_flow_status(
         session=session,
@@ -412,6 +517,22 @@ def complete_repair_step(
         )
         if not completed_result.deduped:
             changed = True
+        if not record_result.deduped:
+            _upsert_outcome_capture(
+                session=session,
+                repair_session_id=repair_session_id,
+                user_id=user_id,
+                partner_user_id=partner_user_id,
+                improvement_note=improvement_note,
+                status=OUTCOME_CAPTURE_STATUS_PENDING,
+            )
+            changed = True
+        refreshed_status = get_repair_flow_status(
+            session=session,
+            repair_session_id=repair_session_id,
+            user_id=user_id,
+            partner_user_id=partner_user_id,
+        )
 
     return RepairFlowStepResult(
         accepted=bool(record_result.accepted),

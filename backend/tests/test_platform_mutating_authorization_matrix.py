@@ -9,6 +9,8 @@
 # AUTHZ_MATRIX: PUT /api/love-languages/preference
 # AUTHZ_MATRIX: POST /api/love-languages/weekly-task/complete
 # AUTHZ_MATRIX: PUT /api/love-map/essentials/heart-profile
+# AUTHZ_MATRIX: PUT /api/love-map/essentials/repair-agreements
+# AUTHZ_MATRIX: POST /api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss
 # AUTHZ_MATRIX: POST /api/love-map/notes
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate-story-ritual
@@ -122,6 +124,16 @@ class PlatformMutatingAuthRequirementTests(unittest.TestCase):
                     "small_delights": "帶熱飲給我。",
                 },
             ),
+            (
+                "PUT",
+                "/api/love-map/essentials/repair-agreements",
+                {
+                    "protect_what_matters": "先保護彼此的安全感。",
+                    "avoid_in_conflict": "不要翻舊帳。",
+                    "repair_reentry": "先停一下，再回來。",
+                },
+            ),
+            ("POST", f"/api/love-map/essentials/repair-outcome-captures/{uuid.uuid4()}/dismiss", None),
             ("POST", "/api/love-map/notes", {"layer": "safe", "content": "note"}),
             ("POST", "/api/love-map/suggestions/shared-future/generate", None),
             ("POST", "/api/love-map/suggestions/shared-future/generate-story-ritual", None),

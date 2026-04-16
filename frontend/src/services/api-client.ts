@@ -265,6 +265,7 @@ export interface RepairFlowStatusPublic {
   in_repair_flow: boolean;
   safety_mode_active: boolean;
   completed: boolean;
+  outcome_capture_pending: boolean;
   current_step: number;
   my_completed_steps: number[];
   partner_completed_steps: number[];
@@ -357,6 +358,25 @@ export interface LoveMapCareProfilePublic {
   updated_at: string | null;
 }
 
+export interface LoveMapRepairAgreementsPublic {
+  protect_what_matters: string | null;
+  avoid_in_conflict: string | null;
+  repair_reentry: string | null;
+  updated_by_name: string | null;
+  updated_at: string | null;
+}
+
+export interface LoveMapRepairOutcomeCapturePublic {
+  id: string;
+  repair_session_id: string;
+  shared_commitment: string | null;
+  improvement_note: string | null;
+  status: string;
+  captured_by_name: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface LoveMapStoryMomentPublic {
   kind: 'card' | 'appreciation' | 'journal';
   title: string;
@@ -395,6 +415,8 @@ export interface LoveMapSystemEssentialsPublic {
   partner_care_preferences: LoveMapCarePreferencesPublic | null;
   my_care_profile: LoveMapCareProfilePublic | null;
   partner_care_profile: LoveMapCareProfilePublic | null;
+  repair_agreements: LoveMapRepairAgreementsPublic | null;
+  pending_repair_outcome_capture: LoveMapRepairOutcomeCapturePublic | null;
   weekly_task: WeeklyTaskPublic | null;
 }
 
@@ -459,6 +481,8 @@ export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
         : null,
       my_care_profile: response.essentials?.my_care_profile ?? null,
       partner_care_profile: response.essentials?.partner_care_profile ?? null,
+      repair_agreements: response.essentials?.repair_agreements ?? null,
+      pending_repair_outcome_capture: response.essentials?.pending_repair_outcome_capture ?? null,
       weekly_task: response.essentials?.weekly_task ?? null,
     },
   };
@@ -473,6 +497,13 @@ export interface LoveMapHeartProfileUpsertPayload extends LoveLanguagePreference
 export interface LoveMapHeartProfileSavePublic {
   care_preferences: LoveMapCarePreferencesPublic;
   care_profile: LoveMapCareProfilePublic;
+}
+
+export interface LoveMapRepairAgreementsUpsertPayload {
+  protect_what_matters: string;
+  avoid_in_conflict: string;
+  repair_reentry: string;
+  source_outcome_capture_id?: string | null;
 }
 
 export const upsertLoveMapHeartProfile = async (
@@ -493,6 +524,25 @@ export const upsertLoveMapHeartProfile = async (
     },
     care_profile: response.care_profile,
   };
+};
+
+export const upsertLoveMapRepairAgreements = async (
+  payload: LoveMapRepairAgreementsUpsertPayload,
+): Promise<LoveMapRepairAgreementsPublic> => {
+  return apiPut<LoveMapRepairAgreementsPublic>('/love-map/essentials/repair-agreements', {
+    protect_what_matters: payload.protect_what_matters,
+    avoid_in_conflict: payload.avoid_in_conflict,
+    repair_reentry: payload.repair_reentry,
+    source_outcome_capture_id: payload.source_outcome_capture_id,
+  });
+};
+
+export const dismissLoveMapRepairOutcomeCapture = async (
+  captureId: string,
+): Promise<LoveMapRepairOutcomeCapturePublic> => {
+  return apiPost<LoveMapRepairOutcomeCapturePublic>(
+    `/love-map/essentials/repair-outcome-captures/${captureId}/dismiss`,
+  );
 };
 
 export const fetchLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {

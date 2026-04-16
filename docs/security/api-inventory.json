@@ -869,6 +869,34 @@
     },
     {
       "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.love_map.upsert_repair_agreements",
+      "method": "PUT",
+      "name": "upsert_repair_agreements",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/repair-agreements",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.love_map.dismiss_repair_outcome_capture",
+      "method": "POST",
+      "name": "dismiss_repair_outcome_capture",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
       "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_map.list_love_map_notes",
       "method": "GET",
@@ -1023,7 +1051,7 @@
     },
     {
       "auth_policy": "authenticated",
-      "data_sensitivity": "public",
+      "data_sensitivity": "relationship_sensitive",
       "endpoint": "app.api.routers.love_map.get_love_map_system",
       "method": "GET",
       "name": "get_love_map_system",

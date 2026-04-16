@@ -20,6 +20,8 @@ from app.api.routers import love_language, love_map  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.love_language import LoveLanguagePreference  # noqa: E402
 from app.models.relationship_care_profile import RelationshipCareProfile  # noqa: E402
+from app.models.relationship_repair_agreement import RelationshipRepairAgreement  # noqa: E402
+from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture  # noqa: E402
 from app.models.user import User  # noqa: E402
 
 
@@ -133,6 +135,48 @@ class LoveMapSystemApiTests(unittest.TestCase):
                     small_delights="提醒我去陽台透氣。",
                 )
             )
+            session.add(
+                RelationshipRepairAgreement(
+                    user_id=min(alice.id, bob.id),
+                    partner_id=max(alice.id, bob.id),
+                    protect_what_matters="先保護彼此的安全感，不在最高張力時替對方下定論。",
+                    avoid_in_conflict="避免翻舊帳，也避免在還很急的時候一直逼對方給答案。",
+                    repair_reentry="先留一段空氣，再在 24 小時內回來把感受與需要說清楚。",
+                    updated_by_user_id=alice.id,
+                )
+            )
+            session.add(
+                RelationshipRepairAgreement(
+                    user_id=min(carol.id, dave.id),
+                    partner_id=max(carol.id, dave.id),
+                    protect_what_matters="外對外，不在外人面前羞辱彼此。",
+                    avoid_in_conflict="不要在情緒高點時開地圖炮。",
+                    repair_reentry="隔天早上再回來整理彼此真正需要什麼。",
+                    updated_by_user_id=carol.id,
+                )
+            )
+            session.add(
+                RelationshipRepairOutcomeCapture(
+                    user_id=min(alice.id, bob.id),
+                    partner_id=max(alice.id, bob.id),
+                    repair_session_id="repair-session-alice-bob",
+                    shared_commitment="今晚先散步十分鐘，再回來把需要說清楚。",
+                    improvement_note="這次我們比較能先停下來。",
+                    status="pending",
+                    created_by_user_id=bob.id,
+                )
+            )
+            session.add(
+                RelationshipRepairOutcomeCapture(
+                    user_id=min(carol.id, dave.id),
+                    partner_id=max(carol.id, dave.id),
+                    repair_session_id="repair-session-carol-dave",
+                    shared_commitment="先睡一覺，隔天再回來。",
+                    improvement_note="這次沒有在外面繼續升高。",
+                    status="pending",
+                    created_by_user_id=carol.id,
+                )
+            )
             session.commit()
 
             self.alice_id = alice.id
@@ -164,6 +208,11 @@ class LoveMapSystemApiTests(unittest.TestCase):
             essentials["partner_care_profile"]["small_delights"],
             "如果你先把餐桌整理好，我會覺得被照顧。",
         )
+        self.assertEqual(
+            essentials["repair_agreements"]["protect_what_matters"],
+            "先保護彼此的安全感，不在最高張力時替對方下定論。",
+        )
+        self.assertEqual(essentials["repair_agreements"]["updated_by_name"], "Alice")
 
     def test_unpaired_user_gets_no_partner_essentials_or_weekly_task(self) -> None:
         self.current_user_id = self.solo_id
@@ -179,6 +228,7 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertIsNone(essentials["partner_care_preferences"])
         self.assertIsNone(essentials["my_care_profile"])
         self.assertIsNone(essentials["partner_care_profile"])
+        self.assertIsNone(essentials["repair_agreements"])
         self.assertIsNone(essentials["weekly_task"])
 
     def test_weekly_task_completion_is_reflected_in_love_map_system(self) -> None:
@@ -214,6 +264,29 @@ class LoveMapSystemApiTests(unittest.TestCase):
             essentials["partner_care_profile"]["support_me"],
             "幫我把燈關暗一點。",
         )
+        self.assertNotEqual(
+            essentials["repair_agreements"]["protect_what_matters"],
+            "外對外，不在外人面前羞辱彼此。",
+        )
+        self.assertEqual(
+            essentials["pending_repair_outcome_capture"]["shared_commitment"],
+            "今晚先散步十分鐘，再回來把需要說清楚。",
+        )
+        self.assertNotEqual(
+            essentials["pending_repair_outcome_capture"]["shared_commitment"],
+            "先睡一覺，隔天再回來。",
+        )
+
+    def test_paired_user_sees_pending_repair_outcome_capture(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.get("/api/love-map/system")
+
+        self.assertEqual(response.status_code, 200)
+        pending_capture = response.json()["essentials"]["pending_repair_outcome_capture"]
+        self.assertIsNotNone(pending_capture)
+        self.assertEqual(pending_capture["repair_session_id"], "repair-session-alice-bob")
+        self.assertEqual(pending_capture["captured_by_name"], "Bob")
 
 
 if __name__ == "__main__":

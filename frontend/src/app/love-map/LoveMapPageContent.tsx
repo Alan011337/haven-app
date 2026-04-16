@@ -22,6 +22,7 @@ import {
   addBlueprintItem,
   completeWeeklyTask,
   createOrUpdateLoveMapNote,
+  dismissLoveMapRepairOutcomeCapture,
   dismissLoveMapSharedFutureSuggestion,
   generateLoveMapSharedFutureCadenceRefinement,
   generateLoveMapSharedFutureRefinement,
@@ -30,7 +31,9 @@ import {
   LOVE_LANGUAGE_OPTIONS,
   normalizeLoveLanguagePreference,
   upsertLoveMapHeartProfile,
+  upsertLoveMapRepairAgreements,
   type LoveMapHeartProfileUpsertPayload,
+  type LoveMapRepairAgreementsUpsertPayload,
   type LoveLanguagePreferenceKey,
   type LoveLanguagePreferenceRecord,
   type LoveMapCardSummary,
@@ -107,6 +110,12 @@ const EMPTY_HEART_PLAYBOOK_DRAFT: LoveMapHeartProfileUpsertPayload = {
   support_me: '',
   avoid_when_stressed: '',
   small_delights: '',
+};
+
+const EMPTY_REPAIR_AGREEMENTS_DRAFT: LoveMapRepairAgreementsUpsertPayload = {
+  protect_what_matters: '',
+  avoid_in_conflict: '',
+  repair_reentry: '',
 };
 
 type SharedFutureRefinementKind = 'next_step' | 'cadence';
@@ -248,6 +257,38 @@ function formatCareCueCountLabel(count: number) {
   return `已留下 ${count}/5 個 care cues`;
 }
 
+function buildRepairAgreementsDraft(
+  agreements?: {
+    protect_what_matters?: string | null;
+    avoid_in_conflict?: string | null;
+    repair_reentry?: string | null;
+  } | null,
+): LoveMapRepairAgreementsUpsertPayload {
+  return {
+    protect_what_matters: agreements?.protect_what_matters ?? '',
+    avoid_in_conflict: agreements?.avoid_in_conflict ?? '',
+    repair_reentry: agreements?.repair_reentry ?? '',
+  };
+}
+
+function countRepairAgreementCompletion(
+  agreements?: {
+    protect_what_matters?: string | null;
+    avoid_in_conflict?: string | null;
+    repair_reentry?: string | null;
+  } | null,
+) {
+  let count = 0;
+  if (agreements?.protect_what_matters?.trim()) count += 1;
+  if (agreements?.avoid_in_conflict?.trim()) count += 1;
+  if (agreements?.repair_reentry?.trim()) count += 1;
+  return count;
+}
+
+function formatRepairAgreementCountLabel(count: number) {
+  return `已留下 ${count}/3 個 repair agreements`;
+}
+
 function normalizeCadenceEligibilityText(value: string) {
   return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -313,6 +354,8 @@ export default function LoveMapPageContent() {
   const [savingWishlist, setSavingWishlist] = useState(false);
   const [savingIdentity, setSavingIdentity] = useState(false);
   const [savingHeartPlaybook, setSavingHeartPlaybook] = useState(false);
+  const [savingRepairAgreements, setSavingRepairAgreements] = useState(false);
+  const [dismissingRepairOutcomeCapture, setDismissingRepairOutcomeCapture] = useState(false);
   const [completingWeeklyTask, setCompletingWeeklyTask] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [generatingStoryRitual, setGeneratingStoryRitual] = useState(false);
@@ -334,6 +377,9 @@ export default function LoveMapPageContent() {
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [heartPlaybookDraft, setHeartPlaybookDraft] =
     useState<LoveMapHeartProfileUpsertPayload>(EMPTY_HEART_PLAYBOOK_DRAFT);
+  const [repairAgreementsDraft, setRepairAgreementsDraft] =
+    useState<LoveMapRepairAgreementsUpsertPayload>(EMPTY_REPAIR_AGREEMENTS_DRAFT);
+  const [selectedOutcomeCaptureId, setSelectedOutcomeCaptureId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!systemQuery.data) {
@@ -360,7 +406,19 @@ export default function LoveMapPageContent() {
         systemQuery.data.essentials?.my_care_profile,
       ),
     );
+    setRepairAgreementsDraft(buildRepairAgreementsDraft(systemQuery.data.essentials?.repair_agreements));
   }, [systemQuery.data]);
+
+  useEffect(() => {
+    const pendingCaptureId = systemQuery.data?.essentials?.pending_repair_outcome_capture?.id ?? null;
+    if (!pendingCaptureId) {
+      setSelectedOutcomeCaptureId(null);
+      return;
+    }
+    if (selectedOutcomeCaptureId && selectedOutcomeCaptureId !== pendingCaptureId) {
+      setSelectedOutcomeCaptureId(null);
+    }
+  }, [selectedOutcomeCaptureId, systemQuery.data?.essentials?.pending_repair_outcome_capture?.id]);
 
   const cardsByLayer = useMemo<Record<LoveMapLayer, LoveMapCardSummary[]>>(
     () => ({
@@ -425,6 +483,64 @@ export default function LoveMapPageContent() {
       showToast('這次沒有順利更新 Heart Care Playbook，稍後再試一次。', 'error');
     } finally {
       setSavingHeartPlaybook(false);
+    }
+  };
+
+  const handleSaveRepairAgreements = async () => {
+    setSavingRepairAgreements(true);
+    try {
+      const sourceOutcomeCaptureId = selectedOutcomeCaptureId;
+      await upsertLoveMapRepairAgreements({
+        ...repairAgreementsDraft,
+        source_outcome_capture_id: sourceOutcomeCaptureId,
+      });
+      await invalidateRelationshipViews();
+      setSelectedOutcomeCaptureId(null);
+      showToast(
+        sourceOutcomeCaptureId
+          ? 'Repair Agreements 已更新，這次修復也已帶回 Heart。'
+          : 'Repair Agreements 已更新。',
+        'success',
+      );
+    } catch (error) {
+      logClientError('love-map-repair-agreements-save-failed', error);
+      showToast('這次沒有順利更新 Repair Agreements，稍後再試一次。', 'error');
+    } finally {
+      setSavingRepairAgreements(false);
+    }
+  };
+
+  const handleUsePendingRepairOutcomeCapture = () => {
+    const pendingCapture = system?.essentials?.pending_repair_outcome_capture;
+    if (!pendingCapture) {
+      return;
+    }
+
+    setRepairAgreementsDraft((current) => ({
+      ...current,
+      repair_reentry: pendingCapture.shared_commitment ?? current.repair_reentry,
+    }));
+    setSelectedOutcomeCaptureId(pendingCapture.id);
+    showToast('已把這次修復的共同承諾帶進 Repair Agreements，確認後再保存。', 'success');
+  };
+
+  const handleDismissPendingRepairOutcomeCapture = async () => {
+    const pendingCapture = system?.essentials?.pending_repair_outcome_capture;
+    if (!pendingCapture) {
+      return;
+    }
+
+    setDismissingRepairOutcomeCapture(true);
+    try {
+      await dismissLoveMapRepairOutcomeCapture(pendingCapture.id);
+      await invalidateRelationshipViews();
+      setSelectedOutcomeCaptureId(null);
+      showToast('這次修復結果先留在當下，不帶回 Heart。', 'success');
+    } catch (error) {
+      logClientError('love-map-repair-outcome-capture-dismiss-failed', error);
+      showToast('這次沒有順利略過修復結果，稍後再試一次。', 'error');
+    } finally {
+      setDismissingRepairOutcomeCapture(false);
     }
   };
 
@@ -659,16 +775,26 @@ export default function LoveMapPageContent() {
   const partnerCarePreferences = normalizeLoveLanguagePreference(system.essentials?.partner_care_preferences);
   const myCareProfile = system.essentials?.my_care_profile ?? null;
   const partnerCareProfile = system.essentials?.partner_care_profile ?? null;
+  const repairAgreements = system.essentials?.repair_agreements ?? null;
+  const pendingRepairOutcomeCapture = system.essentials?.pending_repair_outcome_capture ?? null;
   const weeklyTask = system.essentials?.weekly_task ?? null;
   const currentHeartPlaybook = buildHeartPlaybookDraft(myCarePreferences, myCareProfile);
+  const currentRepairAgreements = buildRepairAgreementsDraft(repairAgreements);
   const myCareCueCount = countCareCueCompletion(myCarePreferences, myCareProfile);
   const partnerCareCueCount = countCareCueCompletion(partnerCarePreferences, partnerCareProfile);
+  const repairAgreementCount = countRepairAgreementCompletion(repairAgreements);
   const myCarePlaybookUpdatedAt = formatShortDateTime(
     myCareProfile?.updated_at ?? system.essentials?.my_care_preferences?.updated_at,
   );
   const partnerCarePlaybookUpdatedAt = formatShortDateTime(
     partnerCareProfile?.updated_at ?? system.essentials?.partner_care_preferences?.updated_at,
   );
+  const repairAgreementsUpdatedAt = formatShortDateTime(repairAgreements?.updated_at);
+  const pendingRepairOutcomeCaptureUpdatedAt = formatShortDateTime(
+    pendingRepairOutcomeCapture?.updated_at ?? pendingRepairOutcomeCapture?.created_at,
+  );
+  const pendingRepairOutcomeCaptureSelected =
+    pendingRepairOutcomeCapture?.id === selectedOutcomeCaptureId;
   const identityMetricValue = system.has_partner
     ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'}`
     : '等待雙向配對';
@@ -677,14 +803,16 @@ export default function LoveMapPageContent() {
     : '先完成雙向伴侶連結，這裡才會變成真正的共享 Relationship System。';
   const heartMetricValue = !system.has_partner
     ? '等待雙向配對'
-    : formatCareCueCountLabel(myCareCueCount);
+    : `照顧 ${myCareCueCount}/5 · 修復 ${repairAgreementCount}/3`;
   const heartMetricFootnote = !system.has_partner
     ? '完成配對後，Heart Care Playbook 會變成 pair-visible，本週任務也會開始出現。'
+    : pendingRepairOutcomeCapture
+      ? `${formatCareCueCountLabel(myCareCueCount)}；Repair Agreements ${repairAgreementCount}/3；有 1 則待審核修復結果可以帶回 Heart。`
     : weeklyTask?.completed
-      ? `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。這週的照顧節奏也已完成。`
+      ? `${formatCareCueCountLabel(myCareCueCount)}；Repair Agreements ${repairAgreementCount}/3；這週的照顧節奏也已完成。`
       : weeklyTask?.task_label
-        ? `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。本週任務：${weeklyTask.task_label}`
-        : `${formatCareCueCountLabel(myCareCueCount)}；伴侶目前留下 ${partnerCareCueCount}/5 個。先把 Heart playbook 留完整，Heart 才會真的變成可維護的照顧系統。`;
+        ? `${formatCareCueCountLabel(myCareCueCount)}；Repair Agreements ${repairAgreementCount}/3；本週任務：${weeklyTask.task_label}`
+        : `${formatCareCueCountLabel(myCareCueCount)}；Repair Agreements ${repairAgreementCount}/3。先把 Repair Agreements 與 Heart playbook 都留完整，Heart 才會真的變成可維護的關係系統。`;
   const storyMetricFootnote = storyHasCapsule
     ? 'Time Capsule 已浮現，這段故事已經有可回來看的回聲。'
     : '目前已留下故事錨點，但還沒有形成 Time Capsule 回聲。';
@@ -694,6 +822,9 @@ export default function LoveMapPageContent() {
   const displayNameChanged = displayNameDraft.trim() !== (system.me.full_name?.trim() ?? '');
   const heartPlaybookChanged =
     JSON.stringify(heartPlaybookDraft) !== JSON.stringify(currentHeartPlaybook);
+  const repairAgreementsChanged =
+    JSON.stringify(repairAgreementsDraft) !== JSON.stringify(currentRepairAgreements)
+    || Boolean(selectedOutcomeCaptureId);
 
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
@@ -703,7 +834,7 @@ export default function LoveMapPageContent() {
         description="這裡不只是 Love Map，也不只是被導覽得更清楚的長頁。它是 Haven 的 shared relationship knowledge center：把你們是誰、現在怎麼樣、哪些故事值得被記住，以及正在一起靠近的未來，放進同一張系統首頁。"
         pulse={
           system.has_partner
-            ? `Haven 現在會用四個長期域來整理你們的關係：Identity、Heart、Story、Future。這裡已經有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層 Inner Landscape 筆記、${system.stats.wishlist_count} 個 Shared Future 片段；而 Heart Care Playbook 與本週照顧任務也會一起放回 Heart。`
+            ? `Haven 現在會用四個長期域來整理你們的關係：Identity、Heart、Story、Future。這裡已經有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層 Inner Landscape 筆記、${system.stats.wishlist_count} 個 Shared Future 片段；而 Heart Care Playbook、Repair Agreements 與本週照顧任務也會一起放回 Heart。`
             : '你還沒有完成雙向伴侶連結，所以 Haven 目前只能先保留你的單邊脈動與可編輯 profile。完成連結後，這裡才會變成真正的 shared relationship system。'
         }
         primaryHref={system.has_partner ? '#identity' : '/settings#settings-relationship'}
@@ -721,9 +852,9 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/78">Heart</p>
               <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
-                {myCareCueCount}/5
+                {myCareCueCount}/5 · {repairAgreementCount}/3
               </p>
-              <p className="mt-2 type-caption text-muted-foreground">Relationship Pulse、Care Playbook、本週任務與 Inner Landscape 都在這裡對齊。</p>
+              <p className="mt-2 type-caption text-muted-foreground">Relationship Pulse、Repair Agreements、Care Playbook、本週任務與 Inner Landscape 都在這裡對齊。</p>
             </div>
 
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
@@ -820,7 +951,7 @@ export default function LoveMapPageContent() {
           metricLabel="Heart status"
           metricValue={heartMetricValue}
           metricFootnote={heartMetricFootnote}
-          belongsHere="Relationship Pulse、pair-visible Heart Care Playbook、本週 care task，以及只屬於你的 Inner Landscape。"
+          belongsHere="Relationship Pulse、pair-maintained Repair Agreements、pair-visible Heart Care Playbook、本週 care task，以及只屬於你的 Inner Landscape。"
           primaryHref="#heart"
           primaryLabel="查看 Heart"
           secondaryHref="/journal"
@@ -1019,7 +1150,7 @@ export default function LoveMapPageContent() {
         id="heart"
         eyebrow="Heart"
         title="把關係現在的感受、照顧方式與私人理解，放回同一層。"
-        description="Heart 不是單一欄位，而是 Relationship System 裡最常被維護的一層：Relationship Pulse 負責共享狀態，Heart Care Playbook 與每週照顧任務讓這一層更可執行，而 Inner Landscape 仍然保留你的私人反思。"
+        description="Heart 不是單一欄位，而是 Relationship System 裡最常被維護的一層：Relationship Pulse 負責共享狀態，Repair Agreements 負責留住你們想怎麼處理張力，Heart Care Playbook 與每週照顧任務讓這一層更可執行，而 Inner Landscape 仍然保留你的私人反思。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -1035,6 +1166,10 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">Care Playbook</p>
               <p className="mt-2 type-section-title text-card-foreground">{formatCareCueCountLabel(myCareCueCount)}</p>
+            </div>
+            <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
+              <p className="type-micro uppercase text-primary/80">Repair Agreements</p>
+              <p className="mt-2 type-section-title text-card-foreground">{formatRepairAgreementCountLabel(repairAgreementCount)}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/80">Weekly task</p>
@@ -1112,6 +1247,224 @@ export default function LoveMapPageContent() {
           </LoveMapKnowledgeBlock>
 
           <div className="space-y-4">
+            {pendingRepairOutcomeCapture ? (
+              <LoveMapKnowledgeBlock
+                dataTestId="relationship-heart-post-mediation-outcome-card"
+                eyebrow="Post-Mediation Outcome Capture"
+                title="先審核這次修復裡，哪些內容值得被帶回 Heart。"
+                description="這不是自動改寫 Repair Agreements。它只是把剛完成修復流程時留下的共同承諾與改善回顧，帶回 Heart 讓你們明確決定要不要保存。"
+                badge={<Badge variant="status" size="sm">Pending review</Badge>}
+                footer={
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="type-caption text-muted-foreground">
+                      只有在你明確保存 Repair Agreements 後，這次修復才會變成 durable relationship knowledge。
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        variant={pendingRepairOutcomeCaptureSelected ? 'secondary' : 'primary'}
+                        onClick={handleUsePendingRepairOutcomeCapture}
+                      >
+                        {pendingRepairOutcomeCaptureSelected ? '已帶入 Repair Agreements' : '帶入 Repair Agreements'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        loading={dismissingRepairOutcomeCapture}
+                        onClick={() => void handleDismissPendingRepairOutcomeCapture()}
+                      >
+                        暫時不帶回
+                      </Button>
+                    </div>
+                  </div>
+                }
+              >
+                <div className="space-y-4 rounded-[1.55rem] border border-white/58 bg-white/78 p-4 shadow-soft">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="type-section-title text-card-foreground">待審核的修復結果</p>
+                      <p className="type-caption text-muted-foreground">
+                        {pendingRepairOutcomeCapture.captured_by_name
+                          ? `由 ${pendingRepairOutcomeCapture.captured_by_name} 帶回`
+                          : '來自剛完成的修復流程'}
+                        {pendingRepairOutcomeCaptureUpdatedAt
+                          ? ` · ${pendingRepairOutcomeCaptureUpdatedAt}`
+                          : ''}
+                      </p>
+                    </div>
+                    <Badge variant="metadata" size="sm">
+                      尚未寫入 Repair Agreements
+                    </Badge>
+                  </div>
+
+                  <div className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4">
+                    <p className="type-micro uppercase text-primary/80">Step 4 · Shared commitment</p>
+                    <p className="mt-2 type-body text-card-foreground">
+                      {pendingRepairOutcomeCapture.shared_commitment ?? '這次沒有留下共同承諾。'}
+                    </p>
+                    <p className="mt-2 type-caption text-muted-foreground">
+                      這一段可以低風險地帶入「要重新開啟修復時，我們怎麼回來」作為草稿，之後仍需要你手動保存。
+                    </p>
+                  </div>
+
+                  <div className="rounded-[1.35rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
+                    <p className="type-micro uppercase text-primary/80">Step 5 · Improvement note</p>
+                    <p className="mt-2 type-body text-card-foreground">
+                      {pendingRepairOutcomeCapture.improvement_note ?? '這次沒有留下改善回顧。'}
+                    </p>
+                    <p className="mt-2 type-caption text-muted-foreground">
+                      這一段只作為 review context 顯示，不會自動映射到其他欄位。
+                    </p>
+                  </div>
+
+                  {pendingRepairOutcomeCaptureSelected ? (
+                    <div className="rounded-[1.35rem] border border-primary/12 bg-primary/8 px-4 py-4">
+                      <p className="type-section-title text-card-foreground">共同承諾已帶入下方 Repair Agreements。</p>
+                      <p className="mt-1 type-caption text-muted-foreground">
+                        你仍然需要手動按下「保存 Repair Agreements」，這次修復才會真正寫回 Heart。
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </LoveMapKnowledgeBlock>
+            ) : null}
+
+            <LoveMapKnowledgeBlock
+              dataTestId="relationship-heart-repair-agreements-card"
+              eyebrow="Repair Agreements"
+              title="把你們想怎麼走過張力與修復，留成一張可回來看的 pair sheet。"
+              description="這一塊不是 live mediation，也不是 Haven 幫你們自動生成的 shared truth。它是一張 pair-maintained 的 working sheet：把你們想保護什麼、要避免什麼，以及準備怎麼重新開啟修復，留在 Heart 裡。"
+              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? 'Pair-maintained' : 'Pair context'}</Badge>}
+              footer={
+                system.has_partner ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="type-caption text-muted-foreground">
+                      這不是一次寫完就不動的規章，而是你們在真的走過摩擦後，會回來微調的 repair operating sheet。
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Link
+                        href="/mediation"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                      >
+                        打開 Mediation
+                        <Sparkles className="h-4 w-4" aria-hidden />
+                      </Link>
+                      <Link
+                        href="/settings#settings-support"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                      >
+                        打開 Support 設定
+                        <Sparkles className="h-4 w-4" aria-hidden />
+                      </Link>
+                      <Button
+                        loading={savingRepairAgreements}
+                        disabled={savingRepairAgreements || !repairAgreementsChanged}
+                        onClick={() => void handleSaveRepairAgreements()}
+                      >
+                        保存 Repair Agreements
+                      </Button>
+                    </div>
+                  </div>
+                ) : undefined
+              }
+            >
+              {!system.has_partner ? (
+                <LoveMapStatePanel
+                  eyebrow="Partner required"
+                  title="先完成雙向伴侶連結"
+                  description="Repair Agreements 屬於 pair-maintained 的 relationship knowledge。完成配對後，這裡才會變成真正可以一起維護的共享修復層。"
+                  tone="quiet"
+                  actionLabel="去設定完成連結"
+                  onAction={goToSettings}
+                />
+              ) : (
+                <div className="space-y-4 rounded-[1.55rem] border border-white/58 bg-white/78 p-4 shadow-soft">
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+                    <div className="space-y-1">
+                      <p className="type-section-title text-card-foreground">我們的 Repair Agreements</p>
+                      <p className="type-caption text-muted-foreground">
+                        {formatRepairAgreementCountLabel(repairAgreementCount)}
+                        {repairAgreementCount === 0
+                          ? ' · 這一塊還沒有被你們正式留下來。'
+                          : repairAgreementsUpdatedAt
+                            ? ` · 最近更新 ${repairAgreementsUpdatedAt}`
+                            : ''}
+                      </p>
+                    </div>
+
+                    <div
+                      className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
+                      data-testid="relationship-heart-repair-agreements-updated-by"
+                    >
+                      <p className="type-micro uppercase text-primary/80">Last updated by</p>
+                      <p className="mt-2 type-section-title text-card-foreground">
+                        {repairAgreements?.updated_by_name ?? '尚未建立'}
+                      </p>
+                      <p className="mt-1 type-caption text-muted-foreground">
+                        {repairAgreementsUpdatedAt ?? '先一起留下第一版。'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {repairAgreementCount === 0 ? (
+                    <div className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4">
+                      <p className="type-section-title text-card-foreground">這一塊還沒有正式寫下來。</p>
+                      <p className="mt-1 type-caption text-muted-foreground">
+                        Heart 現在已經知道怎麼照顧彼此，但還不知道你們想怎麼一起走過張力與修復。先留下第一版，之後再慢慢微調。
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <Textarea
+                    id="love-map-repair-protect-what-matters"
+                    label="當張力升高時，我們想保護什麼"
+                    value={repairAgreementsDraft.protect_what_matters}
+                    onChange={(event) =>
+                      setRepairAgreementsDraft((current) => ({
+                        ...current,
+                        protect_what_matters: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：先保護彼此的安全感，不在情緒最高點替對方下定論。"
+                    maxLength={500}
+                    helperText="這是你們想在高張力裡先守住的關係底線。"
+                  />
+
+                  <Textarea
+                    id="love-map-repair-avoid-in-conflict"
+                    label="卡住或升高時，我們先避免什麼"
+                    value={repairAgreementsDraft.avoid_in_conflict}
+                    onChange={(event) =>
+                      setRepairAgreementsDraft((current) => ({
+                        ...current,
+                        avoid_in_conflict: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：先避免翻舊帳、逼對方立刻給答案，或在外人面前繼續升高。"
+                    maxLength={500}
+                    helperText="把你們已經知道會讓修復更難的事，直接留在這裡。"
+                  />
+
+                  <Textarea
+                    id="love-map-repair-reentry"
+                    label="要重新開啟修復時，我們怎麼回來"
+                    value={repairAgreementsDraft.repair_reentry}
+                    onChange={(event) =>
+                      setRepairAgreementsDraft((current) => ({
+                        ...current,
+                        repair_reentry: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：先留一段空氣，再在 24 小時內回來，用較慢的語氣說感受與需要。"
+                    maxLength={500}
+                    helperText="這不是 rigid SOP，而是你們想反覆回來採用的修復入口。"
+                  />
+
+                  <p className="type-caption text-muted-foreground">
+                    這是一張 pair-maintained 的 repair sheet：任何一方都能更新，但 Heart 會保留最近是誰留下這版內容，而不把它偽裝成無作者的 shared truth。
+                  </p>
+                </div>
+              )}
+            </LoveMapKnowledgeBlock>
+
             <LoveMapKnowledgeBlock
               dataTestId="relationship-heart-playbook-card"
               eyebrow="Heart Care Playbook"

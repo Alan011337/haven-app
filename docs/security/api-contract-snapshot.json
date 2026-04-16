@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 119,
-  "route_digest": "867c863289343df667df159a9d01090d5fb454a74356b0635b2c9ec12fceb5c1",
+  "route_count": 121,
+  "route_digest": "55b1e998d5230790ccbd1d6760aefd735c701663f2e76354c2bf7de0f119ffa2",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -317,6 +317,16 @@
       "idempotency_policy": "required",
       "method": "PUT",
       "path": "/api/love-map/essentials/heart-profile"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "PUT",
+      "path": "/api/love-map/essentials/repair-agreements"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss"
     },
     {
       "idempotency_policy": "n/a",
