@@ -21,6 +21,7 @@ from app.models.love_map_note import LoveMapNote
 from app.models.relationship_care_profile import RelationshipCareProfile
 from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
+from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.user import User
@@ -34,6 +35,8 @@ from app.schemas.love_map import (
     LoveMapCardsResponse,
     LoveMapHeartProfileSavePublic,
     LoveMapHeartProfileUpsert,
+    LoveMapRepairAgreementChangePublic,
+    LoveMapRepairAgreementFieldChangePublic,
     LoveMapRepairAgreementsPublic,
     LoveMapRepairAgreementsUpsert,
     LoveMapRepairOutcomeCapturePublic,
@@ -91,6 +94,13 @@ SUGGESTION_GENERATOR_SHARED_FUTURE_STORY_RITUAL_V1 = "shared_future_story_ritual
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1 = "shared_future_refinement_next_step_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1 = "shared_future_refinement_cadence_v1"
 REFINEMENT_DISMISS_COOLDOWN = timedelta(hours=24)
+REPAIR_AGREEMENT_ORIGIN_MANUAL_EDIT = "manual_edit"
+REPAIR_AGREEMENT_ORIGIN_POST_MEDIATION = "post_mediation_carry_forward"
+REPAIR_AGREEMENT_FIELD_LABELS = {
+    "protect_what_matters": "當張力升高時，我們想保護什麼",
+    "avoid_in_conflict": "卡住或升高時，我們先避免什麼",
+    "repair_reentry": "要重新開啟修復時，我們怎麼回來",
+}
 
 
 def _depth_to_layer(d: int) -> str:
@@ -266,6 +276,51 @@ def _to_repair_outcome_capture_public(
     )
 
 
+def _build_repair_agreement_field_changes(
+    row: RelationshipRepairAgreementChange,
+) -> list[LoveMapRepairAgreementFieldChangePublic]:
+    changes: list[LoveMapRepairAgreementFieldChangePublic] = []
+    for field_key, label in REPAIR_AGREEMENT_FIELD_LABELS.items():
+        before_value = getattr(row, f"{field_key}_before")
+        after_value = getattr(row, f"{field_key}_after")
+        if before_value == after_value:
+            continue
+        if before_value is None and after_value is not None:
+            change_kind = "added"
+        elif before_value is not None and after_value is None:
+            change_kind = "cleared"
+        else:
+            change_kind = "updated"
+        changes.append(
+            LoveMapRepairAgreementFieldChangePublic(
+                key=field_key,
+                label=label,
+                change_kind=change_kind,
+                before_text=before_value,
+                after_text=after_value,
+            )
+        )
+    return changes
+
+
+def _to_repair_agreement_change_public(
+    row: RelationshipRepairAgreementChange,
+    *,
+    changed_by_name: str | None = None,
+    source_captured_by_name: str | None = None,
+) -> LoveMapRepairAgreementChangePublic:
+    return LoveMapRepairAgreementChangePublic(
+        id=str(row.id),
+        changed_at=row.changed_at.isoformat() + "Z" if row.changed_at else None,
+        changed_by_name=changed_by_name,
+        origin_kind=row.origin_kind,
+        source_outcome_capture_id=str(row.source_outcome_capture_id) if row.source_outcome_capture_id else None,
+        source_captured_by_name=source_captured_by_name,
+        source_captured_at=row.source_captured_at.isoformat() + "Z" if row.source_captured_at else None,
+        fields=_build_repair_agreement_field_changes(row),
+    )
+
+
 def _normalize_short_text(value: str | None) -> str | None:
     trimmed = (value or "").strip()
     if not trimmed:
@@ -335,6 +390,22 @@ def _load_pending_repair_outcome_capture(
             RelationshipRepairOutcomeCapture.status == OUTCOME_CAPTURE_STATUS_PENDING,
         ).order_by(RelationshipRepairOutcomeCapture.updated_at.desc())
     ).first()
+
+
+def _load_repair_agreement_history(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+    limit: int = 5,
+) -> list[RelationshipRepairAgreementChange]:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(RelationshipRepairAgreementChange).where(
+            RelationshipRepairAgreementChange.user_id == uid1,
+            RelationshipRepairAgreementChange.partner_id == uid2,
+        ).order_by(RelationshipRepairAgreementChange.changed_at.desc()).limit(limit)
+    ).all()
 
 
 def _pair_scope_ids(user_id: UUID, partner_id: UUID) -> tuple[UUID, UUID]:
@@ -772,6 +843,8 @@ def get_love_map_system(
     partner_care_profile = None
     repair_agreements_row = None
     repair_agreements = None
+    repair_agreement_history_rows: list[RelationshipRepairAgreementChange] = []
+    repair_agreement_history: list[LoveMapRepairAgreementChangePublic] = []
     pending_repair_outcome_capture_row = None
     pending_repair_outcome_capture = None
     weekly_task = None
@@ -836,6 +909,33 @@ def get_love_map_system(
             repair_agreements_row,
             updated_by_name=_resolve_user_name(updated_by_user),
         )
+        repair_agreement_history_rows = _load_repair_agreement_history(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        history_user_ids = {
+            row.changed_by_user_id
+            for row in repair_agreement_history_rows
+            if row.changed_by_user_id is not None
+        }
+        history_user_ids.update(
+            row.source_captured_by_user_id
+            for row in repair_agreement_history_rows
+            if row.source_captured_by_user_id is not None
+        )
+        history_users = {
+            user_id: session.get(User, user_id)
+            for user_id in history_user_ids
+        }
+        repair_agreement_history = [
+            _to_repair_agreement_change_public(
+                row,
+                changed_by_name=_resolve_user_name(history_users.get(row.changed_by_user_id)),
+                source_captured_by_name=_resolve_user_name(history_users.get(row.source_captured_by_user_id)),
+            )
+            for row in repair_agreement_history_rows
+        ]
         pending_repair_outcome_capture_row = _load_pending_repair_outcome_capture(
             session=session,
             user_id=current_user.id,
@@ -876,6 +976,7 @@ def get_love_map_system(
         timestamps.append(partner_care_profile.updated_at)
     if repair_agreements_row and repair_agreements_row.updated_at:
         timestamps.append(repair_agreements_row.updated_at)
+    timestamps.extend(row.changed_at for row in repair_agreement_history_rows if row.changed_at)
     if pending_repair_outcome_capture_row and pending_repair_outcome_capture_row.updated_at:
         timestamps.append(pending_repair_outcome_capture_row.updated_at)
     if weekly_task and weekly_task.completed_at:
@@ -919,6 +1020,7 @@ def get_love_map_system(
             my_care_profile=_to_care_profile_public(my_care_profile),
             partner_care_profile=_to_care_profile_public(partner_care_profile),
             repair_agreements=repair_agreements,
+            repair_agreement_history=repair_agreement_history,
             pending_repair_outcome_capture=pending_repair_outcome_capture,
             weekly_task=_to_weekly_task_public(weekly_task),
         ),
@@ -1026,19 +1128,62 @@ def upsert_repair_agreements(
         user_id=current_user.id,
         partner_id=partner_id,
     )
-    if repair_agreements is None:
+    current_values = {
+        "protect_what_matters": repair_agreements.protect_what_matters if repair_agreements else None,
+        "avoid_in_conflict": repair_agreements.avoid_in_conflict if repair_agreements else None,
+        "repair_reentry": repair_agreements.repair_reentry if repair_agreements else None,
+    }
+    next_values = {
+        "protect_what_matters": _normalize_short_text(body.protect_what_matters),
+        "avoid_in_conflict": _normalize_short_text(body.avoid_in_conflict),
+        "repair_reentry": _normalize_short_text(body.repair_reentry),
+    }
+    has_changes = any(current_values[key] != next_values[key] for key in REPAIR_AGREEMENT_FIELD_LABELS)
+    saved_at = utcnow()
+    if repair_agreements is None and has_changes:
         repair_agreements = RelationshipRepairAgreement(
             user_id=uid1,
             partner_id=uid2,
         )
 
-    repair_agreements.protect_what_matters = _normalize_short_text(body.protect_what_matters)
-    repair_agreements.avoid_in_conflict = _normalize_short_text(body.avoid_in_conflict)
-    repair_agreements.repair_reentry = _normalize_short_text(body.repair_reentry)
-    repair_agreements.updated_by_user_id = current_user.id
-    saved_at = utcnow()
-    repair_agreements.updated_at = saved_at
-    session.add(repair_agreements)
+    if repair_agreements is not None and has_changes:
+        repair_agreements.protect_what_matters = next_values["protect_what_matters"]
+        repair_agreements.avoid_in_conflict = next_values["avoid_in_conflict"]
+        repair_agreements.repair_reentry = next_values["repair_reentry"]
+        repair_agreements.updated_by_user_id = current_user.id
+        repair_agreements.updated_at = saved_at
+        session.add(repair_agreements)
+        session.flush()
+
+        source_captured_at = None
+        if source_capture is not None:
+            source_captured_at = source_capture.updated_at or source_capture.created_at
+
+        session.add(
+            RelationshipRepairAgreementChange(
+                user_id=uid1,
+                partner_id=uid2,
+                repair_agreement_id=repair_agreements.id,
+                changed_by_user_id=current_user.id,
+                origin_kind=(
+                    REPAIR_AGREEMENT_ORIGIN_POST_MEDIATION
+                    if source_capture is not None
+                    else REPAIR_AGREEMENT_ORIGIN_MANUAL_EDIT
+                ),
+                source_outcome_capture_id=source_capture.id if source_capture is not None else None,
+                source_captured_by_user_id=(
+                    source_capture.created_by_user_id if source_capture is not None else None
+                ),
+                source_captured_at=source_captured_at,
+                changed_at=saved_at,
+                protect_what_matters_before=current_values["protect_what_matters"],
+                protect_what_matters_after=next_values["protect_what_matters"],
+                avoid_in_conflict_before=current_values["avoid_in_conflict"],
+                avoid_in_conflict_after=next_values["avoid_in_conflict"],
+                repair_reentry_before=current_values["repair_reentry"],
+                repair_reentry_after=next_values["repair_reentry"],
+            )
+        )
 
     if source_capture is not None:
         source_capture.status = OUTCOME_CAPTURE_STATUS_APPLIED
@@ -1054,11 +1199,18 @@ def upsert_repair_agreements(
         conflict_detail="儲存 Repair Agreements 時發生衝突。",
         failure_detail="儲存 Repair Agreements 失敗。",
     )
-    session.refresh(repair_agreements)
-    return _to_repair_agreements_public(
-        repair_agreements,
-        updated_by_name=_resolve_user_name(current_user),
-    )
+    if repair_agreements is not None:
+        session.refresh(repair_agreements)
+        updated_by_user = (
+            session.get(User, repair_agreements.updated_by_user_id)
+            if repair_agreements.updated_by_user_id
+            else None
+        )
+        return _to_repair_agreements_public(
+            repair_agreements,
+            updated_by_name=_resolve_user_name(updated_by_user),
+        )
+    return LoveMapRepairAgreementsPublic()
 
 
 @router.post(

@@ -21,6 +21,7 @@ from app.db.session import get_session  # noqa: E402
 from app.models.love_language import LoveLanguagePreference  # noqa: E402
 from app.models.relationship_care_profile import RelationshipCareProfile  # noqa: E402
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement  # noqa: E402
+from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange  # noqa: E402
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture  # noqa: E402
 from app.models.user import User  # noqa: E402
 
@@ -135,46 +136,99 @@ class LoveMapSystemApiTests(unittest.TestCase):
                     small_delights="提醒我去陽台透氣。",
                 )
             )
+            alice_bob_repair_agreement = RelationshipRepairAgreement(
+                user_id=min(alice.id, bob.id),
+                partner_id=max(alice.id, bob.id),
+                protect_what_matters="先保護彼此的安全感，不在最高張力時替對方下定論。",
+                avoid_in_conflict="避免翻舊帳，也避免在還很急的時候一直逼對方給答案。",
+                repair_reentry="先留一段空氣，再在 24 小時內回來把感受與需要說清楚。",
+                updated_by_user_id=alice.id,
+            )
+            carol_dave_repair_agreement = RelationshipRepairAgreement(
+                user_id=min(carol.id, dave.id),
+                partner_id=max(carol.id, dave.id),
+                protect_what_matters="外對外，不在外人面前羞辱彼此。",
+                avoid_in_conflict="不要在情緒高點時開地圖炮。",
+                repair_reentry="隔天早上再回來整理彼此真正需要什麼。",
+                updated_by_user_id=carol.id,
+            )
+            alice_bob_capture = RelationshipRepairOutcomeCapture(
+                user_id=min(alice.id, bob.id),
+                partner_id=max(alice.id, bob.id),
+                repair_session_id="repair-session-alice-bob",
+                shared_commitment="今晚先散步十分鐘，再回來把需要說清楚。",
+                improvement_note="這次我們比較能先停下來。",
+                status="pending",
+                created_by_user_id=bob.id,
+            )
+            carol_dave_capture = RelationshipRepairOutcomeCapture(
+                user_id=min(carol.id, dave.id),
+                partner_id=max(carol.id, dave.id),
+                repair_session_id="repair-session-carol-dave",
+                shared_commitment="先睡一覺，隔天再回來。",
+                improvement_note="這次沒有在外面繼續升高。",
+                status="pending",
+                created_by_user_id=carol.id,
+            )
+            session.add(alice_bob_repair_agreement)
+            session.add(carol_dave_repair_agreement)
+            session.add(alice_bob_capture)
+            session.add(carol_dave_capture)
             session.add(
-                RelationshipRepairAgreement(
+                RelationshipRepairAgreementChange(
                     user_id=min(alice.id, bob.id),
                     partner_id=max(alice.id, bob.id),
-                    protect_what_matters="先保護彼此的安全感，不在最高張力時替對方下定論。",
-                    avoid_in_conflict="避免翻舊帳，也避免在還很急的時候一直逼對方給答案。",
-                    repair_reentry="先留一段空氣，再在 24 小時內回來把感受與需要說清楚。",
-                    updated_by_user_id=alice.id,
+                    repair_agreement_id=alice_bob_repair_agreement.id,
+                    changed_by_user_id=bob.id,
+                    origin_kind="post_mediation_carry_forward",
+                    source_outcome_capture_id=alice_bob_capture.id,
+                    source_captured_by_user_id=bob.id,
+                    source_captured_at=alice_bob_capture.updated_at,
+                    changed_at=alice_bob_capture.updated_at,
+                    protect_what_matters_before=None,
+                    protect_what_matters_after="先保護彼此的安全感，不在最高張力時替對方下定論。",
+                    avoid_in_conflict_before=None,
+                    avoid_in_conflict_after=None,
+                    repair_reentry_before="先冷靜一下。",
+                    repair_reentry_after="先留一段空氣，再在 24 小時內回來把感受與需要說清楚。",
                 )
             )
             session.add(
-                RelationshipRepairAgreement(
-                    user_id=min(carol.id, dave.id),
-                    partner_id=max(carol.id, dave.id),
-                    protect_what_matters="外對外，不在外人面前羞辱彼此。",
-                    avoid_in_conflict="不要在情緒高點時開地圖炮。",
-                    repair_reentry="隔天早上再回來整理彼此真正需要什麼。",
-                    updated_by_user_id=carol.id,
-                )
-            )
-            session.add(
-                RelationshipRepairOutcomeCapture(
+                RelationshipRepairAgreementChange(
                     user_id=min(alice.id, bob.id),
                     partner_id=max(alice.id, bob.id),
-                    repair_session_id="repair-session-alice-bob",
-                    shared_commitment="今晚先散步十分鐘，再回來把需要說清楚。",
-                    improvement_note="這次我們比較能先停下來。",
-                    status="pending",
-                    created_by_user_id=bob.id,
+                    repair_agreement_id=alice_bob_repair_agreement.id,
+                    changed_by_user_id=alice.id,
+                    origin_kind="manual_edit",
+                    source_outcome_capture_id=None,
+                    source_captured_by_user_id=None,
+                    source_captured_at=None,
+                    changed_at=alice_bob_repair_agreement.updated_at,
+                    protect_what_matters_before="先保護彼此。",
+                    protect_what_matters_after="先保護彼此的安全感，不在最高張力時替對方下定論。",
+                    avoid_in_conflict_before="不要一直翻舊帳。",
+                    avoid_in_conflict_after="避免翻舊帳，也避免在還很急的時候一直逼對方給答案。",
+                    repair_reentry_before="先留一點空氣。",
+                    repair_reentry_after="先留一段空氣，再在 24 小時內回來把感受與需要說清楚。",
                 )
             )
             session.add(
-                RelationshipRepairOutcomeCapture(
+                RelationshipRepairAgreementChange(
                     user_id=min(carol.id, dave.id),
                     partner_id=max(carol.id, dave.id),
-                    repair_session_id="repair-session-carol-dave",
-                    shared_commitment="先睡一覺，隔天再回來。",
-                    improvement_note="這次沒有在外面繼續升高。",
-                    status="pending",
-                    created_by_user_id=carol.id,
+                    repair_agreement_id=carol_dave_repair_agreement.id,
+                    changed_by_user_id=carol.id,
+                    origin_kind="manual_edit",
+                    source_outcome_capture_id=None,
+                    source_captured_by_user_id=None,
+                    source_captured_at=None,
+                    changed_at=carol_dave_repair_agreement.updated_at,
+                    protect_what_matters_before=None,
+                    protect_what_matters_after="外對外，不在外人面前羞辱彼此。",
+                    avoid_in_conflict_before=None,
+                    avoid_in_conflict_after=None,
+                    repair_reentry_before=None,
+                    repair_reentry_after=None,
                 )
             )
             session.commit()
@@ -213,6 +267,15 @@ class LoveMapSystemApiTests(unittest.TestCase):
             "先保護彼此的安全感，不在最高張力時替對方下定論。",
         )
         self.assertEqual(essentials["repair_agreements"]["updated_by_name"], "Alice")
+        history = essentials["repair_agreement_history"]
+        self.assertEqual(len(history), 2)
+        manual_entry = next(entry for entry in history if entry["origin_kind"] == "manual_edit")
+        carry_forward_entry = next(
+            entry for entry in history if entry["origin_kind"] == "post_mediation_carry_forward"
+        )
+        self.assertEqual(manual_entry["changed_by_name"], "Alice")
+        self.assertEqual(manual_entry["fields"][0]["key"], "protect_what_matters")
+        self.assertEqual(carry_forward_entry["source_captured_by_name"], "Bob")
 
     def test_unpaired_user_gets_no_partner_essentials_or_weekly_task(self) -> None:
         self.current_user_id = self.solo_id
@@ -229,6 +292,7 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertIsNone(essentials["my_care_profile"])
         self.assertIsNone(essentials["partner_care_profile"])
         self.assertIsNone(essentials["repair_agreements"])
+        self.assertEqual(essentials["repair_agreement_history"], [])
         self.assertIsNone(essentials["weekly_task"])
 
     def test_weekly_task_completion_is_reflected_in_love_map_system(self) -> None:
@@ -276,6 +340,13 @@ class LoveMapSystemApiTests(unittest.TestCase):
             essentials["pending_repair_outcome_capture"]["shared_commitment"],
             "先睡一覺，隔天再回來。",
         )
+        self.assertEqual(len(essentials["repair_agreement_history"]), 2)
+        after_texts = [
+            field["after_text"]
+            for entry in essentials["repair_agreement_history"]
+            for field in entry["fields"]
+        ]
+        self.assertNotIn("外對外，不在外人面前羞辱彼此。", after_texts)
 
     def test_paired_user_sees_pending_repair_outcome_capture(self) -> None:
         self.current_user_id = self.alice_id

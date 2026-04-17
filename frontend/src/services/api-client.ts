@@ -366,6 +366,25 @@ export interface LoveMapRepairAgreementsPublic {
   updated_at: string | null;
 }
 
+export interface LoveMapRepairAgreementFieldChangePublic {
+  key: string;
+  label: string;
+  change_kind: 'added' | 'updated' | 'cleared';
+  before_text: string | null;
+  after_text: string | null;
+}
+
+export interface LoveMapRepairAgreementChangePublic {
+  id: string;
+  changed_at: string | null;
+  changed_by_name: string | null;
+  origin_kind: 'manual_edit' | 'post_mediation_carry_forward';
+  source_outcome_capture_id: string | null;
+  source_captured_by_name: string | null;
+  source_captured_at: string | null;
+  fields: LoveMapRepairAgreementFieldChangePublic[];
+}
+
 export interface LoveMapRepairOutcomeCapturePublic {
   id: string;
   repair_session_id: string;
@@ -416,6 +435,7 @@ export interface LoveMapSystemEssentialsPublic {
   my_care_profile: LoveMapCareProfilePublic | null;
   partner_care_profile: LoveMapCareProfilePublic | null;
   repair_agreements: LoveMapRepairAgreementsPublic | null;
+  repair_agreement_history: LoveMapRepairAgreementChangePublic[];
   pending_repair_outcome_capture: LoveMapRepairOutcomeCapturePublic | null;
   weekly_task: WeeklyTaskPublic | null;
 }
@@ -482,6 +502,7 @@ export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
       my_care_profile: response.essentials?.my_care_profile ?? null,
       partner_care_profile: response.essentials?.partner_care_profile ?? null,
       repair_agreements: response.essentials?.repair_agreements ?? null,
+      repair_agreement_history: response.essentials?.repair_agreement_history ?? [],
       pending_repair_outcome_capture: response.essentials?.pending_repair_outcome_capture ?? null,
       weekly_task: response.essentials?.weekly_task ?? null,
     },

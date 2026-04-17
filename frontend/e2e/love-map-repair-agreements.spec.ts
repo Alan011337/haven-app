@@ -42,6 +42,46 @@ async function mockRepairAgreementsApi(page: Page) {
   const now = Date.now();
   const repairAgreementPayloads: Array<Record<string, unknown>> = [];
   let weeklyTaskCompletionCount = 0;
+  let repairAgreementHistorySequence = 2;
+
+  const buildFieldChanges = (
+    previous: {
+      protect_what_matters: string | null;
+      avoid_in_conflict: string | null;
+      repair_reentry: string | null;
+    },
+    next: {
+      protect_what_matters: string | null;
+      avoid_in_conflict: string | null;
+      repair_reentry: string | null;
+    },
+  ) => {
+    const fieldMeta = [
+      ['protect_what_matters', '當張力升高時，我們想保護什麼'],
+      ['avoid_in_conflict', '卡住或升高時，我們先避免什麼'],
+      ['repair_reentry', '要重新開啟修復時，我們怎麼回來'],
+    ] as const;
+
+    return fieldMeta.flatMap(([key, label]) => {
+      const beforeText = previous[key];
+      const afterText = next[key];
+      if (beforeText === afterText) {
+        return [];
+      }
+      const change_kind = beforeText == null
+        ? 'added'
+        : afterText == null
+          ? 'cleared'
+          : 'updated';
+      return [{
+        key,
+        label,
+        change_kind,
+        before_text: beforeText,
+        after_text: afterText,
+      }];
+    });
+  };
 
   const system = {
     has_partner: true,
@@ -128,6 +168,44 @@ async function mockRepairAgreementsApi(page: Page) {
         updated_by_name: 'Alice Chen',
         updated_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
       },
+      repair_agreement_history: [
+        {
+          id: 'repair-history-manual-1',
+          changed_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
+          changed_by_name: 'Alice Chen',
+          origin_kind: 'manual_edit',
+          source_outcome_capture_id: null,
+          source_captured_by_name: null,
+          source_captured_at: null,
+          fields: [
+            {
+              key: 'protect_what_matters',
+              label: '當張力升高時，我們想保護什麼',
+              change_kind: 'updated',
+              before_text: '先保護彼此想修復的意圖。',
+              after_text: '先保護彼此的安全感，不在最高張力時替對方下定論。',
+            },
+          ],
+        },
+        {
+          id: 'repair-history-carry-forward-1',
+          changed_at: new Date(now - 26 * 60 * 60 * 1000).toISOString(),
+          changed_by_name: 'Alice Chen',
+          origin_kind: 'post_mediation_carry_forward',
+          source_outcome_capture_id: 'capture-seeded-1',
+          source_captured_by_name: 'Bob',
+          source_captured_at: new Date(now - 27 * 60 * 60 * 1000).toISOString(),
+          fields: [
+            {
+              key: 'repair_reentry',
+              label: '要重新開啟修復時，我們怎麼回來',
+              change_kind: 'updated',
+              before_text: '先各自冷靜。',
+              after_text: '先留一段空氣，再在 24 小時內回來把感受與需要說清楚。',
+            },
+          ],
+        },
+      ],
       weekly_task: {
         task_slug: 'task_note',
         task_label: '寫一張小紙條謝謝他/她',
@@ -194,6 +272,9 @@ async function mockRepairAgreementsApi(page: Page) {
         repair_reentry?: string | null;
       };
       repairAgreementPayloads.push(payload);
+      const previousRepairAgreements = {
+        ...system.essentials.repair_agreements,
+      };
       system.essentials.repair_agreements = {
         protect_what_matters: payload.protect_what_matters?.trim() || null,
         avoid_in_conflict: payload.avoid_in_conflict?.trim() || null,
@@ -201,6 +282,18 @@ async function mockRepairAgreementsApi(page: Page) {
         updated_by_name: system.me.full_name,
         updated_at: new Date().toISOString(),
       };
+      system.essentials.repair_agreement_history.unshift({
+        id: `repair-history-manual-${repairAgreementHistorySequence}`,
+        changed_at: system.essentials.repair_agreements.updated_at,
+        changed_by_name: system.me.full_name,
+        origin_kind: 'manual_edit',
+        source_outcome_capture_id: null,
+        source_captured_by_name: null,
+        source_captured_at: null,
+        fields: buildFieldChanges(previousRepairAgreements, system.essentials.repair_agreements),
+      });
+      repairAgreementHistorySequence += 1;
+      system.essentials.repair_agreement_history = system.essentials.repair_agreement_history.slice(0, 5);
       system.stats.last_activity_at = system.essentials.repair_agreements.updated_at;
       await fulfillJson(route, system.essentials.repair_agreements);
       return;
@@ -248,6 +341,9 @@ test.describe('Repair Agreements deepening', () => {
 
     await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1')).toContainText('From repair carry-forward');
     await expect(page.getByRole('link', { name: '打開 Mediation' })).toHaveAttribute('href', '/mediation');
     await expect(page.getByRole('link', { name: '打開 Support 設定' })).toHaveAttribute(
       'href',
@@ -270,6 +366,9 @@ test.describe('Repair Agreements deepening', () => {
       protect_what_matters: '先保護彼此正在努力靠近這件事，不在最高點替對方定型。',
       avoid_in_conflict: '不要翻舊帳，也不要在還很急的時候逼對方立刻給答案。',
       repair_reentry: '先留出一段空氣，再在 24 小時內回來，用比較慢的語氣把卡住的點說清楚。',
+      // Direct (non-carry-forward) edits send null for source_outcome_capture_id so the
+      // backend records history with origin_kind="manual_edit".
+      source_outcome_capture_id: null,
     });
 
     await expect(page.getByLabel('當張力升高時，我們想保護什麼')).toHaveValue(
@@ -283,6 +382,10 @@ test.describe('Repair Agreements deepening', () => {
     );
     await expect(page.getByText('已留下 3/3 個 repair agreements').first()).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+      '先保護彼此正在努力靠近這件事，不在最高點替對方定型。',
+    );
 
     await page.getByRole('button', { name: '標記本週任務完成' }).click();
     await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
@@ -371,6 +474,9 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByLabel('卡住或升高時，我們先避免什麼')).toHaveValue(nextAvoidValue);
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(nextReentryValue);
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(nextProtectValue);
 
     const mediationHref = await page.getByRole('link', { name: '打開 Mediation' }).getAttribute('href');
     expect(mediationHref).toBe('/mediation');

@@ -44,6 +44,46 @@ async function mockOutcomeCaptureApi(page: Page) {
   const now = Date.now();
   const savePayloads: Array<Record<string, unknown>> = [];
   const dismissPayloads: string[] = [];
+  let repairAgreementHistorySequence = 1;
+
+  const buildFieldChanges = (
+    previous: {
+      protect_what_matters: string | null;
+      avoid_in_conflict: string | null;
+      repair_reentry: string | null;
+    },
+    next: {
+      protect_what_matters: string | null;
+      avoid_in_conflict: string | null;
+      repair_reentry: string | null;
+    },
+  ) => {
+    const fieldMeta = [
+      ['protect_what_matters', '當張力升高時，我們想保護什麼'],
+      ['avoid_in_conflict', '卡住或升高時，我們先避免什麼'],
+      ['repair_reentry', '要重新開啟修復時，我們怎麼回來'],
+    ] as const;
+
+    return fieldMeta.flatMap(([key, label]) => {
+      const beforeText = previous[key];
+      const afterText = next[key];
+      if (beforeText === afterText) {
+        return [];
+      }
+      const change_kind = beforeText == null
+        ? 'added'
+        : afterText == null
+          ? 'cleared'
+          : 'updated';
+      return [{
+        key,
+        label,
+        change_kind,
+        before_text: beforeText,
+        after_text: afterText,
+      }];
+    });
+  };
 
   const pendingCapture = {
     id: 'capture-1',
@@ -141,6 +181,26 @@ async function mockOutcomeCaptureApi(page: Page) {
         updated_by_name: 'Alice Chen',
         updated_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
       },
+      repair_agreement_history: [
+        {
+          id: 'repair-history-seeded-1',
+          changed_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
+          changed_by_name: 'Alice Chen',
+          origin_kind: 'manual_edit',
+          source_outcome_capture_id: null,
+          source_captured_by_name: null,
+          source_captured_at: null,
+          fields: [
+            {
+              key: 'protect_what_matters',
+              label: '當張力升高時，我們想保護什麼',
+              change_kind: 'updated',
+              before_text: '先保護彼此想修復的意圖。',
+              after_text: '先保護彼此仍想站在同一邊這件事。',
+            },
+          ],
+        },
+      ],
       pending_repair_outcome_capture: pendingCapture,
       weekly_task: {
         task_slug: 'task_note',
@@ -209,6 +269,9 @@ async function mockOutcomeCaptureApi(page: Page) {
         source_outcome_capture_id?: string | null;
       };
       savePayloads.push(payload);
+      const previousRepairAgreements = {
+        ...system.essentials.repair_agreements,
+      };
       system.essentials.repair_agreements = {
         protect_what_matters: payload.protect_what_matters?.trim() || null,
         avoid_in_conflict: payload.avoid_in_conflict?.trim() || null,
@@ -216,6 +279,18 @@ async function mockOutcomeCaptureApi(page: Page) {
         updated_by_name: system.me.full_name,
         updated_at: new Date().toISOString(),
       };
+      system.essentials.repair_agreement_history.unshift({
+        id: `repair-history-carry-forward-${repairAgreementHistorySequence}`,
+        changed_at: system.essentials.repair_agreements.updated_at,
+        changed_by_name: system.me.full_name,
+        origin_kind: payload.source_outcome_capture_id ? 'post_mediation_carry_forward' : 'manual_edit',
+        source_outcome_capture_id: payload.source_outcome_capture_id ?? null,
+        source_captured_by_name: payload.source_outcome_capture_id ? pendingCapture.captured_by_name : null,
+        source_captured_at: payload.source_outcome_capture_id ? pendingCapture.updated_at : null,
+        fields: buildFieldChanges(previousRepairAgreements, system.essentials.repair_agreements),
+      });
+      repairAgreementHistorySequence += 1;
+      system.essentials.repair_agreement_history = system.essentials.repair_agreement_history.slice(0, 5);
       if (payload.source_outcome_capture_id === pendingCapture.id) {
         system.essentials.pending_repair_outcome_capture = null;
       }
@@ -407,6 +482,7 @@ test.describe('Post-mediation outcome capture', () => {
 
     await expect(page.getByTestId('relationship-heart-post-mediation-outcome-card')).toBeVisible();
     await expect(page.getByText(apiState.pendingCapture.shared_commitment)).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
 
     await page.getByRole('button', { name: '帶入 Repair Agreements' }).click();
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(
@@ -427,6 +503,12 @@ test.describe('Post-mediation outcome capture', () => {
     await page.reload();
     await expect(page.getByTestId('relationship-heart-post-mediation-outcome-card')).toHaveCount(0);
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(
+      apiState.pendingCapture.shared_commitment,
+    );
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+      'From repair carry-forward',
+    );
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       apiState.pendingCapture.shared_commitment,
     );
   });
@@ -530,5 +612,11 @@ test.describe('Post-mediation outcome capture', () => {
       completedFlow.sharedCommitment,
     );
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+      'From repair carry-forward',
+    );
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+      completedFlow.sharedCommitment,
+    );
   });
 });

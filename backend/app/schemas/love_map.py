@@ -128,6 +128,25 @@ class LoveMapRepairAgreementsPublic(BaseModel):
     updated_at: str | None = None
 
 
+class LoveMapRepairAgreementFieldChangePublic(BaseModel):
+    key: str
+    label: str
+    change_kind: Literal["added", "updated", "cleared"]
+    before_text: str | None = None
+    after_text: str | None = None
+
+
+class LoveMapRepairAgreementChangePublic(BaseModel):
+    id: str
+    changed_at: str | None = None
+    changed_by_name: str | None = None
+    origin_kind: Literal["manual_edit", "post_mediation_carry_forward"]
+    source_outcome_capture_id: str | None = None
+    source_captured_by_name: str | None = None
+    source_captured_at: str | None = None
+    fields: list[LoveMapRepairAgreementFieldChangePublic] = Field(default_factory=list)
+
+
 class LoveMapRepairOutcomeCapturePublic(BaseModel):
     id: str
     repair_session_id: str
@@ -176,6 +195,7 @@ class LoveMapSystemEssentialsPublic(BaseModel):
     my_care_profile: LoveMapCareProfilePublic | None = None
     partner_care_profile: LoveMapCareProfilePublic | None = None
     repair_agreements: LoveMapRepairAgreementsPublic | None = None
+    repair_agreement_history: list[LoveMapRepairAgreementChangePublic] = Field(default_factory=list)
     pending_repair_outcome_capture: LoveMapRepairOutcomeCapturePublic | None = None
     weekly_task: LoveMapWeeklyTaskPublic | None = None
 

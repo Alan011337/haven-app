@@ -33,6 +33,7 @@ import {
   upsertLoveMapHeartProfile,
   upsertLoveMapRepairAgreements,
   type LoveMapHeartProfileUpsertPayload,
+  type LoveMapRepairAgreementChangePublic,
   type LoveMapRepairAgreementsUpsertPayload,
   type LoveLanguagePreferenceKey,
   type LoveLanguagePreferenceRecord,
@@ -287,6 +288,16 @@ function countRepairAgreementCompletion(
 
 function formatRepairAgreementCountLabel(count: number) {
   return `已留下 ${count}/3 個 repair agreements`;
+}
+
+function getRepairAgreementOriginLabel(originKind: LoveMapRepairAgreementChangePublic['origin_kind']) {
+  return originKind === 'post_mediation_carry_forward'
+    ? 'From repair carry-forward'
+    : 'Direct edit';
+}
+
+function getRepairAgreementOriginTone(originKind: LoveMapRepairAgreementChangePublic['origin_kind']) {
+  return originKind === 'post_mediation_carry_forward' ? 'status' : 'metadata';
 }
 
 function normalizeCadenceEligibilityText(value: string) {
@@ -776,6 +787,7 @@ export default function LoveMapPageContent() {
   const myCareProfile = system.essentials?.my_care_profile ?? null;
   const partnerCareProfile = system.essentials?.partner_care_profile ?? null;
   const repairAgreements = system.essentials?.repair_agreements ?? null;
+  const repairAgreementHistory = system.essentials?.repair_agreement_history ?? [];
   const pendingRepairOutcomeCapture = system.essentials?.pending_repair_outcome_capture ?? null;
   const weeklyTask = system.essentials?.weekly_task ?? null;
   const currentHeartPlaybook = buildHeartPlaybookDraft(myCarePreferences, myCareProfile);
@@ -1402,6 +1414,101 @@ export default function LoveMapPageContent() {
                         {repairAgreementsUpdatedAt ?? '先一起留下第一版。'}
                       </p>
                     </div>
+                  </div>
+
+                  <div
+                    className="rounded-[1.35rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft"
+                    data-testid="relationship-heart-repair-agreements-history"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="type-section-title text-card-foreground">Recent changes</p>
+                        <p className="type-caption text-muted-foreground">
+                          看見最近哪些文字被改動、是誰改的，以及這次調整是不是來自修復帶回。
+                        </p>
+                      </div>
+                      <Badge variant="metadata" size="sm">
+                        最近 {Math.min(repairAgreementHistory.length, 5)} 則
+                      </Badge>
+                    </div>
+
+                    {repairAgreementHistory.length > 0 ? (
+                      <div className="mt-4 space-y-3">
+                        {repairAgreementHistory.map((change, index) => {
+                          const changedAtLabel = formatShortDateTime(change.changed_at);
+                          const sourceCapturedAtLabel = formatShortDateTime(change.source_captured_at);
+                          return (
+                            <div
+                              key={change.id}
+                              className="rounded-[1.2rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                              data-testid={`relationship-heart-repair-agreements-history-entry-${index}`}
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="space-y-1">
+                                  <p className="type-section-title text-card-foreground">
+                                    {change.changed_by_name ?? '未具名使用者'}
+                                    {changedAtLabel ? ` · ${changedAtLabel}` : ''}
+                                  </p>
+                                  <p className="type-caption text-muted-foreground">
+                                    {change.origin_kind === 'post_mediation_carry_forward'
+                                      ? change.source_captured_by_name
+                                        ? `來自 ${change.source_captured_by_name} 帶回的修復結果${sourceCapturedAtLabel ? ` · ${sourceCapturedAtLabel}` : ''}`
+                                        : '來自修復帶回的結果'
+                                      : '直接在 Heart 裡手動調整'}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={getRepairAgreementOriginTone(change.origin_kind)}
+                                  size="sm"
+                                >
+                                  {getRepairAgreementOriginLabel(change.origin_kind)}
+                                </Badge>
+                              </div>
+
+                              <div className="mt-3 space-y-3">
+                                {change.fields.map((fieldChange) => (
+                                  <div
+                                    key={`${change.id}-${fieldChange.key}`}
+                                    className="rounded-[1.1rem] border border-primary/10 bg-primary/8 px-4 py-4"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <p className="type-micro uppercase text-primary/80">{fieldChange.label}</p>
+                                      <Badge variant="metadata" size="sm">
+                                        {fieldChange.change_kind === 'added'
+                                          ? 'Added'
+                                          : fieldChange.change_kind === 'cleared'
+                                            ? 'Cleared'
+                                            : 'Updated'}
+                                      </Badge>
+                                    </div>
+                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                      <div className="rounded-[1rem] border border-white/52 bg-white/76 px-3 py-3">
+                                        <p className="type-micro uppercase text-muted-foreground">Before</p>
+                                        <p className="mt-2 type-caption text-card-foreground">
+                                          {fieldChange.before_text ?? '空白'}
+                                        </p>
+                                      </div>
+                                      <div className="rounded-[1rem] border border-primary/12 bg-primary/10 px-3 py-3">
+                                        <p className="type-micro uppercase text-primary/80">After</p>
+                                        <p className="mt-2 type-caption text-card-foreground">
+                                          {fieldChange.after_text ?? '空白'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mt-4 rounded-[1.2rem] border border-primary/10 bg-primary/8 px-4 py-4">
+                        <p className="type-caption text-muted-foreground">
+                          開始保存 Repair Agreements 後，最近的變動會留在這裡。
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {repairAgreementCount === 0 ? (

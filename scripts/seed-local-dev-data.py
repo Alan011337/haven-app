@@ -74,6 +74,8 @@ from app.models.love_language import LoveLanguagePreference
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.relationship_care_profile import RelationshipCareProfile
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
+from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
+from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
 from app.models.couple_goal import CoupleGoal
 from app.models.love_map_note import LoveMapNote
 from app.models.wishlist_item import WishlistItem
@@ -412,6 +414,8 @@ def seed_relationship_system(session: Session) -> None:
     preference_exists = session.exec(select(LoveLanguagePreference).limit(1)).first()
     care_profile_exists = session.exec(select(RelationshipCareProfile).limit(1)).first()
     repair_agreement_exists = session.exec(select(RelationshipRepairAgreement).limit(1)).first()
+    repair_outcome_capture_exists = session.exec(select(RelationshipRepairOutcomeCapture).limit(1)).first()
+    repair_agreement_change_exists = session.exec(select(RelationshipRepairAgreementChange).limit(1)).first()
 
     if (
         baseline_exists
@@ -421,6 +425,8 @@ def seed_relationship_system(session: Session) -> None:
         and preference_exists
         and care_profile_exists
         and repair_agreement_exists
+        and repair_outcome_capture_exists
+        and repair_agreement_change_exists
     ):
         print("[seed] relationship_system: already exist — skipping")
         return
@@ -560,6 +566,81 @@ def seed_relationship_system(session: Session) -> None:
         )
         session.commit()
         print("[seed] relationship_system: seeded Repair Agreements")
+
+    repair_agreement_row = session.exec(
+        select(RelationshipRepairAgreement).where(
+            RelationshipRepairAgreement.user_id == min(ALICE_ID, BOB_ID),
+            RelationshipRepairAgreement.partner_id == max(ALICE_ID, BOB_ID),
+        )
+    ).first()
+
+    applied_capture_row = session.exec(
+        select(RelationshipRepairOutcomeCapture).where(
+            RelationshipRepairOutcomeCapture.user_id == min(ALICE_ID, BOB_ID),
+            RelationshipRepairOutcomeCapture.partner_id == max(ALICE_ID, BOB_ID),
+            RelationshipRepairOutcomeCapture.repair_session_id == "repair-session-seeded-carry-forward",
+        )
+    ).first()
+
+    if not applied_capture_row:
+        applied_capture_row = RelationshipRepairOutcomeCapture(
+            user_id=min(ALICE_ID, BOB_ID),
+            partner_id=max(ALICE_ID, BOB_ID),
+            repair_session_id="repair-session-seeded-carry-forward",
+            shared_commitment="如果明顯卡住，先留一段空氣，再在 24 小時內回來用較慢的語氣說感受、聽彼此真正卡住的地方。",
+            improvement_note="這次先停下來再回來，讓修復變得比較可完成。",
+            status="applied",
+            created_by_user_id=BOB_ID,
+            reviewed_by_user_id=ALICE_ID,
+            created_at=_days_ago(2),
+            updated_at=_days_ago(2),
+            reviewed_at=_days_ago(1),
+        )
+        session.add(applied_capture_row)
+        session.commit()
+        print("[seed] relationship_system: seeded applied repair outcome capture")
+
+    if not repair_agreement_change_exists and repair_agreement_row and applied_capture_row:
+        session.add(
+            RelationshipRepairAgreementChange(
+                user_id=min(ALICE_ID, BOB_ID),
+                partner_id=max(ALICE_ID, BOB_ID),
+                repair_agreement_id=repair_agreement_row.id,
+                changed_by_user_id=ALICE_ID,
+                origin_kind="post_mediation_carry_forward",
+                source_outcome_capture_id=applied_capture_row.id,
+                source_captured_by_user_id=BOB_ID,
+                source_captured_at=applied_capture_row.updated_at,
+                changed_at=_days_ago(1),
+                protect_what_matters_before="先保護彼此想好好說下去的意圖。",
+                protect_what_matters_after="先保護彼此想好好說下去的意圖。",
+                avoid_in_conflict_before="先不要急著替對方下定論。",
+                avoid_in_conflict_after="先不要急著替對方下定論。",
+                repair_reentry_before="先各自冷靜。",
+                repair_reentry_after="如果明顯卡住，先留一段空氣，再在 24 小時內回來用較慢的語氣說感受、聽彼此真正卡住的地方。",
+            )
+        )
+        session.add(
+            RelationshipRepairAgreementChange(
+                user_id=min(ALICE_ID, BOB_ID),
+                partner_id=max(ALICE_ID, BOB_ID),
+                repair_agreement_id=repair_agreement_row.id,
+                changed_by_user_id=ALICE_ID,
+                origin_kind="manual_edit",
+                source_outcome_capture_id=None,
+                source_captured_by_user_id=None,
+                source_captured_at=None,
+                changed_at=_days_ago(0),
+                protect_what_matters_before="先保護彼此想好好說下去的意圖。",
+                protect_what_matters_after="先保護彼此的安全感，不在情緒最高點把對方定型，也不讓那一刻變成整段關係的定論。",
+                avoid_in_conflict_before="先不要急著替對方下定論。",
+                avoid_in_conflict_after="先避免翻舊帳、替對方下結論，或在還沒冷靜前一直追著要答案。",
+                repair_reentry_before="如果明顯卡住，先留一段空氣，再在 24 小時內回來用較慢的語氣說感受、聽彼此真正卡住的地方。",
+                repair_reentry_after="如果明顯卡住，先留一段空氣，再在 24 小時內回來用較慢的語氣說感受、聽彼此真正卡住的地方。",
+            )
+        )
+        session.commit()
+        print("[seed] relationship_system: seeded Repair Agreements change history")
 
     if not wishlist_exists:
         wishlist_items = [

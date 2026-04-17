@@ -20,6 +20,7 @@ from app.api.deps import get_current_user  # noqa: E402
 from app.api.routers import love_map  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement  # noqa: E402
+from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange  # noqa: E402
 from app.models.user import User  # noqa: E402
 
 
@@ -133,6 +134,46 @@ class LoveMapRepairAgreementsApiTests(unittest.TestCase):
             assert row is not None
             self.assertEqual(row.updated_by_user_id, self.alice_id)
             self.assertEqual(row.protect_what_matters, "先保護彼此的安全感。")
+            history_rows = session.exec(
+                select(RelationshipRepairAgreementChange).where(
+                    RelationshipRepairAgreementChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreementChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(history_rows), 1)
+            self.assertEqual(history_rows[0].origin_kind, "manual_edit")
+            self.assertEqual(history_rows[0].changed_by_user_id, self.alice_id)
+            self.assertEqual(history_rows[0].protect_what_matters_before, "stale pair guidance")
+            self.assertEqual(history_rows[0].protect_what_matters_after, "先保護彼此的安全感。")
+
+    def test_no_op_save_does_not_create_history_or_mutate_updated_by(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/essentials/repair-agreements",
+            json={
+                "protect_what_matters": "stale pair guidance",
+                "avoid_in_conflict": "stale avoid",
+                "repair_reentry": "stale reentry",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["updated_by_name"], "Bob")
+
+        with Session(self.engine) as session:
+            row = session.exec(
+                select(RelationshipRepairAgreement).where(
+                    RelationshipRepairAgreement.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreement.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).first()
+            self.assertIsNotNone(row)
+            assert row is not None
+            self.assertEqual(row.updated_by_user_id, self.bob_id)
+            history_rows = session.exec(select(RelationshipRepairAgreementChange)).all()
+            self.assertEqual(history_rows, [])
 
     def test_unpaired_user_cannot_upsert_repair_agreements(self) -> None:
         self.current_user_id = self.solo_id

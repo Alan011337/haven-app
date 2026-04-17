@@ -21,6 +21,7 @@ from app.api.routers import love_map, mediation  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement  # noqa: E402
+from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange  # noqa: E402
 from app.models.relationship_repair_outcome_capture import (  # noqa: E402
     RelationshipRepairOutcomeCapture,
 )
@@ -258,6 +259,20 @@ class PostMediationOutcomeCaptureApiTests(unittest.TestCase):
             self.assertIsNotNone(agreement_row)
             assert agreement_row is not None
             self.assertEqual(agreement_row.updated_by_user_id, self.alice_id)
+            history_rows = session.exec(
+                select(RelationshipRepairAgreementChange).where(
+                    RelationshipRepairAgreementChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreementChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(history_rows), 1)
+            self.assertEqual(history_rows[0].origin_kind, "post_mediation_carry_forward")
+            self.assertEqual(history_rows[0].source_outcome_capture_id, uuid.UUID(capture_id))
+            self.assertEqual(history_rows[0].source_captured_by_user_id, self.bob_id)
+            self.assertEqual(
+                history_rows[0].repair_reentry_after,
+                "今晚先散步十分鐘，再回來用比較慢的語氣說清楚。",
+            )
 
     def test_pair_user_can_dismiss_pending_capture(self) -> None:
         _session_id, capture_id = self._create_pending_capture()
