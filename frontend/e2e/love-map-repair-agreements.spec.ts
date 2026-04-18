@@ -342,8 +342,14 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1')).toContainText('From repair carry-forward');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1')).toContainText('修復帶回');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
+    ).toContainText('目前採用');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
+    ).toContainText('修復帶回');
     await expect(page.getByRole('link', { name: '打開 Mediation' })).toHaveAttribute('href', '/mediation');
     await expect(page.getByRole('link', { name: '打開 Support 設定' })).toHaveAttribute(
       'href',
@@ -382,10 +388,17 @@ test.describe('Repair Agreements deepening', () => {
     );
     await expect(page.getByText('已留下 3/3 個 repair agreements').first()).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('目前版本');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       '先保護彼此正在努力靠近這件事，不在最高點替對方定型。',
     );
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
+    ).toContainText('手動微調');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
+    ).toContainText('先保護彼此正在努力靠近這件事，不在最高點替對方定型。');
 
     await page.getByRole('button', { name: '標記本週任務完成' }).click();
     await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
@@ -475,8 +488,14 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(nextReentryValue);
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(nextProtectValue);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
+    ).toContainText(nextProtectValue);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
+    ).toContainText('目前版本');
 
     const mediationHref = await page.getByRole('link', { name: '打開 Mediation' }).getAttribute('href');
     expect(mediationHref).toBe('/mediation');

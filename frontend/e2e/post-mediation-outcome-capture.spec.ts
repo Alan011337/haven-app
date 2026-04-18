@@ -482,7 +482,7 @@ test.describe('Post-mediation outcome capture', () => {
 
     await expect(page.getByTestId('relationship-heart-post-mediation-outcome-card')).toBeVisible();
     await expect(page.getByText(apiState.pendingCapture.shared_commitment)).toBeVisible();
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('Direct edit');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
 
     await page.getByRole('button', { name: '帶入 Repair Agreements' }).click();
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(
@@ -506,11 +506,17 @@ test.describe('Post-mediation outcome capture', () => {
       apiState.pendingCapture.shared_commitment,
     );
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
-      'From repair carry-forward',
+      '修復帶回',
     );
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       apiState.pendingCapture.shared_commitment,
     );
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
+    ).toContainText('修復帶回');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
+    ).toContainText(apiState.pendingCapture.shared_commitment);
   });
 
   test('dismisses a pending repair outcome in mocked mode', async ({ page }) => {
@@ -613,10 +619,16 @@ test.describe('Post-mediation outcome capture', () => {
     );
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
-      'From repair carry-forward',
+      '修復帶回',
     );
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       completedFlow.sharedCommitment,
     );
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
+    ).toContainText('修復帶回');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
+    ).toContainText(completedFlow.sharedCommitment);
   });
 });
