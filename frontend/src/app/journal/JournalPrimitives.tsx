@@ -256,7 +256,7 @@ export function JournalVisibilitySwitch({
     {
       value: 'PARTNER_TRANSLATED_ONLY',
       label: '伴侶看整理後的版本',
-      description: '伴侶只會看到 Haven 整理後的版本，不會看到原文或圖片。',
+      description: '保存後 Haven 才會準備伴侶可讀的版本；整理完成前，伴侶看不到原文、圖片或整理版。',
     },
   ];
 

@@ -30,21 +30,26 @@ export default function PartnerJournalCard({
   const isTranslatedOnly = journal.visibility === 'PARTNER_TRANSLATED_ONLY';
   const showPartnerAnalysis = !isTranslatedOnly;
   const isPartnerVersionOnly = isTranslatedOnly;
+  const translatedPartnerBody =
+    journal.partner_translation_status === 'READY'
+      ? journal.partner_translated_content?.trim() || ''
+      : '';
   const sharedBody = isAnalysisOnly
     ? ''
     : isPartnerVersionOnly
-      ? journal.partner_translated_content?.trim() || ''
+      ? translatedPartnerBody
       : journal.content;
   const sharingLabel = isAnalysisOnly
     ? '分析資訊'
     : journal.visibility === 'PARTNER_ORIGINAL'
       ? '原文共享'
-      : journal.partner_translation_status === 'READY'
+      : sharedBody
         ? '整理後版本'
         : '整理中';
   const title = journal.title?.trim() || '未命名來信';
+  const visibleAttachments = isPartnerVersionOnly ? [] : journal.attachments ?? [];
   const inlineAttachmentIds = new Set(findInsertedAttachmentIds(sharedBody));
-  const shelfAttachments = (journal.attachments ?? []).filter(
+  const shelfAttachments = visibleAttachments.filter(
     (attachment) => !inlineAttachmentIds.has(attachment.id),
   );
 
@@ -127,7 +132,7 @@ export default function PartnerJournalCard({
               {sharedBody ? (
                 <div className="mt-4">
                   <JournalRichMarkdown
-                    attachments={journal.attachments ?? []}
+                    attachments={visibleAttachments}
                     content={sharedBody}
                     variant="partner"
                   />
@@ -135,10 +140,10 @@ export default function PartnerJournalCard({
               ) : (
                 <p className="mt-3 font-art text-[1.55rem] leading-[1.65] text-card-foreground italic">
                   &quot;{journal.partner_translation_status === 'PENDING'
-                    ? 'Haven 正在為伴侶整理這篇內容。'
+                    ? 'Haven 正在為伴侶整理這篇內容；整理完成前，伴侶目前看不到這封來信。'
                     : journal.partner_translation_status === 'FAILED'
-                      ? '這封來信先留下情緒摘要，整理後的版本稍後再補上。'
-                      : 'Haven 正在為伴侶整理這篇內容。'}&quot;
+                      ? '這封來信暫時還沒整理好；伴侶目前看不到內容。'
+                      : 'Haven 正在為伴侶整理這篇內容；整理完成前，伴侶目前看不到這封來信。'}&quot;
                 </p>
               )}
             </div>

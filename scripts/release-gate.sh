@@ -390,6 +390,7 @@ PY
 
 cd "${ROOT_DIR}/frontend"
 npm run check:env
+npm run test:unit
 TYPECHECK_TIMEOUT_MS="${TYPECHECK_TIMEOUT_MS:-180000}" npm run typecheck
 
 if [[ "${RUN_E2E:-0}" == "1" ]]; then

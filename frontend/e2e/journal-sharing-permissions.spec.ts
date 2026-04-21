@@ -99,6 +99,35 @@ async function mockJournalSharingApi(page: Page) {
     updated_at: hoursAgo(now, 5),
   };
 
+  const pendingTranslatedPartnerJournal = {
+    id: 'partner-journal-pending-translated',
+    user_id: 'partner-1',
+    title: '整理中但不應露出',
+    content: 'PENDING RAW SECRET LINE',
+    visibility: 'PARTNER_TRANSLATED_ONLY',
+    partner_translation_status: 'PENDING',
+    partner_translated_content: null,
+    attachments: [
+      {
+        id: 'pending-translated-attachment-1',
+        file_name: 'pending-secret-photo.jpg',
+        mime_type: 'image/jpeg',
+        size_bytes: 1024,
+        created_at: hoursAgo(now, 4.5),
+        caption: null,
+        url: 'https://example.com/pending-secret-photo.jpg',
+      },
+    ],
+    mood_label: '緊張',
+    emotional_needs: 'PENDING NEEDS SHOULD NOT LEAK',
+    advice_for_partner: 'PENDING ADVICE SHOULD NOT LEAK',
+    action_for_partner: 'PENDING ACTION SHOULD NOT LEAK',
+    card_recommendation: 'SAFE_ZONE',
+    safety_tier: 0,
+    created_at: hoursAgo(now, 4.5),
+    updated_at: hoursAgo(now, 4.5),
+  };
+
   const originalPartnerJournal = {
     id: 'partner-journal-original',
     user_id: 'partner-1',
@@ -324,7 +353,11 @@ async function mockJournalSharingApi(page: Page) {
     }
 
     if (path.endsWith('/journals/partner') && method === 'GET') {
-      await fulfillJson(route, [translatedPartnerJournal, originalPartnerJournal]);
+      await fulfillJson(route, [
+        translatedPartnerJournal,
+        pendingTranslatedPartnerJournal,
+        originalPartnerJournal,
+      ]);
       return;
     }
 
@@ -382,6 +415,9 @@ test.describe('Journal sharing permissions', () => {
     await expect(page.getByRole('button', { name: '私密保存' })).toBeVisible();
     await expect(page.getByRole('button', { name: '伴侶看原文' })).toBeVisible();
     await expect(page.getByRole('button', { name: '伴侶看整理後的版本' })).toBeVisible();
+    await expect(
+      page.getByText('保存後 Haven 才會準備伴侶可讀的版本；整理完成前，伴侶看不到原文、圖片或整理版。'),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: '伴侶只看分析' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '完全私密（不送 AI）' })).toHaveCount(0);
     await expect(
@@ -428,6 +464,19 @@ test.describe('Journal sharing permissions', () => {
     await expect(translatedCard.getByText('內心深處的渴望')).toHaveCount(0);
     await expect(translatedCard.getByText('理解視角')).toHaveCount(0);
     await expect(translatedCard.getByText('具體做法')).toHaveCount(0);
+    await expect(translatedCard.locator('img')).toHaveCount(0);
+
+    const pendingTranslatedCard = page
+      .getByRole('heading', { level: 3, name: '整理中但不應露出' })
+      .locator('xpath=ancestor::article[1]');
+    await expect(pendingTranslatedCard.getByText('整理中', { exact: true })).toBeVisible();
+    await expect(pendingTranslatedCard.getByText('伴侶目前看不到這封來信')).toBeVisible();
+    await expect(pendingTranslatedCard.getByText('PENDING RAW SECRET LINE')).toHaveCount(0);
+    await expect(pendingTranslatedCard.getByText('pending-secret-photo.jpg')).toHaveCount(0);
+    await expect(pendingTranslatedCard.getByText('PENDING NEEDS SHOULD NOT LEAK')).toHaveCount(0);
+    await expect(pendingTranslatedCard.getByText('PENDING ADVICE SHOULD NOT LEAK')).toHaveCount(0);
+    await expect(pendingTranslatedCard.getByText('PENDING ACTION SHOULD NOT LEAK')).toHaveCount(0);
+    await expect(pendingTranslatedCard.locator('img')).toHaveCount(0);
 
     const originalCard = page
       .getByRole('heading', { level: 3, name: '原文共享頁' })

@@ -316,13 +316,18 @@ async def _build_partner_journal_payload(
         content = journal.content
         include_attachments = True
     elif normalized_visibility == "PARTNER_TRANSLATED_ONLY":
-        if journal.partner_translation_status == _TRANSLATION_STATUS_READY:
-            translated_content = journal.partner_translated_content
+        translated_ready = (
+            str(journal.partner_translation_status or "").strip().upper()
+            == _TRANSLATION_STATUS_READY
+        )
+        translated_content = journal.partner_translated_content
+        if not translated_ready or not str(translated_content or "").strip():
+            return None
     elif normalized_visibility == "PARTNER_ANALYSIS_ONLY":
         # No content, no translation — analysis fields only
         include_analysis = True
     else:
-        include_analysis = False
+        return None
 
     payload = {
         "id": journal.id,

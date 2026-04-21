@@ -742,6 +742,9 @@ jobs:
       - name: Frontend lint
         run: npm run lint
 
+      - name: Frontend unit tests
+        run: npm run test:unit
+
       - name: Frontend typecheck
         run: TYPECHECK_TIMEOUT_MS=180000 npm run typecheck
 

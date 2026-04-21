@@ -10,6 +10,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
 SECURITY_GATE_PATH = BACKEND_ROOT / "scripts" / "security-gate.sh"
 RELEASE_GATE_LOCAL_PATH = REPO_ROOT / "scripts" / "release-gate-local.sh"
+RELEASE_GATE_PATH = REPO_ROOT / "scripts" / "release-gate.sh"
+RELEASE_GATE_WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release-gate.yml"
 GATE_COMMON_PATH = REPO_ROOT / "scripts" / "gate-common.sh"
 
 
@@ -25,6 +27,8 @@ def collect_contract_violations() -> list[str]:
 
     security_text = _read(SECURITY_GATE_PATH)
     release_text = _read(RELEASE_GATE_LOCAL_PATH)
+    deploy_release_text = _read(RELEASE_GATE_PATH)
+    workflow_text = _read(RELEASE_GATE_WORKFLOW_PATH)
 
     if 'source "${SCRIPT_DIR}/gate-common.sh"' not in release_text:
         violations.append("release_gate_missing_shared_helper_source")
@@ -40,6 +44,16 @@ def collect_contract_violations() -> list[str]:
     for marker in required_release_markers:
         if marker not in release_text:
             violations.append(f"release_gate_missing_marker:{marker}")
+
+    frontend_unit_test_marker = "npm run test:unit"
+    if frontend_unit_test_marker not in release_text:
+        violations.append("release_gate_local_missing_frontend_unit_tests")
+    if frontend_unit_test_marker not in deploy_release_text:
+        violations.append("release_gate_missing_frontend_unit_tests")
+    if frontend_unit_test_marker not in workflow_text:
+        violations.append("release_gate_workflow_missing_frontend_unit_tests")
+    if "Frontend unit tests" not in workflow_text:
+        violations.append("release_gate_workflow_missing_frontend_unit_test_step_name")
 
     required_security_markers = (
         "check_api_contract_snapshot.py",

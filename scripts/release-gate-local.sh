@@ -1096,6 +1096,7 @@ fi
 cd "${FRONTEND_DIR}"
 npm run check:env
 npm run contract:types:check
+npm run test:unit
 if [[ "${SKIP_FRONTEND_TYPECHECK:-0}" == "1" ]]; then
   echo "[release-gate-local] skip frontend typecheck (SKIP_FRONTEND_TYPECHECK=1)"
 else

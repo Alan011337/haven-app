@@ -10,8 +10,11 @@
  * ERR_MODULE_NOT_FOUND. We previously had to normalize a batch of these by
  * hand — this guard makes the drift harder to silently reintroduce.
  *
- * Scope: only applies to test files under `src/**\/__tests__/*.test.ts` and
- * `*.test.tsx`. Does not police product source, e2e specs, or scripts.
+ * Scope: mirrors `npm run test:unit`, which globs `src/**\/__tests__/*.test.ts`
+ * in `frontend/package.json`. This guard covers that same universe plus
+ * `*.test.tsx` for future-proofing. Product source, e2e specs, and scripts are
+ * deliberately out of scope — they do not run under the strip-types ESM
+ * harness and have different resolution semantics.
  */
 
 import fs from 'node:fs/promises';
