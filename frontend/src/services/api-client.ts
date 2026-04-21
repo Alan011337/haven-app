@@ -383,6 +383,7 @@ export interface LoveMapRepairAgreementChangePublic {
   source_captured_by_name: string | null;
   source_captured_at: string | null;
   fields: LoveMapRepairAgreementFieldChangePublic[];
+  revision_note: string | null;
 }
 
 export interface LoveMapRepairOutcomeCapturePublic {
@@ -525,6 +526,7 @@ export interface LoveMapRepairAgreementsUpsertPayload {
   avoid_in_conflict: string;
   repair_reentry: string;
   source_outcome_capture_id?: string | null;
+  revision_note?: string | null;
 }
 
 export const upsertLoveMapHeartProfile = async (
@@ -555,6 +557,7 @@ export const upsertLoveMapRepairAgreements = async (
     avoid_in_conflict: payload.avoid_in_conflict,
     repair_reentry: payload.repair_reentry,
     source_outcome_capture_id: payload.source_outcome_capture_id,
+    revision_note: payload.revision_note ?? null,
   });
 };
 

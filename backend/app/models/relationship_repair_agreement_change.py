@@ -50,3 +50,7 @@ class RelationshipRepairAgreementChange(SQLModel, table=True):
     avoid_in_conflict_after: str | None = Field(default=None, max_length=500)
     repair_reentry_before: str | None = Field(default=None, max_length=500)
     repair_reentry_after: str | None = Field(default=None, max_length=500)
+    # Optional short human-authored note attached to this change event.
+    # Never mandatory, never AI-generated. Rendered as a quiet italic excerpt
+    # in the Repair Agreements timeline entry when present.
+    revision_note: str | None = Field(default=None, max_length=300)

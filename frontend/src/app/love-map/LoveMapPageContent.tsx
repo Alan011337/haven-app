@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { HeartHandshake, Sparkles } from 'lucide-react';
+import { HeartHandshake, PenLine, Sparkles } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input, { Textarea } from '@/components/ui/Input';
@@ -458,6 +458,12 @@ export default function LoveMapPageContent() {
   const [repairAgreementsDraft, setRepairAgreementsDraft] =
     useState<LoveMapRepairAgreementsUpsertPayload>(EMPTY_REPAIR_AGREEMENTS_DRAFT);
   const [selectedOutcomeCaptureId, setSelectedOutcomeCaptureId] = useState<string | null>(null);
+  const [expandedHistoryEntries, setExpandedHistoryEntries] = useState<Record<string, boolean>>({});
+  // Optional short human-authored note, saved alongside a meaningful Repair
+  // Agreements change. Kept separate from `repairAgreementsDraft` so note
+  // presence alone never enables the Save button — a note without a field
+  // change is a no-op, same as today.
+  const [repairAgreementsRevisionNoteDraft, setRepairAgreementsRevisionNoteDraft] = useState('');
 
   useEffect(() => {
     if (!systemQuery.data) {
@@ -603,12 +609,16 @@ export default function LoveMapPageContent() {
     setSavingRepairAgreements(true);
     try {
       const sourceOutcomeCaptureId = selectedOutcomeCaptureId;
+      const trimmedRevisionNote = repairAgreementsRevisionNoteDraft.trim();
+      const revisionNotePayload = trimmedRevisionNote.length > 0 ? trimmedRevisionNote : null;
       await upsertLoveMapRepairAgreements({
         ...repairAgreementsDraft,
         source_outcome_capture_id: sourceOutcomeCaptureId,
+        revision_note: revisionNotePayload,
       });
       await invalidateRelationshipViews();
       setSelectedOutcomeCaptureId(null);
+      setRepairAgreementsRevisionNoteDraft('');
       showToast(
         sourceOutcomeCaptureId
           ? 'Repair Agreements 已更新，這次修復也已帶回 Heart。'
@@ -964,7 +974,14 @@ export default function LoveMapPageContent() {
             </p>
           </div>
           <Badge variant={getRepairAgreementOriginTone(revision.change.origin_kind)} size="sm">
-            {getRepairAgreementOriginLabel(revision.change.origin_kind)}
+            <span className="inline-flex items-center gap-1">
+              {revision.change.origin_kind === 'post_mediation_carry_forward' ? (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              ) : (
+                <PenLine className="h-3.5 w-3.5" aria-hidden />
+              )}
+              {getRepairAgreementOriginLabel(revision.change.origin_kind)}
+            </span>
           </Badge>
         </div>
 
@@ -980,6 +997,15 @@ export default function LoveMapPageContent() {
               {currentValue ?? '空白'}
             </p>
           </div>
+
+          {revision.change.revision_note ? (
+            <p
+              className="border-l-2 border-primary/20 pl-3 type-caption italic text-card-foreground/80"
+              data-testid={`relationship-heart-repair-field-review-${fieldKey}-note`}
+            >
+              {revision.change.revision_note}
+            </p>
+          ) : null}
 
           <div className="rounded-[1rem] border border-white/58 bg-white/72 px-3 py-3 shadow-soft">
             <p className="type-micro uppercase text-muted-foreground">上一版</p>
@@ -1599,6 +1625,13 @@ export default function LoveMapPageContent() {
                         {repairAgreementHistoryEntries.map((change, index) => {
                           const changedAtLabel = formatShortDateTime(change.changed_at);
                           const sourceCapturedAtLabel = formatShortDateTime(change.source_captured_at);
+                          const isCarryForward = change.origin_kind === 'post_mediation_carry_forward';
+                          const OriginIcon = isCarryForward ? Sparkles : PenLine;
+                          const isExpanded = expandedHistoryEntries[change.id] === true;
+                          const fieldLabels = change.fields
+                            .map((fieldChange) => fieldChange.label)
+                            .filter((label): label is string => Boolean(label))
+                            .join('、');
                           return (
                             <div
                               key={change.id}
@@ -1615,7 +1648,7 @@ export default function LoveMapPageContent() {
                                     {formatRepairAgreementChangeSummary(change)}
                                   </p>
                                   <p className="type-caption text-muted-foreground">
-                                    {change.origin_kind === 'post_mediation_carry_forward'
+                                    {isCarryForward
                                       ? change.source_captured_by_name
                                         ? `來自 ${change.source_captured_by_name} 帶回的修復結果${sourceCapturedAtLabel ? ` · ${sourceCapturedAtLabel}` : ''}`
                                         : '來自修復帶回的結果'
@@ -1626,65 +1659,105 @@ export default function LoveMapPageContent() {
                                   variant={getRepairAgreementOriginTone(change.origin_kind)}
                                   size="sm"
                                 >
-                                  {getRepairAgreementOriginLabel(change.origin_kind)}
+                                  <span className="inline-flex items-center gap-1">
+                                    <OriginIcon className="h-3.5 w-3.5" aria-hidden />
+                                    {getRepairAgreementOriginLabel(change.origin_kind)}
+                                  </span>
                                 </Badge>
                               </div>
 
-                              <div className="mt-3 space-y-3">
-                                {change.fields.map((fieldChange) => (
-                                  <div
-                                    key={`${change.id}-${fieldChange.key}`}
-                                    className="rounded-[1.1rem] border border-primary/10 bg-primary/8 px-4 py-4"
-                                  >
-                                    {isRepairAgreementFieldKey(fieldChange.key)
-                                      ? (() => {
-                                          const isCurrentValue =
-                                            getRepairAgreementSavedValue(repairAgreements, fieldChange.key)
-                                            === normalizeRepairAgreementText(fieldChange.after_text);
-                                          return (
-                                            <>
-                                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                                <p className="type-micro uppercase text-primary/80">
-                                                  {fieldChange.label}
-                                                </p>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                  <Badge variant="metadata" size="sm">
-                                                    {getRepairAgreementChangeKindLabel(fieldChange.change_kind)}
-                                                  </Badge>
-                                                  {isCurrentValue ? (
-                                                    <Badge variant="success" size="sm">
-                                                      目前版本
-                                                    </Badge>
-                                                  ) : null}
-                                                </div>
-                                              </div>
-                                              <div className="mt-3 space-y-3">
-                                                <div className="rounded-[1rem] border border-primary/12 bg-white/78 px-3 py-3 shadow-soft">
-                                                  <p className="type-micro uppercase text-primary/80">
-                                                    {isCurrentValue ? '目前採用' : '當時改成'}
-                                                  </p>
-                                                  <p className="mt-2 type-caption text-card-foreground">
-                                                    {truncateRepairAgreementPreview(fieldChange.after_text)}
-                                                  </p>
-                                                </div>
-                                                <div className="rounded-[1rem] border border-white/52 bg-white/76 px-3 py-3">
-                                                  <p className="type-micro uppercase text-muted-foreground">
-                                                    上一版
-                                                  </p>
-                                                  <p className="mt-2 type-caption text-card-foreground">
-                                                    {fieldChange.before_text
-                                                      ? truncateRepairAgreementPreview(fieldChange.before_text)
-                                                      : '第一次正式留下'}
-                                                  </p>
-                                                </div>
-                                              </div>
-                                            </>
-                                          );
-                                        })()
-                                      : null}
-                                  </div>
-                                ))}
+                              {change.revision_note ? (
+                                <p
+                                  className="mt-3 border-l-2 border-primary/20 pl-3 type-caption italic text-card-foreground/80"
+                                  data-testid={`relationship-heart-repair-agreements-history-entry-${index}-note`}
+                                >
+                                  {change.revision_note}
+                                </p>
+                              ) : null}
+
+                              {!isExpanded && fieldLabels ? (
+                                <p className="mt-3 type-caption text-muted-foreground">
+                                  觸及：{fieldLabels}
+                                </p>
+                              ) : null}
+
+                              <div className="mt-3">
+                                <button
+                                  type="button"
+                                  aria-expanded={isExpanded}
+                                  onClick={() =>
+                                    setExpandedHistoryEntries((current) => ({
+                                      ...current,
+                                      [change.id]: !isExpanded,
+                                    }))
+                                  }
+                                  className="type-caption text-primary/80 underline-offset-2 transition-colors duration-haven ease-haven hover:text-primary hover:underline focus-ring-premium"
+                                  data-testid={`relationship-heart-repair-agreements-history-entry-${index}-expand`}
+                                >
+                                  {isExpanded ? '收起這次的改動' : '看看這一次改了什麼'}
+                                </button>
                               </div>
+
+                              {isExpanded ? (
+                                <div
+                                  className="mt-3 space-y-3"
+                                  data-testid={`relationship-heart-repair-agreements-history-entry-${index}-detail`}
+                                >
+                                  {change.fields.map((fieldChange) => (
+                                    <div
+                                      key={`${change.id}-${fieldChange.key}`}
+                                      className="rounded-[1.1rem] border border-primary/10 bg-primary/8 px-4 py-4"
+                                    >
+                                      {isRepairAgreementFieldKey(fieldChange.key)
+                                        ? (() => {
+                                            const isCurrentValue =
+                                              getRepairAgreementSavedValue(repairAgreements, fieldChange.key)
+                                              === normalizeRepairAgreementText(fieldChange.after_text);
+                                            return (
+                                              <>
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                  <p className="type-micro uppercase text-primary/80">
+                                                    {fieldChange.label}
+                                                  </p>
+                                                  <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge variant="metadata" size="sm">
+                                                      {getRepairAgreementChangeKindLabel(fieldChange.change_kind)}
+                                                    </Badge>
+                                                    {isCurrentValue ? (
+                                                      <Badge variant="success" size="sm">
+                                                        目前版本
+                                                      </Badge>
+                                                    ) : null}
+                                                  </div>
+                                                </div>
+                                                <div className="mt-3 space-y-3">
+                                                  <div className="rounded-[1rem] border border-primary/12 bg-white/78 px-3 py-3 shadow-soft">
+                                                    <p className="type-micro uppercase text-primary/80">
+                                                      {isCurrentValue ? '目前採用' : '當時改成'}
+                                                    </p>
+                                                    <p className="mt-2 type-caption text-card-foreground">
+                                                      {truncateRepairAgreementPreview(fieldChange.after_text)}
+                                                    </p>
+                                                  </div>
+                                                  <div className="rounded-[1rem] border border-white/52 bg-white/76 px-3 py-3">
+                                                    <p className="type-micro uppercase text-muted-foreground">
+                                                      上一版
+                                                    </p>
+                                                    <p className="mt-2 type-caption text-card-foreground">
+                                                      {fieldChange.before_text
+                                                        ? truncateRepairAgreementPreview(fieldChange.before_text)
+                                                        : '第一次正式留下'}
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                              </>
+                                            );
+                                          })()
+                                        : null}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
                           );
                         })}
@@ -1754,6 +1827,24 @@ export default function LoveMapPageContent() {
                     helperText="這不是 rigid SOP，而是你們想反覆回來採用的修復入口。"
                   />
                   {renderRepairAgreementFieldReview('repair_reentry')}
+
+                  <Textarea
+                    id="love-map-repair-revision-note"
+                    data-testid="relationship-heart-repair-agreements-revision-note-input"
+                    label="為這次改動留下一句話（選填）"
+                    value={repairAgreementsRevisionNoteDraft}
+                    onChange={(event) => setRepairAgreementsRevisionNoteDraft(event.target.value)}
+                    placeholder="例如：我們決定先練一週看看再微調。"
+                    maxLength={300}
+                    rows={2}
+                    className="!min-h-[4rem]"
+                    disabled={savingRepairAgreements}
+                    helperText={
+                      selectedOutcomeCaptureId
+                        ? '這段註記會和從修復帶回的內容一起留下。'
+                        : undefined
+                    }
+                  />
 
                   <p className="type-caption text-muted-foreground">
                     這是一張 pair-maintained 的 repair sheet：任何一方都能更新，但 Heart 會保留最近是誰留下這版內容，而不把它偽裝成無作者的 shared truth。

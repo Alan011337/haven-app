@@ -229,5 +229,93 @@ class LoveMapRepairAgreementsApiTests(unittest.TestCase):
             )
 
 
+    def test_upsert_repair_agreements_persists_revision_note(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/essentials/repair-agreements",
+            json={
+                "protect_what_matters": "stale pair guidance",
+                "avoid_in_conflict": "stale avoid",
+                "repair_reentry": "先留一點空氣，再在 24 小時內回來。",
+                "revision_note": "我們在週二散步後聊出的版本。",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with Session(self.engine) as session:
+            history_rows = session.exec(
+                select(RelationshipRepairAgreementChange).where(
+                    RelationshipRepairAgreementChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreementChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(history_rows), 1)
+            self.assertEqual(history_rows[0].revision_note, "我們在週二散步後聊出的版本。")
+
+        system_response = self.client.get("/api/love-map/system")
+        self.assertEqual(system_response.status_code, 200)
+        essentials = system_response.json()["essentials"]
+        history = essentials["repair_agreement_history"]
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["revision_note"], "我們在週二散步後聊出的版本。")
+
+    def test_upsert_repair_agreements_without_note_stores_null(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/essentials/repair-agreements",
+            json={
+                "protect_what_matters": "stale pair guidance",
+                "avoid_in_conflict": "stale avoid",
+                "repair_reentry": "只改 reentry，但不留註記。",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with Session(self.engine) as session:
+            history_rows = session.exec(
+                select(RelationshipRepairAgreementChange).where(
+                    RelationshipRepairAgreementChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreementChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(history_rows), 1)
+            self.assertIsNone(history_rows[0].revision_note)
+
+        system_response = self.client.get("/api/love-map/system")
+        self.assertEqual(system_response.status_code, 200)
+        history = system_response.json()["essentials"]["repair_agreement_history"]
+        self.assertEqual(len(history), 1)
+        self.assertIsNone(history[0]["revision_note"])
+
+    def test_upsert_repair_agreements_whitespace_note_is_normalized_null(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/essentials/repair-agreements",
+            json={
+                "protect_what_matters": "stale pair guidance",
+                "avoid_in_conflict": "stale avoid",
+                "repair_reentry": "只想試試空白註記。",
+                "revision_note": "   \u3000\n  ",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        with Session(self.engine) as session:
+            history_rows = session.exec(
+                select(RelationshipRepairAgreementChange).where(
+                    RelationshipRepairAgreementChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreementChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(history_rows), 1)
+            self.assertIsNone(history_rows[0].revision_note)
+
+
 if __name__ == "__main__":
     unittest.main()

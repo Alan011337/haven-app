@@ -318,6 +318,7 @@ def _to_repair_agreement_change_public(
         source_captured_by_name=source_captured_by_name,
         source_captured_at=row.source_captured_at.isoformat() + "Z" if row.source_captured_at else None,
         fields=_build_repair_agreement_field_changes(row),
+        revision_note=row.revision_note,
     )
 
 
@@ -1139,6 +1140,10 @@ def upsert_repair_agreements(
         "repair_reentry": _normalize_short_text(body.repair_reentry),
     }
     has_changes = any(current_values[key] != next_values[key] for key in REPAIR_AGREEMENT_FIELD_LABELS)
+    # Optional short human-authored revision note. Whitespace-only input is
+    # normalized to None so an empty chip never renders in the timeline.
+    # Over-length input is rejected earlier by Pydantic's `max_length=300`.
+    normalized_revision_note = (body.revision_note or "").strip() or None
     saved_at = utcnow()
     if repair_agreements is None and has_changes:
         repair_agreements = RelationshipRepairAgreement(
@@ -1182,6 +1187,7 @@ def upsert_repair_agreements(
                 avoid_in_conflict_after=next_values["avoid_in_conflict"],
                 repair_reentry_before=current_values["repair_reentry"],
                 repair_reentry_after=next_values["repair_reentry"],
+                revision_note=normalized_revision_note,
             )
         )
 

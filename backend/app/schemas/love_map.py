@@ -145,6 +145,8 @@ class LoveMapRepairAgreementChangePublic(BaseModel):
     source_captured_by_name: str | None = None
     source_captured_at: str | None = None
     fields: list[LoveMapRepairAgreementFieldChangePublic] = Field(default_factory=list)
+    # Optional short human-authored note left at save-time; null when absent.
+    revision_note: str | None = None
 
 
 class LoveMapRepairOutcomeCapturePublic(BaseModel):
@@ -179,6 +181,9 @@ class LoveMapRepairAgreementsUpsert(BaseModel):
     avoid_in_conflict: str = Field(default="", max_length=500)
     repair_reentry: str = Field(default="", max_length=500)
     source_outcome_capture_id: str | None = Field(default=None, max_length=64)
+    # Optional human-authored revision note persisted on the change-history row.
+    # Max 300 matches existing `improvement_note` cap on outcome captures.
+    revision_note: str | None = Field(default=None, max_length=300)
 
 
 class LoveMapWeeklyTaskPublic(BaseModel):

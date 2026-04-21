@@ -199,6 +199,7 @@ async function mockOutcomeCaptureApi(page: Page) {
               after_text: '先保護彼此仍想站在同一邊這件事。',
             },
           ],
+          revision_note: null,
         },
       ],
       pending_repair_outcome_capture: pendingCapture,
@@ -267,6 +268,7 @@ async function mockOutcomeCaptureApi(page: Page) {
         avoid_in_conflict?: string | null;
         repair_reentry?: string | null;
         source_outcome_capture_id?: string | null;
+        revision_note?: string | null;
       };
       savePayloads.push(payload);
       const previousRepairAgreements = {
@@ -279,6 +281,7 @@ async function mockOutcomeCaptureApi(page: Page) {
         updated_by_name: system.me.full_name,
         updated_at: new Date().toISOString(),
       };
+      const normalizedRevisionNote = payload.revision_note?.trim() || null;
       system.essentials.repair_agreement_history.unshift({
         id: `repair-history-carry-forward-${repairAgreementHistorySequence}`,
         changed_at: system.essentials.repair_agreements.updated_at,
@@ -288,6 +291,7 @@ async function mockOutcomeCaptureApi(page: Page) {
         source_captured_by_name: payload.source_outcome_capture_id ? pendingCapture.captured_by_name : null,
         source_captured_at: payload.source_outcome_capture_id ? pendingCapture.updated_at : null,
         fields: buildFieldChanges(previousRepairAgreements, system.essentials.repair_agreements),
+        revision_note: normalizedRevisionNote,
       });
       repairAgreementHistorySequence += 1;
       system.essentials.repair_agreement_history = system.essentials.repair_agreement_history.slice(0, 5);
@@ -488,7 +492,14 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(
       apiState.pendingCapture.shared_commitment,
     );
+    // Carry-forward is now pending: the contextual helper line below the revision-note input
+    // should become visible, signaling that a note typed here will ride along with the
+    // post-mediation carry-forward.
+    await expect(page.getByText('這段註記會和從修復帶回的內容一起留下。')).toBeVisible();
 
+    await page
+      .getByTestId('relationship-heart-repair-agreements-revision-note-input')
+      .fill('這是從週三修復會談帶回的版本。');
     await page.getByRole('button', { name: '保存 Repair Agreements' }).click();
 
     await expect.poll(() => apiState.savePayloads.length).toBe(1);
@@ -497,6 +508,7 @@ test.describe('Post-mediation outcome capture', () => {
       avoid_in_conflict: '不要在最高張力時逼對方立刻回答。',
       repair_reentry: apiState.pendingCapture.shared_commitment,
       source_outcome_capture_id: apiState.pendingCapture.id,
+      revision_note: '這是從週三修復會談帶回的版本。',
     });
 
     await expect(page.getByTestId('relationship-heart-post-mediation-outcome-card')).toHaveCount(0);
@@ -508,7 +520,15 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       '修復帶回',
     );
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+    // The note excerpt rides along with the carry-forward entry and is visible in the
+    // collapsed state (no expand click needed).
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-note')).toContainText(
+      '這是從週三修復會談帶回的版本。',
+    );
+    // Detail panel is collapsed by default; expand to assert the carried-forward shared commitment
+    // landed in the timeline entry's before/after.
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toContainText(
       apiState.pendingCapture.shared_commitment,
     );
     await expect(
@@ -517,6 +537,12 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
     ).toContainText(apiState.pendingCapture.shared_commitment);
+    // Per-field revision-intent echo: the note typed at save-time is now also surfaced
+    // inside the repair_reentry field review panel, adjacent to the current value, so
+    // the user doesn't have to scan the timeline to understand why the wording changed.
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toContainText('這是從週三修復會談帶回的版本。');
   });
 
   test('dismisses a pending repair outcome in mocked mode', async ({ page }) => {
@@ -609,7 +635,13 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(
       completedFlow.sharedCommitment,
     );
+    // Carry-forward helper line becomes visible once the capture is queued for save.
+    await expect(page.getByText('這段註記會和從修復帶回的內容一起留下。')).toBeVisible();
 
+    // Type a revision note so the live backend persists it on the change-history row.
+    await page
+      .getByTestId('relationship-heart-repair-agreements-revision-note-input')
+      .fill('實測帶回：週三修復會談後的版本。');
     await page.getByRole('button', { name: '保存 Repair Agreements' }).click();
     await expect(page.getByTestId('relationship-heart-post-mediation-outcome-card')).toHaveCount(0);
 
@@ -621,7 +653,14 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
       '修復帶回',
     );
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+    // The note chip persists across reload — served from the real backend's history row.
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-note')).toContainText(
+      '實測帶回：週三修復會談後的版本。',
+    );
+    // Detail panel is collapsed by default; expand to read the carried-forward commitment from
+    // the timeline entry's before/after cards.
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toContainText(
       completedFlow.sharedCommitment,
     );
     await expect(
@@ -630,5 +669,11 @@ test.describe('Post-mediation outcome capture', () => {
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
     ).toContainText(completedFlow.sharedCommitment);
+    // Parity with the mocked block: the typed note also echoes into the per-field review
+    // panel after the live carry-forward save, so the live backend's revision_note round-trips
+    // all the way to the field echo without any mock help.
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toContainText('實測帶回：週三修復會談後的版本。');
   });
 });

@@ -186,6 +186,7 @@ async function mockRepairAgreementsApi(page: Page) {
               after_text: '先保護彼此的安全感，不在最高張力時替對方下定論。',
             },
           ],
+          revision_note: '我們決定先練一週看看再微調。',
         },
         {
           id: 'repair-history-carry-forward-1',
@@ -204,6 +205,7 @@ async function mockRepairAgreementsApi(page: Page) {
               after_text: '先留一段空氣，再在 24 小時內回來把感受與需要說清楚。',
             },
           ],
+          revision_note: null,
         },
       ],
       weekly_task: {
@@ -270,6 +272,7 @@ async function mockRepairAgreementsApi(page: Page) {
         protect_what_matters?: string | null;
         avoid_in_conflict?: string | null;
         repair_reentry?: string | null;
+        revision_note?: string | null;
       };
       repairAgreementPayloads.push(payload);
       const previousRepairAgreements = {
@@ -282,6 +285,7 @@ async function mockRepairAgreementsApi(page: Page) {
         updated_by_name: system.me.full_name,
         updated_at: new Date().toISOString(),
       };
+      const normalizedRevisionNote = payload.revision_note?.trim() || null;
       system.essentials.repair_agreement_history.unshift({
         id: `repair-history-manual-${repairAgreementHistorySequence}`,
         changed_at: system.essentials.repair_agreements.updated_at,
@@ -291,6 +295,7 @@ async function mockRepairAgreementsApi(page: Page) {
         source_captured_by_name: null,
         source_captured_at: null,
         fields: buildFieldChanges(previousRepairAgreements, system.essentials.repair_agreements),
+        revision_note: normalizedRevisionNote,
       });
       repairAgreementHistorySequence += 1;
       system.essentials.repair_agreement_history = system.essentials.repair_agreement_history.slice(0, 5);
@@ -344,12 +349,48 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1')).toContainText('修復帶回');
+    // Timeline entries collapse their before/after detail by default: each entry renders a
+    // "觸及：…" scan line + an expand button. The detail panel is not mounted until opened.
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('觸及：');
+    // Revision-note excerpt: visible as an italic quoted chip when the change row carries one;
+    // entries without a note never render the chip (no empty-space artifact).
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-note')).toContainText(
+      '我們決定先練一週看看再微調。',
+    );
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1-note')).toHaveCount(0);
+    // No carry-forward pending in this fixture, so the carry-forward helper line below the
+    // revision-note input should NOT appear.
+    await expect(page.getByText('這段註記會和從修復帶回的內容一起留下。')).toHaveCount(0);
+    await expect(
+      page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand'),
+    ).toHaveText('看看這一次改了什麼');
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toHaveCount(0);
+    // Expanding entry 0 reveals the before/after cards and flips the button label.
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toBeVisible();
+    await expect(
+      page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand'),
+    ).toHaveText('收起這次的改動');
+    // Collapse again so subsequent assertions read the default state.
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toHaveCount(0);
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
     ).toContainText('目前採用');
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-repair_reentry'),
     ).toContainText('修復帶回');
+    // Per-field revision-intent echo: the latest change responsible for each field's current
+    // value carries the human "why" directly into the field review panel. The manual_edit entry
+    // that established the current protect_what_matters value carries a note, so the echo is
+    // visible inside its field panel. The carry-forward entry responsible for repair_reentry
+    // has revision_note: null, so no echo renders in that panel (zero pixels, no empty chip).
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters-note'),
+    ).toContainText('我們決定先練一週看看再微調。');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toHaveCount(0);
     await expect(page.getByRole('link', { name: '打開 Mediation' })).toHaveAttribute('href', '/mediation');
     await expect(page.getByRole('link', { name: '打開 Support 設定' })).toHaveAttribute(
       'href',
@@ -365,6 +406,11 @@ test.describe('Repair Agreements deepening', () => {
     await page
       .getByLabel('要重新開啟修復時，我們怎麼回來')
       .fill('先留出一段空氣，再在 24 小時內回來，用比較慢的語氣把卡住的點說清楚。');
+    // Optional revision note: the e2e covers the "note present" path. When typed, the note is
+    // plumbed through the upsert payload and surfaces as the quoted chip on the new timeline entry.
+    await page
+      .getByTestId('relationship-heart-repair-agreements-revision-note-input')
+      .fill('走過上週那次之後，我們重新寫的版本。');
     await page.getByRole('button', { name: '保存 Repair Agreements' }).click();
 
     await expect.poll(() => apiState.repairAgreementPayloads.length).toBe(1);
@@ -375,6 +421,7 @@ test.describe('Repair Agreements deepening', () => {
       // Direct (non-carry-forward) edits send null for source_outcome_capture_id so the
       // backend records history with origin_kind="manual_edit".
       source_outcome_capture_id: null,
+      revision_note: '走過上週那次之後，我們重新寫的版本。',
     });
 
     await expect(page.getByLabel('當張力升高時，我們想保護什麼')).toHaveValue(
@@ -389,10 +436,32 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByText('已留下 3/3 個 repair agreements').first()).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('目前版本');
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(
+    // The note chip appears on the new entry, visible regardless of expand state.
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-note')).toContainText(
+      '走過上週那次之後，我們重新寫的版本。',
+    );
+    // Save clears the note input so the user doesn't accidentally resubmit the same note.
+    await expect(
+      page.getByTestId('relationship-heart-repair-agreements-revision-note-input'),
+    ).toHaveValue('');
+    // Expand the newly-saved entry to read its before/after detail; "目前版本" + the new text
+    // live inside the detail panel now.
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toContainText(
+      '目前版本',
+    );
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toContainText(
       '先保護彼此正在努力靠近這件事，不在最高點替對方定型。',
     );
+    // After the manual-edit save, the just-written note now also echoes inside the matching
+    // per-field review panel — visible adjacent to the current value so users don't have to
+    // scan the timeline to understand the wording.
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters-note'),
+    ).toContainText('走過上週那次之後，我們重新寫的版本。');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toContainText('走過上週那次之後，我們重新寫的版本。');
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
     ).toContainText('手動微調');
@@ -489,7 +558,12 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
-    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText(nextProtectValue);
+    // Expand entry 0 so the newly-persisted before/after text is reachable in the timeline
+    // detail panel (which is collapsed by default on the live stack as well).
+    await page.getByTestId('relationship-heart-repair-agreements-history-entry-0-expand').click();
+    await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0-detail')).toContainText(
+      nextProtectValue,
+    );
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
     ).toContainText(nextProtectValue);
