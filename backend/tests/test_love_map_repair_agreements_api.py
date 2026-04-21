@@ -175,6 +175,36 @@ class LoveMapRepairAgreementsApiTests(unittest.TestCase):
             history_rows = session.exec(select(RelationshipRepairAgreementChange)).all()
             self.assertEqual(history_rows, [])
 
+    def test_no_op_save_with_revision_note_does_not_create_misleading_history(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/essentials/repair-agreements",
+            json={
+                "protect_what_matters": "stale pair guidance",
+                "avoid_in_conflict": "stale avoid",
+                "repair_reentry": "stale reentry",
+                "revision_note": "這只是重按保存，不應該變成新的修訂原因。",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["updated_by_name"], "Bob")
+
+        with Session(self.engine) as session:
+            row = session.exec(
+                select(RelationshipRepairAgreement).where(
+                    RelationshipRepairAgreement.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipRepairAgreement.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).first()
+            self.assertIsNotNone(row)
+            assert row is not None
+            self.assertEqual(row.updated_by_user_id, self.bob_id)
+            history_rows = session.exec(select(RelationshipRepairAgreementChange)).all()
+            self.assertEqual(history_rows, [])
+
     def test_unpaired_user_cannot_upsert_repair_agreements(self) -> None:
         self.current_user_id = self.solo_id
 

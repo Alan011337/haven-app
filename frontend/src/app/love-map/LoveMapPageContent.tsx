@@ -15,6 +15,15 @@ import {
 } from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
 import { queryKeys } from '@/lib/query-keys';
+import {
+  buildLatestCurrentRevisionByField,
+  buildLatestNoteCarryingRevisionByField,
+  getRepairAgreementSavedValue,
+  isRepairAgreementFieldKey,
+  normalizeRepairAgreementText,
+  resolveRepairAgreementFieldReviewSemantics,
+  type RepairAgreementFieldKey,
+} from '@/lib/repair-agreement-revision-semantics';
 import { logClientError } from '@/lib/safe-error-log';
 import { cn } from '@/lib/utils';
 import {
@@ -119,25 +128,10 @@ const EMPTY_REPAIR_AGREEMENTS_DRAFT: LoveMapRepairAgreementsUpsertPayload = {
   repair_reentry: '',
 };
 
-const REPAIR_AGREEMENT_FIELD_KEYS = [
-  'protect_what_matters',
-  'avoid_in_conflict',
-  'repair_reentry',
-] as const;
-
-type RepairAgreementFieldKey = (typeof REPAIR_AGREEMENT_FIELD_KEYS)[number];
-
 const REPAIR_AGREEMENT_FIELD_LABELS: Record<RepairAgreementFieldKey, string> = {
   protect_what_matters: '當張力升高時，我們想保護什麼',
   avoid_in_conflict: '卡住或升高時，我們先避免什麼',
   repair_reentry: '要重新開啟修復時，我們怎麼回來',
-};
-
-type RepairAgreementFieldRevisionContext = {
-  change: LoveMapRepairAgreementChangePublic;
-  fieldChange: LoveMapRepairAgreementChangePublic['fields'][number] & {
-    key: RepairAgreementFieldKey;
-  };
 };
 
 type SharedFutureRefinementKind = 'next_step' | 'cadence';
@@ -311,15 +305,6 @@ function formatRepairAgreementCountLabel(count: number) {
   return `已留下 ${count}/3 個 repair agreements`;
 }
 
-function normalizeRepairAgreementText(value?: string | null) {
-  const trimmed = (value ?? '').trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function isRepairAgreementFieldKey(value: string): value is RepairAgreementFieldKey {
-  return REPAIR_AGREEMENT_FIELD_KEYS.includes(value as RepairAgreementFieldKey);
-}
-
 function getRepairAgreementOriginLabel(originKind: LoveMapRepairAgreementChangePublic['origin_kind']) {
   return originKind === 'post_mediation_carry_forward'
     ? '修復帶回'
@@ -351,20 +336,6 @@ function truncateRepairAgreementPreview(value?: string | null, limit = 140) {
   if (!normalized) return '空白';
   if (normalized.length <= limit) return normalized;
   return `${normalized.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
-}
-
-function getRepairAgreementSavedValue(
-  agreements:
-    | {
-        protect_what_matters?: string | null;
-        avoid_in_conflict?: string | null;
-        repair_reentry?: string | null;
-      }
-    | null
-    | undefined,
-  fieldKey: RepairAgreementFieldKey,
-) {
-  return normalizeRepairAgreementText(agreements?.[fieldKey]);
 }
 
 function normalizeCadenceEligibilityText(value: string) {
@@ -516,39 +487,10 @@ export default function LoveMapPageContent() {
   const system = systemQuery.data;
   const repairAgreements = system?.essentials?.repair_agreements ?? null;
   const repairAgreementHistory = system?.essentials?.repair_agreement_history;
-  const latestCurrentRevisionByField = useMemo<
-    Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null>
-  >(() => {
-    const next: Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null> = {
-      protect_what_matters: null,
-      avoid_in_conflict: null,
-      repair_reentry: null,
-    };
-
-    for (const change of repairAgreementHistory ?? []) {
-      for (const fieldChange of change.fields) {
-        if (!isRepairAgreementFieldKey(fieldChange.key)) {
-          continue;
-        }
-        if (next[fieldChange.key]) {
-          continue;
-        }
-        const currentSavedValue = getRepairAgreementSavedValue(repairAgreements, fieldChange.key);
-        if (currentSavedValue !== normalizeRepairAgreementText(fieldChange.after_text)) {
-          continue;
-        }
-        next[fieldChange.key] = {
-          change,
-          fieldChange: {
-            ...fieldChange,
-            key: fieldChange.key,
-          },
-        };
-      }
-    }
-
-    return next;
-  }, [repairAgreementHistory, repairAgreements]);
+  const latestCurrentRevisionByField = useMemo(
+    () => buildLatestCurrentRevisionByField(repairAgreementHistory, repairAgreements),
+    [repairAgreementHistory, repairAgreements],
+  );
 
   // Fallback when the latest change establishing a field's current value has no
   // revision_note: the most recent NOTE-CARRYING change that touched the same
@@ -557,38 +499,10 @@ export default function LoveMapPageContent() {
   // described the exact current text, always as an earlier version the pair
   // later tweaked. When the primary echo is present, this memo is ignored;
   // when both are absent, the field panel renders zero extra pixels.
-  const latestNoteCarryingRevisionByField = useMemo<
-    Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null>
-  >(() => {
-    const next: Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null> = {
-      protect_what_matters: null,
-      avoid_in_conflict: null,
-      repair_reentry: null,
-    };
-
-    for (const change of repairAgreementHistory ?? []) {
-      if (!change.revision_note) {
-        continue;
-      }
-      for (const fieldChange of change.fields) {
-        if (!isRepairAgreementFieldKey(fieldChange.key)) {
-          continue;
-        }
-        if (next[fieldChange.key]) {
-          continue;
-        }
-        next[fieldChange.key] = {
-          change,
-          fieldChange: {
-            ...fieldChange,
-            key: fieldChange.key,
-          },
-        };
-      }
-    }
-
-    return next;
-  }, [repairAgreementHistory]);
+  const latestNoteCarryingRevisionByField = useMemo(
+    () => buildLatestNoteCarryingRevisionByField(repairAgreementHistory),
+    [repairAgreementHistory],
+  );
 
   const goToSettings = () => {
     if (typeof window !== 'undefined') {
@@ -990,7 +904,15 @@ export default function LoveMapPageContent() {
     || Boolean(selectedOutcomeCaptureId);
 
   const renderRepairAgreementFieldReview = (fieldKey: RepairAgreementFieldKey) => {
-    const revision = latestCurrentRevisionByField[fieldKey];
+    const {
+      currentRevision: revision,
+      primaryNote,
+      earlierNoteContext,
+      shouldRenderEarlierNote,
+    } = resolveRepairAgreementFieldReviewSemantics({
+      currentRevision: latestCurrentRevisionByField[fieldKey],
+      latestNoteCarryingRevision: latestNoteCarryingRevisionByField[fieldKey],
+    });
     if (!revision) {
       return null;
     }
@@ -1003,13 +925,6 @@ export default function LoveMapPageContent() {
     // Fallback activates only when the exact-match change has no note. When
     // present it is ALWAYS framed as "an earlier version the pair later
     // tweaked", never as if it described the exact current wording.
-    const primaryNote = revision.change.revision_note;
-    const earlierNoteContext = !primaryNote
-      ? latestNoteCarryingRevisionByField[fieldKey]
-      : null;
-    const shouldRenderEarlierNote = Boolean(
-      earlierNoteContext && earlierNoteContext.change.id !== revision.change.id,
-    );
     const earlierChangedAtLabel = earlierNoteContext
       ? formatShortDateTime(earlierNoteContext.change.changed_at)
       : null;
