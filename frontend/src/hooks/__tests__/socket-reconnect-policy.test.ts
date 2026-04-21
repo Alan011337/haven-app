@@ -4,7 +4,7 @@ import {
   classifyDisconnectReason,
   computeReconnectDelayMs,
   resolveReconnectCap,
-} from '../socket-reconnect-policy';
+} from '../socket-reconnect-policy.ts';
 
 test('classifyDisconnectReason buckets auth close code 1008', () => {
   assert.equal(classifyDisconnectReason(1008), 'auth_or_policy');

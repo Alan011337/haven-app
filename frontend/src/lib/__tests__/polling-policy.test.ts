@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildAdaptiveRefetchInterval,
   getAdaptiveIntervalMs,
-} from '../polling-policy';
+} from '../polling-policy.ts';
 
 function withWindowEnv(
   options: {

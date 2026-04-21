@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   INITIAL_SOCKET_STATE,
   transitionSocketConnectionState,
-} from '../socket-connection-state';
+} from '../socket-connection-state.ts';
 
 test('starts in idle', () => {
   assert.equal(INITIAL_SOCKET_STATE, 'idle');

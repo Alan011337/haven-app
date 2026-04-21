@@ -4,7 +4,7 @@ import {
   isApiEnvelopePayload,
   normalizeApiEnvelopeError,
   unwrapApiEnvelopeData,
-} from '../api-envelope';
+} from '../api-envelope.ts';
 
 test('isApiEnvelopePayload accepts canonical envelope shape', () => {
   const payload = {

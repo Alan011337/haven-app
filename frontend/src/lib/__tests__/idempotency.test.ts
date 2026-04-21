@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildIdempotencyHeaders, normalizeIdempotencyKey } from '../idempotency';
+import { buildIdempotencyHeaders, normalizeIdempotencyKey } from '../idempotency.ts';
 
 test('normalizeIdempotencyKey rejects short or empty values', () => {
   assert.equal(normalizeIdempotencyKey(''), null);
