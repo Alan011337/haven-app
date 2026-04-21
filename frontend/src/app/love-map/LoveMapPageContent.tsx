@@ -550,6 +550,46 @@ export default function LoveMapPageContent() {
     return next;
   }, [repairAgreementHistory, repairAgreements]);
 
+  // Fallback when the latest change establishing a field's current value has no
+  // revision_note: the most recent NOTE-CARRYING change that touched the same
+  // field still often carries the most meaningful human "why" for the nearby
+  // wording. We surface it separately with explicit framing — never as if it
+  // described the exact current text, always as an earlier version the pair
+  // later tweaked. When the primary echo is present, this memo is ignored;
+  // when both are absent, the field panel renders zero extra pixels.
+  const latestNoteCarryingRevisionByField = useMemo<
+    Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null>
+  >(() => {
+    const next: Record<RepairAgreementFieldKey, RepairAgreementFieldRevisionContext | null> = {
+      protect_what_matters: null,
+      avoid_in_conflict: null,
+      repair_reentry: null,
+    };
+
+    for (const change of repairAgreementHistory ?? []) {
+      if (!change.revision_note) {
+        continue;
+      }
+      for (const fieldChange of change.fields) {
+        if (!isRepairAgreementFieldKey(fieldChange.key)) {
+          continue;
+        }
+        if (next[fieldChange.key]) {
+          continue;
+        }
+        next[fieldChange.key] = {
+          change,
+          fieldChange: {
+            ...fieldChange,
+            key: fieldChange.key,
+          },
+        };
+      }
+    }
+
+    return next;
+  }, [repairAgreementHistory]);
+
   const goToSettings = () => {
     if (typeof window !== 'undefined') {
       window.location.href = '/settings#settings-relationship';
@@ -960,6 +1000,23 @@ export default function LoveMapPageContent() {
     const previousValue = revision.fieldChange.before_text;
     const currentValue = revision.fieldChange.after_text;
 
+    // Fallback activates only when the exact-match change has no note. When
+    // present it is ALWAYS framed as "an earlier version the pair later
+    // tweaked", never as if it described the exact current wording.
+    const primaryNote = revision.change.revision_note;
+    const earlierNoteContext = !primaryNote
+      ? latestNoteCarryingRevisionByField[fieldKey]
+      : null;
+    const shouldRenderEarlierNote = Boolean(
+      earlierNoteContext && earlierNoteContext.change.id !== revision.change.id,
+    );
+    const earlierChangedAtLabel = earlierNoteContext
+      ? formatShortDateTime(earlierNoteContext.change.changed_at)
+      : null;
+    const earlierAfterPreview = earlierNoteContext
+      ? truncateRepairAgreementPreview(earlierNoteContext.fieldChange.after_text)
+      : null;
+
     return (
       <div
         className="rounded-[1.2rem] border border-primary/10 bg-primary/8 px-4 py-4"
@@ -998,13 +1055,32 @@ export default function LoveMapPageContent() {
             </p>
           </div>
 
-          {revision.change.revision_note ? (
+          {primaryNote ? (
             <p
               className="border-l-2 border-primary/20 pl-3 type-caption italic text-card-foreground/80"
               data-testid={`relationship-heart-repair-field-review-${fieldKey}-note`}
             >
-              {revision.change.revision_note}
+              {primaryNote}
             </p>
+          ) : shouldRenderEarlierNote && earlierNoteContext ? (
+            <div
+              className="rounded-[1rem] border border-muted-foreground/12 bg-muted/20 px-3 py-3"
+              data-testid={`relationship-heart-repair-field-review-${fieldKey}-earlier-note`}
+            >
+              <p className="type-caption text-muted-foreground">
+                該段後來又有微調 · 最近留下原因的是
+                {` ${earlierNoteContext.change.changed_by_name ?? '未具名使用者'}`}
+                {earlierChangedAtLabel ? `（${earlierChangedAtLabel}）` : ''}
+              </p>
+              <p className="mt-2 border-l-2 border-muted-foreground/25 pl-3 type-caption italic text-card-foreground/80">
+                {earlierNoteContext.change.revision_note}
+              </p>
+              {earlierAfterPreview ? (
+                <p className="mt-2 type-micro text-muted-foreground/80">
+                  {`該版原文：「${earlierAfterPreview}」`}
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="rounded-[1rem] border border-white/58 bg-white/72 px-3 py-3 shadow-soft">

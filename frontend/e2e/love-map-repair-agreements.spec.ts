@@ -207,6 +207,32 @@ async function mockRepairAgreementsApi(page: Page) {
           ],
           revision_note: null,
         },
+        {
+          // Superseded-no-note fixture: this is an earlier manual edit to
+          // repair_reentry that carries a human "why." The later carry-forward
+          // (entry above) overwrites the wording without a note, so the
+          // primary echo for repair_reentry is absent. The fallback chip
+          // should surface THIS entry's revision_note with explicit
+          // `該段後來又有微調` framing, without implying the note describes
+          // the current wording exactly.
+          id: 'repair-history-manual-earliest',
+          changed_at: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+          changed_by_name: 'Alice Chen',
+          origin_kind: 'manual_edit',
+          source_outcome_capture_id: null,
+          source_captured_by_name: null,
+          source_captured_at: null,
+          fields: [
+            {
+              key: 'repair_reentry',
+              label: '要重新開啟修復時，我們怎麼回來',
+              change_kind: 'updated',
+              before_text: '吵完就各走各的。',
+              after_text: '先各自冷靜。',
+            },
+          ],
+          revision_note: '想先試試短暫分開、但不冷處理太久。',
+        },
       ],
       weekly_task: {
         task_slug: 'task_note',
@@ -391,6 +417,29 @@ test.describe('Repair Agreements deepening', () => {
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
     ).toHaveCount(0);
+    // Superseded-no-note resolution: the carry-forward entry that established
+    // the current repair_reentry wording has no revision_note, so the primary
+    // echo is absent. But an earlier manual edit on the same field carries a
+    // human "why" that is still meaningfully close to the current wording.
+    // The fallback chip surfaces that earlier note with explicit framing
+    // (`該段後來又有微調`) and shows the note's original target wording
+    // (`先各自冷靜。`) so users can tell exactly what the note described —
+    // never pretending it describes the current text verbatim.
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText('該段後來又有微調');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText('想先試試短暫分開、但不冷處理太久。');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText('先各自冷靜。');
+    // Primary echo wins over fallback: when protect_what_matters' current-value
+    // change itself carries a note, the earlier-note chip is suppressed
+    // entirely (no duplicate "why" rendering on the same field).
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-protect_what_matters-earlier-note'),
+    ).toHaveCount(0);
     await expect(page.getByRole('link', { name: '打開 Mediation' })).toHaveAttribute('href', '/mediation');
     await expect(page.getByRole('link', { name: '打開 Support 設定' })).toHaveAttribute(
       'href',
@@ -462,6 +511,13 @@ test.describe('Repair Agreements deepening', () => {
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
     ).toContainText('走過上週那次之後，我們重新寫的版本。');
+    // Primary takes over: now that the save established a new current-value
+    // change on repair_reentry that itself carries a note, the earlier-note
+    // fallback chip (which had surfaced the superseded earlier "why") is
+    // suppressed. Only one "why" per field, attached to the exact wording.
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toHaveCount(0);
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
     ).toContainText('手動微調');
@@ -480,7 +536,7 @@ test.describe('Repair Agreements deepening', () => {
     request,
     baseURL,
   }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
     test.skip(
       process.env.LOVE_MAP_LIVE_E2E !== '1',
       'Set LOVE_MAP_LIVE_E2E=1 to run against the seeded local Postgres stack.',
@@ -570,6 +626,51 @@ test.describe('Repair Agreements deepening', () => {
     await expect(
       page.getByTestId('relationship-heart-repair-field-review-protect_what_matters'),
     ).toContainText('目前版本');
+
+    const primaryNoteReentryValue = `先各自冷靜，再約定一個能回來說話的時間。${revisionSuffix}`;
+    const primaryNoteText = `想先試試短暫分開、但不要讓它變成冷處理。${revisionSuffix}`;
+    await page
+      .getByLabel('要重新開啟修復時，我們怎麼回來')
+      .fill(primaryNoteReentryValue);
+    await page
+      .getByTestId('relationship-heart-repair-agreements-revision-note-input')
+      .fill(primaryNoteText);
+    await expect(page.getByRole('button', { name: '保存 Repair Agreements' })).toBeEnabled();
+    await page.getByRole('button', { name: '保存 Repair Agreements' }).click();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(primaryNoteReentryValue);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toContainText(primaryNoteText);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toHaveCount(0);
+
+    const supersedingReentryValue = `如果又卡住，先暫停，再在隔天晚餐前用更慢的語氣回來。${revisionSuffix}`;
+    await page
+      .getByLabel('要重新開啟修復時，我們怎麼回來')
+      .fill(supersedingReentryValue);
+    await expect(
+      page.getByTestId('relationship-heart-repair-agreements-revision-note-input'),
+    ).toHaveValue('');
+    await expect(page.getByRole('button', { name: '保存 Repair Agreements' })).toBeEnabled();
+    await page.getByRole('button', { name: '保存 Repair Agreements' }).click();
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByLabel('要重新開啟修復時，我們怎麼回來')).toHaveValue(supersedingReentryValue);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-note'),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText('該段後來又有微調');
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText(primaryNoteText);
+    await expect(
+      page.getByTestId('relationship-heart-repair-field-review-repair_reentry-earlier-note'),
+    ).toContainText(primaryNoteReentryValue);
 
     const mediationHref = await page.getByRole('link', { name: '打開 Mediation' }).getAttribute('href');
     expect(mediationHref).toBe('/mediation');
