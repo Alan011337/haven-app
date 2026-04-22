@@ -100,8 +100,14 @@ export interface JournalLexicalComposerHandle {
   focus: () => void;
   getMarkdown: () => string;
   insertImage: (payload: InsertJournalImagePayload) => string;
+  insertReflectionSection: (payload: JournalReflectionSectionPayload) => string;
   scrollToSection: (sectionId: string) => boolean;
 }
+
+export type JournalReflectionSectionPayload = {
+  heading: string;
+  prompt: string;
+};
 
 export type JournalEditorBlockAction =
   | 'bullet-list'
@@ -145,6 +151,26 @@ function insertJournalImageNode(payload: InsertJournalImagePayload) {
 
   const root = $getRoot();
   root.append(imageNode, trailingParagraph);
+  trailingParagraph.selectStart();
+}
+
+function insertReflectionSectionNode(payload: JournalReflectionSectionPayload) {
+  const heading = payload.heading.trim();
+  const prompt = payload.prompt.trim();
+  if (!heading) return;
+
+  const root = $getRoot();
+  const headingNode = $createHeadingNode('h2');
+  const promptNode = $createParagraphNode();
+  const trailingParagraph = $createParagraphNode();
+
+  headingNode.append($createTextNode(heading));
+  if (prompt) {
+    promptNode.append($createTextNode(prompt));
+    root.append(headingNode, promptNode, trailingParagraph);
+  } else {
+    root.append(headingNode, trailingParagraph);
+  }
   trailingParagraph.selectStart();
 }
 
@@ -458,6 +484,16 @@ const JournalLexicalComposer = forwardRef<
           insertJournalImageNode(payload);
           nextMarkdown = exportJournalMarkdown(editor);
         }, { discrete: true });
+        return nextMarkdown;
+      },
+      insertReflectionSection: (payload) => {
+        if (!editor) return '';
+        let nextMarkdown = '';
+        editor.update(() => {
+          insertReflectionSectionNode(payload);
+          nextMarkdown = exportJournalMarkdown(editor);
+        }, { discrete: true });
+        editor.focus();
         return nextMarkdown;
       },
       scrollToSection: (sectionId) => {

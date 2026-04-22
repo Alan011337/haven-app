@@ -9,6 +9,8 @@ import {
   type JournalOutlineEntry,
 } from '@/lib/journal-outline';
 import { JOURNAL_RHYTHM } from '@/features/journal/journal-document-rhythm';
+import { JOURNAL_IMAGE_ALT_FALLBACK } from '@/features/journal/editor/journal-attachment-markdown';
+import { resolveJournalFigureCaption } from '@/features/journal/journal-figure-caption';
 import { cn } from '@/lib/utils';
 
 export type JournalMarkdownVariant = 'partner' | 'read' | 'studio';
@@ -44,8 +46,47 @@ function transformJournalMarkdownUrl(rawUrl: string): string {
   return '';
 }
 
+const FENCED_CODE_BLOCK_RE = /^\s*```/;
+const HEADING_RE = /^\s{0,3}(#{1,2})\s+(.+?)\s*#*\s*$/;
+
+function normalizeHeadingLabel(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function buildHeadingEntryByLine(
+  content: string,
+  headingEntries: JournalOutlineEntry[],
+) {
+  const entryByLine = new Map<number, JournalOutlineEntry>();
+  const lines = String(content ?? '').replace(/\r\n/g, '\n').split('\n');
+  let headingEntryIndex = 0;
+  let insideCodeFence = false;
+
+  lines.forEach((line, index) => {
+    if (FENCED_CODE_BLOCK_RE.test(line)) {
+      insideCodeFence = !insideCodeFence;
+      return;
+    }
+
+    if (insideCodeFence) return;
+
+    const match = line.match(HEADING_RE);
+    if (!match) return;
+
+    const entry = headingEntries[headingEntryIndex] ?? null;
+    const label = normalizeHeadingLabel(match[2] ?? '');
+    if (entry && entry.label === label) {
+      entryByLine.set(index + 1, entry);
+    }
+    headingEntryIndex += 1;
+  });
+
+  return entryByLine;
+}
+
 function buildMarkdownComponents(
   attachments: JournalAttachmentPublic[],
+  content: string,
   variant: JournalMarkdownVariant,
   headingEntries: JournalOutlineEntry[],
   surface: 'read' | 'write',
@@ -66,19 +107,17 @@ function buildMarkdownComponents(
     : isRead
       ? JOURNAL_RHYTHM.figure
       : 'my-10 overflow-hidden rounded-[2rem] border border-[rgba(219,204,187,0.34)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(249,244,237,0.9))] shadow-soft md:mx-[-1.25rem]';
-  let headingEntryIndex = 0;
+  const headingEntryByLine = buildHeadingEntryByLine(content, headingEntries);
 
-  const takeHeadingEntry = () => {
-    const entry = headingEntries[headingEntryIndex] ?? null;
-    if (entry) {
-      headingEntryIndex += 1;
-    }
-    return entry;
+  const resolveHeadingEntry = (node: unknown) => {
+    const line = (node as { position?: { start?: { line?: number } } } | null)?.position
+      ?.start?.line;
+    return typeof line === 'number' ? (headingEntryByLine.get(line) ?? null) : null;
   };
 
   return {
-    h1: ({ children }) => {
-      const entry = takeHeadingEntry();
+    h1: ({ children, node }) => {
+      const entry = resolveHeadingEntry(node);
       return (
         <h1
           id={entry ? buildJournalSectionDomId(surface, entry.id) : undefined}
@@ -99,8 +138,8 @@ function buildMarkdownComponents(
         </h1>
       );
     },
-    h2: ({ children }) => {
-      const entry = takeHeadingEntry();
+    h2: ({ children, node }) => {
+      const entry = resolveHeadingEntry(node);
       return (
         <h2
           id={entry ? buildJournalSectionDomId(surface, entry.id) : undefined}
@@ -237,9 +276,15 @@ function buildMarkdownComponents(
       const attachment = attachmentId
         ? attachments.find((item) => item.id === attachmentId)
         : null;
-      const authoredCaption = attachment?.caption?.trim() || null;
-      const fallbackAltText = alt ? alt.trim() || null : null;
-      const figcaptionText = authoredCaption;
+      // SR alt binds to the raw humanized alt (or the shared fallback
+      // constant) independently of the visible-caption decision. The
+      // quality gate below only suppresses the *visible* figcaption for
+      // junk-like filenames; screen-reader users always get a descriptor.
+      const rawAlt = (typeof alt === 'string' ? alt.trim() : '') || JOURNAL_IMAGE_ALT_FALLBACK;
+      const caption = resolveJournalFigureCaption({
+        caption: attachment?.caption,
+        alt,
+      });
 
       if (!resolvedSrc) {
         return (
@@ -250,10 +295,11 @@ function buildMarkdownComponents(
       }
 
       return (
-        <figure className={figureClass}>
+        <figure data-testid="journal-figure" className={figureClass}>
           {/* eslint-disable-next-line @next/next/no-img-element -- Signed attachment URLs are dynamic and unsuitable for Next image optimization. */}
           <img
-            alt={figcaptionText || fallbackAltText || 'journal image'}
+            data-testid="journal-figure-image"
+            alt={rawAlt}
             className={
               isRead
                 ? JOURNAL_RHYTHM.figureImage
@@ -261,9 +307,17 @@ function buildMarkdownComponents(
             }
             src={resolvedSrc}
           />
-          {figcaptionText ? (
-            <figcaption className={JOURNAL_RHYTHM.figcaption}>
-              {figcaptionText}
+          {caption.kind !== 'none' ? (
+            <figcaption
+              data-testid="journal-figure-caption"
+              data-caption-kind={caption.kind}
+              className={
+                caption.kind === 'authored'
+                  ? JOURNAL_RHYTHM.figcaptionAuthored
+                  : JOURNAL_RHYTHM.figcaptionAlt
+              }
+            >
+              {caption.text}
             </figcaption>
           ) : null}
         </figure>
@@ -297,7 +351,7 @@ export function JournalRichMarkdown({
       )}
     >
       <ReactMarkdown
-        components={buildMarkdownComponents(attachments, variant, headingEntries, surface)}
+        components={buildMarkdownComponents(attachments, content, variant, headingEntries, surface)}
         remarkPlugins={[remarkGfm]}
         urlTransform={transformJournalMarkdownUrl}
       >

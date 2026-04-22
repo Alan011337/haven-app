@@ -47,6 +47,7 @@ async function mockJournalTranslationReadinessApi(page: Page) {
     visibility: 'PARTNER_TRANSLATED_ONLY',
     content_format: 'markdown',
     partner_translation_status: 'NOT_REQUESTED',
+    partner_translation_ready_at: null as string | null,
     partner_translated_content: null as string | null,
     attachments: [] as Array<{
       id: string;
@@ -306,6 +307,7 @@ async function mockJournalTranslationReadinessApi(page: Page) {
       journal.partner_translation_status = nextStatus;
       journal.partner_translated_content =
         nextStatus === 'READY' ? 'TRANSLATED PARTNER MARKER' : null;
+      journal.partner_translation_ready_at = nextStatus === 'READY' ? hoursAgo(now, 0.5) : null;
       journal.updated_at = new Date().toISOString();
     },
   };
@@ -313,6 +315,7 @@ async function mockJournalTranslationReadinessApi(page: Page) {
 
 test.describe('Journal translated-only readiness', () => {
   test.use({ bypassCSP: true, viewport: { width: 1440, height: 1200 } });
+  test.setTimeout(90_000);
 
   test('author sees translated-only readiness states without translated content leakage', async ({ page }) => {
     const api = await mockJournalTranslationReadinessApi(page);
@@ -320,6 +323,10 @@ test.describe('Journal translated-only readiness', () => {
 
     const expectations = [
       {
+        deliveryDescription: '這篇目前沒有可交付給伴侶的整理後版本',
+        deliveryLabel: '伴侶現在看不到這一頁',
+        lifecycleLabel: '尚未開始準備伴侶版本',
+        lifecycleState: 'waiting',
         label: '尚未準備好',
         message: '這一頁設成整理後版本後，保存才會開始準備伴侶可讀的版本。',
         shortLabel: '尚未準備',
@@ -327,6 +334,10 @@ test.describe('Journal translated-only readiness', () => {
         status: 'NOT_REQUESTED' as const,
       },
       {
+        deliveryDescription: '整理完成前，伴侶端不會出現這篇內容',
+        deliveryLabel: '伴侶現在看不到這一頁',
+        lifecycleLabel: '正在等待伴侶版本',
+        lifecycleState: 'waiting',
         label: '正在整理給伴侶看的版本',
         message: 'Haven 正在準備伴侶可讀的版本。整理完成前，伴侶還看不到這段內容。',
         shortLabel: '整理中',
@@ -334,6 +345,10 @@ test.describe('Journal translated-only readiness', () => {
         status: 'PENDING' as const,
       },
       {
+        deliveryDescription: '不是你的原文或圖片',
+        deliveryLabel: '伴侶現在看到整理後版本',
+        lifecycleLabel: '整理後版本已交付',
+        lifecycleState: 'current',
         label: '已整理好給伴侶閱讀',
         message: '伴侶現在看到的是 Haven 整理後的版本，不是你的原文或圖片。',
         shortLabel: '伴侶可讀',
@@ -341,6 +356,10 @@ test.describe('Journal translated-only readiness', () => {
         status: 'READY' as const,
       },
       {
+        deliveryDescription: '這篇目前沒有可交付給伴侶的整理後版本',
+        deliveryLabel: '伴侶現在看不到這一頁',
+        lifecycleLabel: '這次準備沒有完成',
+        lifecycleState: 'failed',
         label: '暫時沒整理好',
         message: 'Haven 這次還沒整理好伴侶可讀的版本。伴侶目前看不到這段內容；你下次保存這一頁時，Haven 會再試一次。',
         shortLabel: '暫未完成',
@@ -364,8 +383,55 @@ test.describe('Journal translated-only readiness', () => {
         page.locator(`[data-testid="journal-translation-status-chip"][data-state="${expectation.state}"]`).first(),
       ).toContainText(expectation.shortLabel);
 
+      const deliveryPanel = page.getByTestId('journal-partner-visibility-panel');
+      await expect(deliveryPanel).toBeVisible();
+      await expect(deliveryPanel).toContainText('伴侶可見狀態');
+      await expect(deliveryPanel).toContainText('伴侶現在看得到什麼');
+      await expect(deliveryPanel).toContainText(expectation.deliveryLabel);
+      await expect(deliveryPanel).toContainText(expectation.deliveryDescription);
+      await expect(deliveryPanel).toContainText('下一次保存會發生什麼');
+      await expect(deliveryPanel).toContainText('保存後會準備伴侶版本');
+      const lifecycleCard = page.getByTestId('journal-delivery-lifecycle-card');
+      await expect(lifecycleCard).toBeVisible();
+      await expect(lifecycleCard).toHaveAttribute('data-lifecycle-state', expectation.lifecycleState);
+      await expect(lifecycleCard).toContainText('交付生命週期');
+      await expect(lifecycleCard).toContainText(expectation.lifecycleLabel);
+      if (expectation.status === 'READY') {
+        await expect(lifecycleCard).toContainText('上次成功準備');
+      }
+      await expect(deliveryPanel).toContainText('信任邊界');
+      await expect(deliveryPanel).toContainText('整理後版本只給伴侶閱讀');
+
       await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
     }
+  });
+
+  test('author sees dirty translated-only delivery state without partner text leakage', async ({
+    page,
+  }) => {
+    const api = await mockJournalTranslationReadinessApi(page);
+    api.setStatus('READY');
+    await login(page);
+
+    await page.goto('/journal/journal-1');
+    const editor = page.getByLabel('Journal writing canvas');
+    await editor.click();
+    await editor.pressSequentially('\n\n新增一段尚未保存的原文。');
+    await page.getByRole('button', { name: '分享設定' }).click();
+
+    const deliveryPanel = page.getByTestId('journal-partner-visibility-panel');
+    await expect(deliveryPanel).toBeVisible();
+    await expect(deliveryPanel).toHaveAttribute('data-tone', 'dirty');
+    await expect(deliveryPanel).toContainText('伴侶現在看到整理後版本');
+    await expect(deliveryPanel).toContainText('伴侶仍看到上一次已整理好的版本');
+    await expect(deliveryPanel).toContainText('你剛改的原文不會直接送出');
+    await expect(deliveryPanel).toContainText('Haven 會準備或刷新伴侶可讀的整理後版本');
+    const lifecycleCard = page.getByTestId('journal-delivery-lifecycle-card');
+    await expect(lifecycleCard).toHaveAttribute('data-lifecycle-state', 'stale-until-save');
+    await expect(lifecycleCard).toContainText('上次整理版仍在使用中');
+    await expect(lifecycleCard).toContainText('上次成功準備');
+    await expect(deliveryPanel).toContainText('整理後版本只給伴侶閱讀');
+    await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
   });
 
   test('library cards show the compact translated-only readiness chip', async ({ page }) => {

@@ -234,6 +234,9 @@ test.describe('Journal V2 foundation live local stack', () => {
     const writeTarget = page.getByTestId('journal-write-section-what-i-need');
 
     await expect(documentMap).toBeVisible();
+    await expect(documentMap).toContainText('這一頁的結構');
+    await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toContainText('主章節');
+    await expect(mapEntry).toContainText('小節');
     await expect(mapEntry).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await mapEntry.click();

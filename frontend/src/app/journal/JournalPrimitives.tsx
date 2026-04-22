@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  Clock3,
   Eye,
   FilePenLine,
   Images,
@@ -28,7 +29,9 @@ import {
   buildJournalTranslationStatusPresentation,
   type JournalTranslationStatusPresentation,
 } from '@/app/journal/journal-translation-status';
+import type { JournalSharingDeliveryPresentation } from '@/app/journal/journal-sharing-delivery';
 import type { JournalOutlineEntry } from '@/lib/journal-outline';
+import type { JournalSectionModel } from '@/lib/journal-section-model';
 import { JournalRichMarkdown } from '@/lib/journal-markdown';
 import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
 import { formatTranslationReadyAt } from '@/lib/format';
@@ -36,6 +39,13 @@ import { cn } from '@/lib/utils';
 
 export type JournalStudioMode = 'compare' | 'read' | 'write';
 export type JournalSaveState = 'draft' | 'dirty' | 'error' | 'saved' | 'saving';
+export type JournalReflectionSectionStarter = {
+  description: string;
+  heading: string;
+  id: string;
+  label: string;
+  prompt: string;
+};
 
 export function JournalShell({ children }: { children: ReactNode }) {
   return (
@@ -453,6 +463,137 @@ export function JournalTranslationStatusCard({
   );
 }
 
+function getPartnerVisibilityPanelToneClasses(
+  tone: JournalSharingDeliveryPresentation['tone'],
+) {
+  if (tone === 'dirty') {
+    return {
+      card: 'border-primary/16 bg-primary/[0.055]',
+      chip: 'border-primary/18 bg-primary/[0.1] text-primary',
+    };
+  }
+  if (tone === 'translated-ready') {
+    return {
+      card: 'border-emerald-500/18 bg-[linear-gradient(180deg,rgba(236,253,245,0.86),rgba(255,252,248,0.92))]',
+      chip: 'border-emerald-500/18 bg-emerald-500/[0.12] text-emerald-800',
+    };
+  }
+  if (tone === 'translated-waiting') {
+    return {
+      card: 'border-primary/12 bg-[linear-gradient(180deg,rgba(255,252,248,0.9),rgba(248,243,236,0.86))]',
+      chip: 'border-primary/14 bg-primary/[0.07] text-card-foreground',
+    };
+  }
+  if (tone === 'original') {
+    return {
+      card: 'border-accent/16 bg-accent/[0.055]',
+      chip: 'border-accent/16 bg-accent/[0.1] text-accent',
+    };
+  }
+  return {
+    card: 'border-white/58 bg-white/72',
+    chip: 'border-border/70 bg-white/78 text-muted-foreground',
+  };
+}
+
+export function JournalPartnerVisibilityPanel({
+  presentation,
+}: {
+  presentation: JournalSharingDeliveryPresentation;
+}) {
+  const toneClasses = getPartnerVisibilityPanelToneClasses(presentation.tone);
+  const items = [
+    {
+      icon: Eye,
+      label: '伴侶現在看得到什麼',
+      title: presentation.partnerNowLabel,
+      description: presentation.partnerNowDescription,
+    },
+    {
+      icon: Share2,
+      label: '下一次保存會發生什麼',
+      title: presentation.nextSaveLabel,
+      description: presentation.nextSaveDescription,
+    },
+  ];
+
+  return (
+    <section
+      data-testid="journal-partner-visibility-panel"
+      data-tone={presentation.tone}
+      className={cn('rounded-[1.55rem] border p-4 shadow-soft', toneClasses.card)}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[0.68rem] uppercase tracking-[0.24em] text-primary/80">伴侶可見狀態</p>
+        <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-semibold', toneClasses.chip)}>
+          {presentation.partnerNowLabel}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.label}
+              className="rounded-[1.25rem] border border-white/58 bg-white/68 p-3.5 shadow-glass-inset"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/78 text-primary shadow-soft">
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                </span>
+                <div className="space-y-1">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    {item.label}
+                  </p>
+                  <h4 className="text-sm font-semibold leading-6 text-card-foreground">{item.title}</h4>
+                  <p className="text-xs leading-6 text-muted-foreground">{item.description}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        data-testid="journal-delivery-lifecycle-card"
+        data-lifecycle-state={presentation.lifecycleState}
+        className="mt-3 rounded-[1.25rem] border border-white/58 bg-white/68 p-3.5 shadow-glass-inset"
+      >
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/78 text-primary shadow-soft">
+            <Clock3 className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          <div className="space-y-1">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              交付生命週期
+            </p>
+            <h4 className="text-sm font-semibold leading-6 text-card-foreground">{presentation.lifecycleLabel}</h4>
+            <p className="text-xs leading-6 text-muted-foreground">{presentation.lifecycleDescription}</p>
+            <p className="text-[11px] font-semibold leading-5 text-primary/85">
+              {presentation.lifecycleReadyAt
+                ? `${presentation.lifecycleMetaLabel}：${formatTranslationReadyAt(presentation.lifecycleReadyAt)}`
+                : presentation.lifecycleMetaLabel}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-[1.2rem] border border-white/58 bg-white/62 px-3.5 py-3">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/78 text-primary">
+            <Check className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          <div className="space-y-1">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">信任邊界</p>
+            <p className="text-xs leading-6 text-card-foreground">{presentation.boundaryLabel}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function JournalCanvasFrame({
   children,
   tone = 'writing',
@@ -477,30 +618,41 @@ export function JournalCanvasFrame({
 export function JournalDocumentMap({
   activeSectionId,
   entries,
+  onInsertStarter,
   onSelect,
+  starters = [],
 }: {
   activeSectionId: string | null;
-  entries: JournalOutlineEntry[];
-  onSelect: (entry: JournalOutlineEntry) => void;
+  entries: JournalSectionModel[];
+  onInsertStarter?: (starter: JournalReflectionSectionStarter) => void;
+  onSelect: (entry: JournalSectionModel) => void;
+  starters?: JournalReflectionSectionStarter[];
 }) {
   return (
     <section
       data-testid="journal-document-map"
-      className="rounded-[1.9rem] border border-white/56 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(248,243,236,0.78))] p-4 shadow-soft md:p-5"
+      className="rounded-[2rem] border border-white/56 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(248,243,236,0.78))] p-4 shadow-soft md:p-5"
     >
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
           <LayoutPanelTop className="h-4 w-4 text-primary/80" aria-hidden />
-          Document Map
+          這一頁的結構
         </div>
         <p className="text-sm leading-7 text-muted-foreground">
-          讓這一頁的段落有可返回的結構，不用每次都重新找位置。
+          把長一點的反思整理成可返回的段落，寫作和重讀都不用重新找位置。
         </p>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-2.5">
         {entries.map((entry) => {
           const active = entry.id === activeSectionId;
+          const typeLabel =
+            entry.depth === 0 ? '頁面' : entry.depth === 1 ? '主章節' : '小節';
+          const bodyLabel = entry.isEmpty
+            ? '還需要正文'
+            : entry.isLight
+              ? '可以再多寫一點'
+              : `${entry.paragraphCount || 1} 段`;
           return (
             <button
               key={entry.id}
@@ -509,29 +661,80 @@ export function JournalDocumentMap({
               aria-pressed={active}
               onClick={() => onSelect(entry)}
               className={cn(
-                'flex w-full items-center justify-between gap-3 rounded-[1.2rem] border px-3.5 py-3 text-left text-sm transition-all duration-haven ease-haven',
+                'flex w-full flex-col gap-2 rounded-[1.35rem] border px-3.5 py-3 text-left text-sm transition-all duration-haven ease-haven',
                 active
                   ? 'border-primary/18 bg-primary/[0.075] text-card-foreground shadow-soft'
                   : 'border-white/56 bg-white/72 text-card-foreground hover:bg-white/84',
               )}
             >
+              <span className="flex w-full items-center justify-between gap-3">
+                <span
+                  className={cn(
+                    'min-w-0 truncate',
+                    entry.depth === 0 ? 'font-semibold' : '',
+                    entry.depth === 1 ? 'pl-2' : '',
+                    entry.depth === 2 ? 'pl-5 text-muted-foreground' : '',
+                  )}
+                >
+                  {entry.label}
+                </span>
+                <span className="shrink-0 rounded-full bg-primary/[0.075] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/72">
+                  {typeLabel}
+                </span>
+              </span>
               <span
                 className={cn(
-                  'truncate',
-                  entry.depth === 0 ? 'font-semibold' : '',
-                  entry.depth === 1 ? 'pl-3' : '',
-                  entry.depth === 2 ? 'pl-6 text-muted-foreground' : '',
+                  'block w-full text-xs leading-6',
+                  entry.excerpt ? 'text-muted-foreground' : 'text-muted-foreground/72',
+                  entry.depth === 1 ? 'pl-2' : '',
+                  entry.depth === 2 ? 'pl-5' : '',
                 )}
               >
-                {entry.label}
+                {entry.excerpt || '先留一個小節，等正文慢慢長出來。'}
               </span>
-              <span className="text-[10px] uppercase tracking-[0.24em] text-primary/70">
-                {entry.depth === 0 ? 'Title' : entry.depth === 1 ? 'H1' : 'H2'}
+              <span
+                className={cn(
+                  'text-[0.68rem] font-semibold uppercase tracking-[0.18em]',
+                  entry.isEmpty || entry.isLight ? 'text-primary/72' : 'text-muted-foreground',
+                  entry.depth === 1 ? 'pl-2' : '',
+                  entry.depth === 2 ? 'pl-5' : '',
+                )}
+              >
+                {bodyLabel}
               </span>
             </button>
           );
         })}
       </div>
+
+      {starters.length > 0 && onInsertStarter ? (
+        <div className="mt-5 rounded-[1.5rem] border border-primary/12 bg-primary/[0.045] p-3.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/72">
+            反思起手式
+          </p>
+          <p className="mt-1 text-xs leading-6 text-muted-foreground">
+            不用一次寫完，先放進一個小節，讓這一頁有可以長大的骨架。
+          </p>
+          <div className="mt-3 space-y-2">
+            {starters.map((starter) => (
+              <button
+                key={starter.id}
+                type="button"
+                data-testid={`journal-reflection-starter-${starter.id}`}
+                onClick={() => onInsertStarter(starter)}
+                className="w-full rounded-[1.15rem] border border-white/56 bg-white/72 px-3.5 py-3 text-left shadow-soft transition hover:bg-white/86"
+              >
+                <span className="block text-sm font-medium text-card-foreground">
+                  加入：{starter.label}
+                </span>
+                <span className="mt-1 block text-xs leading-6 text-muted-foreground">
+                  {starter.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

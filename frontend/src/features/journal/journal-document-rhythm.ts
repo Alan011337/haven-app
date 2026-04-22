@@ -36,8 +36,28 @@ export const JOURNAL_RHYTHM = {
     'my-10 overflow-hidden rounded-[2.05rem] border border-[rgba(219,204,187,0.34)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(249,244,237,0.9))] shadow-soft md:mx-[-1.25rem]',
   figureImage:
     'max-h-[36rem] w-full bg-[rgba(246,239,231,0.72)] object-contain',
+  // Authored figcaption: italic editorial serif via Haven's --font-art
+  // (Playfair Display). Used when an author wrote a caption OR a legacy
+  // caption is surfaced read-only. Carries the same shared anatomy
+  // (border-t + px-5 … md:px-6) as the other figcaption tokens.
+  figcaptionAuthored:
+    'border-t border-white/58 px-5 py-3.5 font-art italic text-[0.95rem] leading-[1.75] text-muted-foreground md:px-6',
+  // Alt-fallback figcaption: a quieter sans-serif whisper for the
+  // filename-derived humanized alt. Deliberately smaller + lighter than
+  // authored so the read signal "alt whisper ≠ author prose" stays legible.
+  figcaptionAlt:
+    'border-t border-white/58 px-5 py-2.5 text-[0.82rem] leading-7 tracking-[0.01em] text-muted-foreground/72 md:px-6',
+  // Wrapper for the expanded write-mode textarea shell. Keeps the figure's
+  // hairline border rhythm around the in-place editing UI.
+  figcaptionWriteShell: 'border-t border-white/58 px-5 py-3 md:px-6',
+  // Collapsed write-mode prompt button. Quietest of the four tones so a
+  // fresh uncaptioned image reads as an invitation, not a form field.
+  figcaptionPromptButton:
+    'flex w-full items-center gap-2 border-t border-white/58 px-5 py-3 text-[0.82rem] text-muted-foreground/72 transition-colors hover:text-card-foreground focus-visible:text-card-foreground focus-visible:outline-none md:px-6',
+  // Backward-compat alias — mirrors figcaptionAuthored so any stray legacy
+  // consumer keeps the authored tone.
   figcaption:
-    'border-t border-white/58 px-5 py-3.5 text-sm leading-7 text-muted-foreground md:px-6',
+    'border-t border-white/58 px-5 py-3.5 font-art italic text-[0.95rem] leading-[1.75] text-muted-foreground md:px-6',
   scrollMarginClass: 'scroll-mt-40',
   scrollMarginPx: 160,
   containerMaxW: 'max-w-[44rem]',

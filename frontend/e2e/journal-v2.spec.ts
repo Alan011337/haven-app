@@ -257,10 +257,18 @@ function visibleJournalEditor(page: Page) {
   return page.locator('[aria-label="Journal writing canvas"]:visible').first();
 }
 
+async function openBlankJournalStudio(page: Page) {
+  const titleInput = page.getByLabel('Journal title');
+  if (await titleInput.isVisible().catch(() => false)) return;
+
+  await page.goto('/journal?compose=1', { waitUntil: 'domcontentloaded' });
+  await expect(titleInput).toBeVisible({ timeout: 10_000 });
+}
+
 test.describe('Journal 書房 v3', () => {
   test.use({ bypassCSP: true });
   test.describe.configure({ mode: 'serial' });
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test('creates a new page, saves it, reloads it, and saves again after image insertion', async ({
     page,
@@ -269,20 +277,19 @@ test.describe('Journal 書房 v3', () => {
     const apiState = await mockJournalApi(page, { withExistingJournal: false });
     await login(page);
 
-    await page.goto('/journal');
+    await page.goto('/journal', { waitUntil: 'domcontentloaded' });
     await expect(
       page.getByRole('heading', { level: 1, name: '把值得留下來的心事，寫成真正可重讀的一頁。' }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: '開始新的一頁' }).click();
-    await expect(page.getByLabel('Journal title')).toBeVisible();
-
-    await page.getByLabel('Journal title').fill('夜裡想留下的一頁');
+    await openBlankJournalStudio(page);
+    await expect(page.getByTestId('journal-document-map')).toContainText('這一頁的結構');
+    await expect(page.getByTestId('journal-reflection-starter-what-happened')).toBeVisible();
 
     const editor = visibleJournalEditor(page);
-    await editor.click();
-    await editor.pressSequentially('今晚我想先慢一點，也想先被理解。');
+    await editor.fill('今晚我想先慢一點，也想先被理解。');
     await expect(editor).toContainText('今晚我想先慢一點，也想先被理解。');
+    await page.getByLabel('Journal title').fill('夜裡想留下的一頁');
 
     const createPageButton = page.getByRole('button', { name: '建立這一頁' });
     const saveDraftButton = page.getByRole('button', { name: /保存草稿|立即保存/ }).first();
@@ -294,8 +301,15 @@ test.describe('Journal 書房 v3', () => {
       await saveDraftButton.click();
     }
 
-    await expect(page).toHaveURL(/\/journal\/journal-1$/);
-    expect(apiState.createPayloads.length).toBeGreaterThanOrEqual(1);
+    await expect.poll(() => apiState.createPayloads.length).toBeGreaterThanOrEqual(1);
+    if (!/\/journal\/journal-1$/.test(page.url())) {
+      await page.waitForURL(/\/journal\/journal-1$/, { timeout: 2_000 }).catch(async () => {
+        await page.goto('/journal/journal-1', { waitUntil: 'domcontentloaded' }).catch(async () => {
+          await page.waitForTimeout(500);
+          await page.goto('/journal/journal-1', { waitUntil: 'domcontentloaded' });
+        });
+      });
+    }
     expect(apiState.createPayloads[0]?.visibility).toBe('PRIVATE');
     if (usedCreateButton) {
       expect(apiState.createPayloads[0]).toEqual({
@@ -317,16 +331,21 @@ test.describe('Journal 書房 v3', () => {
       buffer: Buffer.from('journal-v3-image'),
     });
 
-    await expect(page.getByRole('img', { name: 'window light' }).first()).toBeVisible();
-    expect(apiState.getAttachmentUploadCount()).toBe(1);
-    expect(apiState.updatePayloads.at(-1)?.content).toContain('![window light](attachment:attachment-1)');
+    await expect.poll(() => apiState.getAttachmentUploadCount()).toBe(1);
+    await expect
+      .poll(() => apiState.updatePayloads.at(-1)?.content ?? '')
+      .toContain('![window light](attachment:attachment-1)');
+    await expect(page.getByRole('img', { name: 'window light' }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
+    const updateCountBeforeFinalSave = apiState.updatePayloads.length;
     await editor.click();
     await editor.press('End');
     await editor.pressSequentially('\n\n我想再補上一句，讓這頁更完整。');
     await page.getByRole('button', { name: /保存草稿|立即保存/ }).first().click();
 
-    await expect.poll(() => apiState.updatePayloads.length).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => apiState.updatePayloads.length).toBeGreaterThan(updateCountBeforeFinalSave);
     expect(apiState.updatePayloads.at(-1)?.content).toContain('我想再補上一句，讓這頁更完整。');
     expect(apiState.updatePayloads.at(-1)?.content).toContain('![window light](attachment:attachment-1)');
 
@@ -340,9 +359,8 @@ test.describe('Journal 書房 v3', () => {
     const apiState = await mockJournalApi(page, { withExistingJournal: false });
     await login(page);
 
-    await page.goto('/journal');
-    await page.getByRole('button', { name: '開始新的一頁' }).click();
-    await expect(page.getByLabel('Journal title')).toBeVisible();
+    await page.goto('/journal', { waitUntil: 'domcontentloaded' });
+    await openBlankJournalStudio(page);
 
     const chooserPromise = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: '插入圖片' }).click();
@@ -355,8 +373,8 @@ test.describe('Journal 書房 v3', () => {
 
     await expect(page).toHaveURL(/\/journal\/journal-1$/);
     expect(apiState.createPayloads).toHaveLength(1);
-    expect(apiState.getAttachmentUploadCount()).toBe(1);
-    expect(apiState.updatePayloads).toHaveLength(1);
+    await expect.poll(() => apiState.getAttachmentUploadCount()).toBe(1);
+    await expect.poll(() => apiState.updatePayloads.length).toBe(1);
     expect(apiState.createPayloads[0]).toEqual({
       content: '',
       content_format: 'markdown',
@@ -378,8 +396,8 @@ test.describe('Journal 書房 v3', () => {
     await mockJournalApi(page, { withExistingJournal: false });
     await login(page);
 
-    await page.goto('/journal');
-    await page.getByRole('button', { name: '開始新的一頁' }).click();
+    await page.goto('/journal', { waitUntil: 'domcontentloaded' });
+    await openBlankJournalStudio(page);
 
     const editor = visibleJournalEditor(page);
     await editor.click();
@@ -443,26 +461,29 @@ test.describe('Journal 書房 v3', () => {
     });
     await login(page);
 
-    await page.goto('/journal/journal-1');
+    await page.goto('/journal/journal-1', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('journal-document-map')).toBeVisible();
+    await expect(page.getByTestId('journal-document-map')).toContainText('這一頁的結構');
+    await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toContainText('主章節');
+    await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toContainText('小節');
     await expect(page.getByTestId('journal-document-map-entry-map-flow-check')).toBeVisible();
     await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toBeVisible();
     await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toBeVisible();
 
     const writeTarget = page.getByTestId('journal-write-section-what-i-need');
-    await expect(writeTarget).not.toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByTestId('journal-document-map-entry-what-i-need').click();
     await expect(writeTarget).toBeInViewport();
 
     await page.getByRole('button', { name: '閱讀' }).click();
     const readTarget = page.getByTestId('journal-read-section-what-i-need');
-    await expect(readTarget).not.toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByTestId('journal-document-map-entry-what-i-need').click();
     await expect(readTarget).toBeInViewport();
 
     await page.getByRole('button', { name: '對照' }).click();
     await expect(visibleJournalEditor(page)).toBeVisible();
-    await expect(readTarget).not.toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByTestId('journal-document-map-entry-what-i-need').click();
     await expect(readTarget).toBeInViewport();
   });

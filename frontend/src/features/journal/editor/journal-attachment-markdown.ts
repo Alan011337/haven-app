@@ -1,9 +1,14 @@
+// Shared fallback label for filename-derived alt text. Exported so the
+// figure-caption helper (and its quality gate) can reject this exact literal
+// without string-drift between the two sides.
+export const JOURNAL_IMAGE_ALT_FALLBACK = 'journal image';
+
 export function deriveJournalAttachmentAlt(fileName: string): string {
   return (
     fileName
       .replace(/\.[^.]+$/, '')
       .replace(/[-_]+/g, ' ')
-      .trim() || 'journal image'
+      .trim() || JOURNAL_IMAGE_ALT_FALLBACK
   );
 }
 

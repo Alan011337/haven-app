@@ -221,12 +221,12 @@ def seed_cards(session: Session) -> list[Card]:
 # =========================================================================
 JOURNAL_ENTRIES = [
     # Alice's journals
-    {"user_id": ALICE_ID, "days_ago": 7, "content": "今天跟 Bob 去了那家新開的拉麵店。湯頭很濃郁，他點了辣味的，我點了原味。吃完之後我們在河邊散步，聊了很多最近工作上的壓力。覺得能有一個人願意聽我抱怨，真的很幸福。", "mood": "grateful", "partner_translation_status": "READY", "partner_translated_content": "Alice 想讓 Bob 收到的是：今天一起吃拉麵、散步、聊壓力的時候，她感覺自己被陪伴，也很珍惜有人願意聽她慢慢說。"},
+    {"user_id": ALICE_ID, "days_ago": 7, "content": "今天跟 Bob 去了那家新開的拉麵店。湯頭很濃郁，他點了辣味的，我點了原味。吃完之後我們在河邊散步，聊了很多最近工作上的壓力。覺得能有一個人願意聽我抱怨，真的很幸福。", "mood": "grateful", "partner_translation_status": "READY", "partner_translation_ready_at_days_ago": 7, "partner_translated_content": "Alice 想讓 Bob 收到的是：今天一起吃拉麵、散步、聊壓力的時候，她感覺自己被陪伴，也很珍惜有人願意聽她慢慢說。"},
     {"user_id": ALICE_ID, "days_ago": 5, "content": "工作上遇到一個很棘手的 bug，debug 了一整天都沒有頭緒。回到家之後 Bob 幫我泡了一杯熱可可，雖然問題還沒解決，但心情好多了。明天再戰！", "mood": "tired"},
     {"user_id": ALICE_ID, "days_ago": 3, "content": "今天是我們在一起的第 500 天紀念日！Bob 偷偷準備了一束花和一張手寫卡片。卡片上寫著「謝謝你願意陪我一起長大」，看到的瞬間眼眶就紅了。我們約好以後每個一百天都要慶祝一下。", "mood": "happy"},
     {"user_id": ALICE_ID, "days_ago": 1, "content": "跟 Bob 因為家事分工的問題小吵了一架。冷靜下來之後，我覺得自己太急了，應該好好溝通而不是指責。晚上主動跟他道歉，他也說了他的想法。吵架不可怕，可怕的是不願意面對。", "mood": "reflective"},
     # Bob's journals
-    {"user_id": BOB_ID, "days_ago": 6, "content": "Alice 最近工作壓力很大，我能感覺到她回家的時候整個人都很緊繃。今天特意早下班去買了她最喜歡的草莓蛋糕，看到她吃的時候露出的笑容，覺得一切都值得了。", "mood": "caring", "partner_translation_status": "READY", "partner_translated_content": "Bob 想讓 Alice 收到的是：他有看見她最近的壓力，也想用草莓蛋糕這樣的小事，讓她回家時可以鬆一點。"},
+    {"user_id": BOB_ID, "days_ago": 6, "content": "Alice 最近工作壓力很大，我能感覺到她回家的時候整個人都很緊繃。今天特意早下班去買了她最喜歡的草莓蛋糕，看到她吃的時候露出的笑容，覺得一切都值得了。", "mood": "caring", "partner_translation_status": "READY", "partner_translation_ready_at_days_ago": 6, "partner_translated_content": "Bob 想讓 Alice 收到的是：他有看見她最近的壓力，也想用草莓蛋糕這樣的小事，讓她回家時可以鬆一點。"},
     {"user_id": BOB_ID, "days_ago": 4, "content": "今天在公司的專案獲得了主管的讚賞，第一個想分享的人就是 Alice。打電話跟她說的時候，她比我還開心，一直說「我就知道你可以的！」。有人無條件相信你的感覺真好。", "mood": "proud"},
     {"user_id": BOB_ID, "days_ago": 2, "content": "週末兩個人窩在家裡看了一整天的電影。從早到晚吃了三包爆米花，看了四部片。雖然什麼特別的事都沒做，但這種平凡的幸福才是最珍貴的吧。", "mood": "content"},
     {"user_id": BOB_ID, "days_ago": 0, "content": "今天跟 Alice 討論了明年的旅行計畫。她想去日本看櫻花，我想去冰島看極光。最後決定兩個都去！開始存旅費的動力瞬間就來了。有共同目標的感覺真的很棒。", "mood": "excited"},
@@ -253,6 +253,11 @@ def seed_journals(session: Session) -> list[Journal]:
             content_format="markdown",
             partner_translation_status=entry.get("partner_translation_status", "NOT_REQUESTED"),
             partner_translated_content=entry.get("partner_translated_content"),
+            partner_translation_ready_at=(
+                _days_ago(entry["partner_translation_ready_at_days_ago"])
+                if entry.get("partner_translation_ready_at_days_ago") is not None
+                else None
+            ),
             is_draft=False,
             created_at=_days_ago(entry["days_ago"]),
             updated_at=_days_ago(entry["days_ago"]),

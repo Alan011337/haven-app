@@ -398,7 +398,7 @@ async function mockJournalSharingApi(page: Page) {
 
 test.describe('Journal sharing permissions', () => {
   test.use({ bypassCSP: true });
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   test('keeps the author share selector to 3 modes and preserves legacy visibility until explicitly changed', async ({
     page,
@@ -423,6 +423,17 @@ test.describe('Journal sharing permissions', () => {
     await expect(
       page.getByText('這一頁沿用較早的「伴侶只看分析」設定。只要你不改分享設定，它就會維持只分享分析資訊。'),
     ).toBeVisible();
+    const deliveryPanel = page.getByTestId('journal-partner-visibility-panel');
+    await expect(deliveryPanel).toBeVisible();
+    await expect(deliveryPanel).toContainText('伴侶可見狀態');
+    await expect(deliveryPanel).toContainText('伴侶現在看得到什麼');
+    await expect(deliveryPanel).toContainText('伴侶現在看到舊版分析資訊');
+    await expect(deliveryPanel).toContainText('下一次保存會發生什麼');
+    await expect(deliveryPanel).toContainText('保存後維持舊版分析分享');
+    await expect(deliveryPanel).toContainText('交付生命週期');
+    await expect(deliveryPanel).toContainText('不在交付中');
+    await expect(deliveryPanel).toContainText('信任邊界');
+    await expect(deliveryPanel).toContainText('未保存前，伴侶端仍依照上一次保存的設定');
 
     const editor = page.getByLabel('Journal writing canvas');
     await editor.click();
@@ -433,6 +444,7 @@ test.describe('Journal sharing permissions', () => {
     expect(apiState.getUpdatePayloads().at(-1)).not.toHaveProperty('visibility');
 
     await page.getByRole('button', { name: '私密保存' }).click();
+    await expect(deliveryPanel).toContainText('保存後伴侶仍看不到');
     await page.getByRole('button', { name: '立即保存' }).click();
 
     await expect.poll(() => apiState.getUpdatePayloads().length).toBeGreaterThan(1);
@@ -443,6 +455,35 @@ test.describe('Journal sharing permissions', () => {
 
     await page.getByRole('button', { name: '閱讀' }).click();
     await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
+  });
+
+  test('explains original-share dirty state before save', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    const apiState = await mockJournalSharingApi(page);
+    await login(page);
+
+    await page.goto('/journal/journal-1');
+    await page.getByRole('button', { name: '分享設定' }).click();
+    await page.getByRole('button', { name: '伴侶看原文' }).click();
+    await page.getByRole('button', { name: '立即保存' }).click();
+
+    await expect.poll(() => apiState.getUpdatePayloads().length).toBeGreaterThan(0);
+    expect(apiState.getUpdatePayloads().at(-1)?.visibility).toBe('PARTNER_ORIGINAL');
+
+    const editor = page.getByLabel('Journal writing canvas');
+    await editor.click();
+    await editor.pressSequentially('\n\n這段還沒有保存給伴侶。');
+
+    const deliveryPanel = page.getByTestId('journal-partner-visibility-panel');
+    await expect(deliveryPanel).toBeVisible();
+    await expect(deliveryPanel).toHaveAttribute('data-tone', 'dirty');
+    await expect(deliveryPanel).toContainText('伴侶現在看到上一次保存的原文');
+    await expect(deliveryPanel).toContainText('你剛改的內容還沒送出');
+    await expect(deliveryPanel).toContainText('下一次保存後，伴侶會看到你保存下來的原文');
+    const lifecycleCard = page.getByTestId('journal-delivery-lifecycle-card');
+    await expect(lifecycleCard).toHaveAttribute('data-lifecycle-state', 'original');
+    await expect(lifecycleCard).toContainText('原文分享等待保存');
+    await expect(lifecycleCard).toContainText('原文分享不產生整理版');
   });
 
   test('shows original vs translated partner content with the stricter translated-only boundary', async ({

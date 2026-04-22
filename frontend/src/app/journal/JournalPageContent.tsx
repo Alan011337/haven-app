@@ -46,6 +46,7 @@ import {
   JournalMobileDock,
   JournalMobileSheet,
   JournalModeToggle,
+  JournalPartnerVisibilityPanel,
   JournalReadSurface,
   JournalSavePill,
   JournalStatePanel,
@@ -53,9 +54,11 @@ import {
   JournalTranslationStatusCard,
   JournalTranslationStatusChip,
   JournalVisibilitySwitch,
+  type JournalReflectionSectionStarter,
   type JournalSaveState,
   type JournalStudioMode,
 } from '@/app/journal/JournalPrimitives';
+import { buildJournalSharingDeliveryPresentation } from '@/app/journal/journal-sharing-delivery';
 import { buildJournalTranslationStatusPresentation } from '@/app/journal/journal-translation-status';
 import JournalLexicalComposer, {
   type JournalEditorBlockAction,
@@ -79,8 +82,11 @@ import {
 } from '@/app/journal/journal-draft-payload';
 import {
   buildJournalOutline,
-  type JournalOutlineEntry,
 } from '@/lib/journal-outline';
+import {
+  buildJournalSectionModel,
+  type JournalSectionModel,
+} from '@/lib/journal-section-model';
 
 const DEFAULT_VISIBILITY: JournalVisibility = 'PRIVATE';
 const JOURNAL_HOME_SEED_STORAGE_KEY = 'haven_journal_home_seed_v1';
@@ -103,6 +109,29 @@ const MOBILE_INLINE_ACTIONS: Array<{ format: JournalEditorInlineFormat; label: s
   { format: 'italic', label: '斜體' },
   { format: 'code', label: '行內程式碼' },
 ];
+const REFLECTION_SECTION_STARTERS: JournalReflectionSectionStarter[] = [
+  {
+    description: '先把場景、事件或對話放下來，不急著整理成結論。',
+    heading: '發生了什麼',
+    id: 'what-happened',
+    label: '發生了什麼',
+    prompt: '先把場景、事件或對話放在這裡。',
+  },
+  {
+    description: '把表面情緒底下真正被碰到的地方寫清楚。',
+    heading: '我真正感受到的是',
+    id: 'what-i-felt',
+    label: '我真正感受到的是',
+    prompt: '我真正感受到的是……',
+  },
+  {
+    description: '把這一頁想帶進關係、對話或下一步的重點留下來。',
+    heading: '我想帶進關係的是',
+    id: 'bring-forward',
+    label: '我想帶進關係的是',
+    prompt: '我想帶進關係的是……',
+  },
+];
 
 function buildSnapshot({
   attachments,
@@ -124,6 +153,17 @@ function buildSnapshot({
     title,
     visibility,
   });
+}
+
+function appendReflectionSectionMarkdown(
+  baseContent: string,
+  starter: JournalReflectionSectionStarter,
+) {
+  const heading = starter.heading.trim();
+  const prompt = starter.prompt.trim();
+  const sectionMarkdown = prompt ? `## ${heading}\n\n${prompt}` : `## ${heading}`;
+  const trimmedBase = baseContent.trimEnd();
+  return trimmedBase ? `${trimmedBase}\n\n${sectionMarkdown}` : sectionMarkdown;
 }
 
 interface JournalPageContentProps {
@@ -256,7 +296,23 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     () => journalOutline.filter((entry) => entry.kind === 'heading'),
     [journalOutline],
   );
-  const showDocumentMap = journalOutline.length >= 2;
+  const journalSections = useMemo(
+    () =>
+      buildJournalSectionModel({
+        content,
+        outlineEntries: journalOutline,
+        title,
+      }),
+    [content, journalOutline, title],
+  );
+  const titleSection = useMemo(
+    () => journalSections.find((entry) => entry.kind === 'title') ?? null,
+    [journalSections],
+  );
+  const showDocumentMap = journalSections.length > 0;
+  const showReflectionStarters =
+    content.trim().length < 650 ||
+    journalSections.filter((section) => section.kind === 'heading').length < 2;
   const showStudio = Boolean(journalId) || draftOpen;
   const draftBootstrapPending = !currentJournalId && createJournalMutation.isPending;
   const editorKey = `${currentJournalId ?? `draft:${draftOpen ? 'open' : 'closed'}`}:${editorSeed}`;
@@ -305,12 +361,12 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
 
   useEffect(() => {
     setActiveSectionId((current) => {
-      if (current && journalOutline.some((entry) => entry.id === current)) {
+      if (current && journalSections.some((entry) => entry.id === current)) {
         return current;
       }
-      return journalOutline[0]?.id ?? null;
+      return journalSections[0]?.id ?? null;
     });
-  }, [journalOutline]);
+  }, [journalSections]);
 
   useEffect(() => {
     hasExplicitVisibilitySelectionRef.current = hasExplicitVisibilitySelection;
@@ -850,6 +906,33 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
       visibility,
     ],
   );
+  const sharingDeliveryPresentation = useMemo(
+    () =>
+      buildJournalSharingDeliveryPresentation({
+        attachmentsCount: attachments.length,
+        currentVisibility: visibility,
+        hasCurrentJournalId: Boolean(currentJournalId),
+        hasExplicitVisibilitySelection,
+        hasUnsavedChanges,
+        isDraft,
+        partnerTranslationReadyAt,
+        partnerTranslationStatus,
+        persistedVisibility,
+        saveState,
+      }),
+    [
+      attachments.length,
+      currentJournalId,
+      hasExplicitVisibilitySelection,
+      hasUnsavedChanges,
+      isDraft,
+      partnerTranslationReadyAt,
+      partnerTranslationStatus,
+      persistedVisibility,
+      saveState,
+      visibility,
+    ],
+  );
 
   const insertAttachmentIntoDraft = useCallback(
     ({
@@ -1161,6 +1244,43 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     setMobileSheet(null);
   }, [runEditorTask]);
 
+  const handleInsertReflectionSection = useCallback(
+    (starter: JournalReflectionSectionStarter) => {
+      runEditorTask(() => {
+        const editorHandle = editorRef.current;
+        const insertedMarkdown = editorHandle?.insertReflectionSection({
+          heading: starter.heading,
+          prompt: starter.prompt,
+        });
+        const currentEditorMarkdown = editorHandle ? readCurrentJournalContent() : '';
+        const nextMarkdown =
+          insertedMarkdown && insertedMarkdown.includes(`## ${starter.heading}`)
+            ? insertedMarkdown
+            : currentEditorMarkdown.includes(`## ${starter.heading}`)
+              ? currentEditorMarkdown
+              : appendReflectionSectionMarkdown(readCurrentJournalContent(), starter);
+
+        commitContentState(nextMarkdown);
+        markUnsaved({ nextContent: nextMarkdown, nextIsDraft: isDraft });
+
+        if (!editorHandle) {
+          suppressBlankEditorSyncRef.current = true;
+          setEditorSeed((seed) => seed + 1);
+        }
+
+        showToast('新的反思小節已放進這一頁。', 'success');
+      });
+    },
+    [
+      commitContentState,
+      isDraft,
+      markUnsaved,
+      readCurrentJournalContent,
+      runEditorTask,
+      showToast,
+    ],
+  );
+
   const handleImagePickerRequest = useCallback(async () => {
     if (!currentJournalId && draftBootstrapPending) {
       showToast('草稿正在準備，等這一頁有了編號就能放入圖片。', 'info');
@@ -1190,7 +1310,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     return true;
   }, []);
 
-  const handleSelectDocumentMapEntry = useCallback((entry: JournalOutlineEntry) => {
+  const handleSelectDocumentMapEntry = useCallback((entry: JournalSectionModel) => {
     setActiveSectionId(entry.id);
 
     if (studioMode === 'read' || studioMode === 'compare') {
@@ -1471,6 +1591,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                     <JournalTranslationStatusCard presentation={translationStatusPresentation} />
                   </div>
                 ) : null}
+                <div className="mt-4">
+                  <JournalPartnerVisibilityPanel presentation={sharingDeliveryPresentation} />
+                </div>
               </section>
             ) : (
               <div />
@@ -1532,10 +1655,10 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           </div>
 
           <div
-            id={titleEntry ? `journal-write-section-${titleEntry.id}` : undefined}
-            data-journal-section-id={titleEntry?.id ?? undefined}
-            data-journal-surface={titleEntry ? 'write' : undefined}
-            data-testid={titleEntry ? `journal-write-section-${titleEntry.id}` : undefined}
+            id={titleSection ? `journal-write-section-${titleSection.id}` : undefined}
+            data-journal-section-id={titleSection?.id ?? undefined}
+            data-journal-surface={titleSection ? 'write' : undefined}
+            data-testid={titleSection ? `journal-write-section-${titleSection.id}` : undefined}
             className="scroll-mt-32 md:scroll-mt-40"
           >
             <input
@@ -1566,7 +1689,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
           <div className="mx-auto w-full max-w-[42rem]">
             <JournalDocumentMap
               activeSectionId={activeSectionId}
-              entries={journalOutline}
+              entries={journalSections}
+              starters={showReflectionStarters ? REFLECTION_SECTION_STARTERS : []}
+              onInsertStarter={handleInsertReflectionSection}
               onSelect={handleSelectDocumentMapEntry}
             />
           </div>
@@ -1633,7 +1758,7 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
                 meta={`${currentDateLabel} · ${visibilityLabel}`}
                 surface="read"
                 title={activeTitle}
-                titleSectionId={titleEntry?.id ?? null}
+                titleSectionId={titleSection?.id ?? titleEntry?.id ?? null}
                 variant={studioMode === 'compare' ? 'compare' : 'default'}
               />
             </div>
@@ -1730,6 +1855,9 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
             <JournalTranslationStatusCard presentation={translationStatusPresentation} />
           </div>
         ) : null}
+        <div className="mt-4">
+          <JournalPartnerVisibilityPanel presentation={sharingDeliveryPresentation} />
+        </div>
       </JournalMobileSheet>
 
       <JournalMobileSheet
