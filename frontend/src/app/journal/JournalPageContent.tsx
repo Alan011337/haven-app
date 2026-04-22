@@ -48,6 +48,7 @@ import {
   JournalModeToggle,
   JournalPartnerVisibilityPanel,
   JournalReadSurface,
+  JournalRereadingGuide,
   JournalSavePill,
   JournalStatePanel,
   JournalStudioHero,
@@ -87,6 +88,7 @@ import {
   buildJournalSectionModel,
   type JournalSectionModel,
 } from '@/lib/journal-section-model';
+import { buildJournalRereadGuide } from '@/lib/journal-reread-guide';
 
 const DEFAULT_VISIBILITY: JournalVisibility = 'PRIVATE';
 const JOURNAL_HOME_SEED_STORAGE_KEY = 'haven_journal_home_seed_v1';
@@ -309,10 +311,20 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     () => journalSections.find((entry) => entry.kind === 'title') ?? null,
     [journalSections],
   );
+  const rereadGuide = useMemo(
+    () =>
+      buildJournalRereadGuide({
+        content,
+        imageCount: attachments.length,
+        sections: journalSections,
+      }),
+    [attachments.length, content, journalSections],
+  );
   const showDocumentMap = journalSections.length > 0;
   const showReflectionStarters =
-    content.trim().length < 650 ||
-    journalSections.filter((section) => section.kind === 'heading').length < 2;
+    studioMode !== 'read' &&
+    (content.trim().length < 650 ||
+      journalSections.filter((section) => section.kind === 'heading').length < 2);
   const showStudio = Boolean(journalId) || draftOpen;
   const draftBootstrapPending = !currentJournalId && createJournalMutation.isPending;
   const editorKey = `${currentJournalId ?? `draft:${draftOpen ? 'open' : 'closed'}`}:${editorSeed}`;
@@ -1327,6 +1339,63 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
     editorRef.current?.scrollToSection(entry.id);
   }, [scrollReadSurfaceToSection, studioMode]);
 
+  const handleSelectRereadGuideSection = useCallback((sectionId: string) => {
+    setActiveSectionId(sectionId);
+    scrollReadSurfaceToSection(sectionId);
+  }, [scrollReadSurfaceToSection]);
+
+  useEffect(() => {
+    if (studioMode !== 'read') return;
+
+    const container = readSurfaceRef.current;
+    if (!container) return;
+
+    let frame: number | null = null;
+    const updateActiveSection = () => {
+      frame = null;
+      const targets = Array.from(
+        container.querySelectorAll<HTMLElement>('[data-journal-section-id]'),
+      );
+      if (!targets.length) return;
+
+      const viewportAnchor = Math.min(window.innerHeight * 0.5, 360);
+      let nextSectionId = targets[0]?.dataset.journalSectionId ?? null;
+      let closestDistance = Number.POSITIVE_INFINITY;
+      for (const target of targets) {
+        const rect = target.getBoundingClientRect();
+        if (rect.bottom < 96 || rect.top > window.innerHeight) {
+          continue;
+        }
+
+        const distance = Math.abs(rect.top - viewportAnchor);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          nextSectionId = target.dataset.journalSectionId ?? nextSectionId;
+        }
+      }
+
+      if (nextSectionId) {
+        setActiveSectionId((current) => (current === nextSectionId ? current : nextSectionId));
+      }
+    };
+
+    const scheduleUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    scheduleUpdate();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    return () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [journalSections, studioMode]);
+
   if (journalId && journalDetailQuery.isError) {
     return (
       <JournalStatePanel
@@ -1693,6 +1762,16 @@ export default function JournalPageContent({ journalId }: JournalPageContentProp
               starters={showReflectionStarters ? REFLECTION_SECTION_STARTERS : []}
               onInsertStarter={handleInsertReflectionSection}
               onSelect={handleSelectDocumentMapEntry}
+            />
+          </div>
+        ) : null}
+
+        {studioMode === 'read' ? (
+          <div className="mx-auto w-full max-w-[46rem]">
+            <JournalRereadingGuide
+              activeSectionId={activeSectionId}
+              guide={rereadGuide}
+              onSelect={handleSelectRereadGuideSection}
             />
           </div>
         ) : null}

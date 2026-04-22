@@ -97,6 +97,8 @@ async function prepareStructuredJournal(
     '',
     '先把第一節寫成真正的起點。',
     '',
+    '## Middle Truth',
+    '',
     longMiddleSection,
     '',
     '## What I Need',
@@ -236,6 +238,7 @@ test.describe('Journal V2 foundation live local stack', () => {
     await expect(documentMap).toBeVisible();
     await expect(documentMap).toContainText('這一頁的結構');
     await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toContainText('主章節');
+    await expect(page.getByTestId('journal-document-map-entry-middle-truth')).toContainText('小節');
     await expect(mapEntry).toContainText('小節');
     await expect(mapEntry).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -248,7 +251,9 @@ test.describe('Journal V2 foundation live local stack', () => {
 
     await page.getByRole('button', { name: '閱讀' }).click();
     const readTarget = page.getByTestId('journal-read-section-what-i-need');
-    await mapEntry.click();
+    await expect(page.getByTestId('journal-reread-guide')).toContainText('重讀這一頁');
+    await expect(page.getByTestId('journal-reread-guide-card-middle')).toContainText('Middle Truth');
+    await page.getByTestId('journal-reread-guide-card-closing').click();
     await expect(readTarget).toBeInViewport();
 
     await page.getByRole('button', { name: '對照' }).click();

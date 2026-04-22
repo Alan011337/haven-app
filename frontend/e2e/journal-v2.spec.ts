@@ -451,6 +451,8 @@ test.describe('Journal 書房 v3', () => {
           '',
           '先把第一節寫成真正的起點。',
           '',
+          '## Middle Truth',
+          '',
           longMiddleSection,
           '',
           '## What I Need',
@@ -465,9 +467,11 @@ test.describe('Journal 書房 v3', () => {
     await expect(page.getByTestId('journal-document-map')).toBeVisible();
     await expect(page.getByTestId('journal-document-map')).toContainText('這一頁的結構');
     await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toContainText('主章節');
+    await expect(page.getByTestId('journal-document-map-entry-middle-truth')).toContainText('小節');
     await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toContainText('小節');
     await expect(page.getByTestId('journal-document-map-entry-map-flow-check')).toBeVisible();
     await expect(page.getByTestId('journal-document-map-entry-opening-scene')).toBeVisible();
+    await expect(page.getByTestId('journal-document-map-entry-middle-truth')).toBeVisible();
     await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toBeVisible();
 
     const writeTarget = page.getByTestId('journal-write-section-what-i-need');
@@ -477,9 +481,18 @@ test.describe('Journal 書房 v3', () => {
 
     await page.getByRole('button', { name: '閱讀' }).click();
     const readTarget = page.getByTestId('journal-read-section-what-i-need');
+    await expect(page.getByTestId('journal-reread-guide')).toBeVisible();
+    await expect(page.getByTestId('journal-reread-guide')).toContainText('重讀這一頁');
+    await expect(page.getByTestId('journal-reread-guide')).toContainText('閱讀路線');
+    await expect(page.getByTestId('journal-reread-guide')).toContainText('這一頁的節奏');
+    await expect(page.getByTestId('journal-reread-guide-card-opener')).toContainText('Opening Scene');
+    await expect(page.getByTestId('journal-reread-guide-card-middle')).toContainText('Middle Truth');
+    await expect(page.getByTestId('journal-reread-guide-card-closing')).toContainText('What I Need');
+    await expect(page.getByTestId('journal-reread-guide-card-opener')).toContainText('先把第一節寫成真正的起點。');
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.getByTestId('journal-document-map-entry-what-i-need').click();
+    await page.getByTestId('journal-reread-guide-card-closing').click();
     await expect(readTarget).toBeInViewport();
+    await expect(page.getByTestId('journal-document-map-entry-what-i-need')).toHaveAttribute('aria-pressed', 'true');
 
     await page.getByRole('button', { name: '對照' }).click();
     await expect(visibleJournalEditor(page)).toBeVisible();

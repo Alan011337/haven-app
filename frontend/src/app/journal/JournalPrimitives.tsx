@@ -31,6 +31,10 @@ import {
 } from '@/app/journal/journal-translation-status';
 import type { JournalSharingDeliveryPresentation } from '@/app/journal/journal-sharing-delivery';
 import type { JournalOutlineEntry } from '@/lib/journal-outline';
+import type {
+  JournalRereadGuideModel,
+  JournalRereadPathItem,
+} from '@/lib/journal-reread-guide';
 import type { JournalSectionModel } from '@/lib/journal-section-model';
 import { JournalRichMarkdown } from '@/lib/journal-markdown';
 import { buildJournalExcerpt, deriveJournalTitle } from '@/lib/journal-format';
@@ -735,6 +739,123 @@ export function JournalDocumentMap({
           </div>
         </div>
       ) : null}
+    </section>
+  );
+}
+
+function getRereadPathToneClass(item: JournalRereadPathItem, activeSectionId: string | null) {
+  const active = item.sectionId === activeSectionId;
+  if (active) {
+    return 'border-primary/18 bg-primary/[0.075] shadow-soft';
+  }
+  if (item.slot === 'middle') {
+    return 'border-accent/14 bg-accent/[0.045] hover:bg-accent/[0.065]';
+  }
+  return 'border-white/58 bg-white/72 hover:bg-white/84';
+}
+
+export function JournalRereadingGuide({
+  activeSectionId,
+  guide,
+  onSelect,
+}: {
+  activeSectionId: string | null;
+  guide: JournalRereadGuideModel;
+  onSelect: (sectionId: string) => void;
+}) {
+  const rhythmItems = [
+    { label: '段落', value: `${guide.sectionCount}` },
+    { label: '正文', value: `${guide.paragraphCount}` },
+    { label: '圖片', value: `${guide.imageCount}` },
+  ];
+
+  return (
+    <section
+      data-testid="journal-reread-guide"
+      className="rounded-[2.05rem] border border-white/56 bg-[linear-gradient(180deg,rgba(255,253,249,0.9),rgba(248,242,235,0.82))] p-4 shadow-soft md:p-5"
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] lg:items-start">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm font-medium text-card-foreground">
+              <Eye className="h-4 w-4 text-primary/80" aria-hidden />
+              重讀這一頁
+            </div>
+            <p className="text-sm leading-7 text-muted-foreground">
+              {guide.emptyOrShort
+                ? '這一頁還很輕，先從已留下的入口慢慢回來。'
+                : '讓段落結構帶你重新靠近當時的感受，不用一次掃完整篇。'}
+            </p>
+          </div>
+
+          <div className="rounded-[1.35rem] border border-white/58 bg-white/68 p-3.5 shadow-glass-inset">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-primary/72">
+              這一頁的節奏
+            </p>
+            <p className="mt-2 text-sm leading-7 text-card-foreground">{guide.summary}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {rhythmItems.map((item) => (
+                <span
+                  key={item.label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/62 bg-white/76 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+                >
+                  <span className="text-card-foreground">{item.value}</span>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary/72">
+            <LayoutPanelTop className="h-3.5 w-3.5" aria-hidden />
+            閱讀路線
+          </div>
+          <div className="grid gap-2.5 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            {guide.pathItems.map((item) => {
+              const active = item.sectionId === activeSectionId;
+              return (
+                <button
+                  key={`${item.slot}-${item.sectionId}`}
+                  type="button"
+                  data-testid={`journal-reread-guide-card-${item.slot}`}
+                  aria-pressed={active}
+                  onClick={() => onSelect(item.sectionId)}
+                  className={cn(
+                    'rounded-[1.35rem] border px-3.5 py-3 text-left transition-all duration-haven ease-haven',
+                    getRereadPathToneClass(item, activeSectionId),
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-primary/72">
+                      {item.label}
+                    </span>
+                    {active ? (
+                      <span className="rounded-full bg-primary/[0.1] px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        正在讀
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-2 block text-sm font-semibold leading-6 text-card-foreground">
+                    {item.sectionLabel}
+                  </span>
+                  <span className="mt-1 block text-xs leading-6 text-muted-foreground">
+                    {item.excerpt}
+                  </span>
+                  <span className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold leading-5 text-primary/78">
+                    <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                    {item.cue}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs leading-6 text-muted-foreground">
+            從這裡回到當時：點一段，閱讀位置和左側結構會一起對齊。
+          </p>
+        </div>
+      </div>
     </section>
   );
 }
