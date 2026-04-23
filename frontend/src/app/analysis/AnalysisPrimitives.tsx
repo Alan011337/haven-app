@@ -18,6 +18,7 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import type { AnalysisUnderstandingBriefModel } from '@/lib/analysis-v2-understanding-brief';
 
 type AnalysisTone = 'default' | 'strength' | 'attention' | 'quiet' | 'error';
 
@@ -220,6 +221,107 @@ export function AnalysisPulseCard({
         {footer}
       </div>
     </GlassCard>
+  );
+}
+
+export function AnalysisUnderstandingBrief({
+  model,
+  onSelectEvidence,
+}: {
+  model: AnalysisUnderstandingBriefModel;
+  onSelectEvidence: (evidenceId: string) => void;
+}) {
+  return (
+    <section
+      data-testid="analysis-v2-brief"
+      className="overflow-hidden rounded-[2.6rem] border border-white/56 bg-[linear-gradient(165deg,rgba(255,253,249,0.94),rgba(243,237,228,0.88))] p-5 shadow-lift backdrop-blur-xl md:p-6"
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                Analysis V2
+              </Badge>
+              <p className="type-micro uppercase text-primary/80">Understanding Brief</p>
+            </div>
+            <h2 className="type-h3 text-card-foreground">{model.title}</h2>
+            <p className="type-body-muted text-muted-foreground">{model.description}</p>
+          </div>
+          <div className="max-w-sm rounded-[1.6rem] border border-white/56 bg-white/72 p-4 shadow-soft">
+            <p className="type-caption uppercase tracking-[0.18em] text-primary/76">Grounding</p>
+            <p className="mt-2 type-body-muted text-card-foreground">{model.sourceNote}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+          {model.cards.map((card) => (
+            <GlassCard
+              key={card.key}
+              data-testid={`analysis-v2-brief-card-${card.key}`}
+              className={cn(
+                'overflow-hidden rounded-[2rem] p-5 shadow-soft backdrop-blur-md',
+                stateToneClasses[card.tone],
+              )}
+            >
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[1.1rem] border shadow-soft',
+                      card.tone === 'attention'
+                        ? 'border-primary/18 bg-primary/10 text-primary'
+                        : card.tone === 'strength'
+                          ? 'border-accent/18 bg-accent/10 text-card-foreground'
+                          : 'border-white/56 bg-white/72 text-primary',
+                    )}
+                  >
+                    {toneIcon(card.tone)}
+                  </span>
+                  <div className="min-w-0 space-y-2">
+                    <p className="type-micro uppercase text-primary/76">{card.question}</p>
+                    <h3 className="type-section-title text-card-foreground">{card.title}</h3>
+                    <p className="type-body-muted text-muted-foreground">{card.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2" aria-label={`${card.question} 的依據來源`}>
+                  {card.sources.length ? (
+                    card.sources.map((source) => (
+                      <Badge
+                        key={source}
+                        variant="outline"
+                        size="sm"
+                        className="border-white/54 bg-white/72"
+                      >
+                        {source}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                      等待更多來源
+                    </Badge>
+                  )}
+                </div>
+
+                {card.action.evidenceId ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => onSelectEvidence(card.action.evidenceId as string)}
+                  >
+                    {card.action.label}
+                  </Button>
+                ) : card.action.href ? (
+                  <AnalysisLinkAction href={card.action.href} label={card.action.label} />
+                ) : null}
+              </div>
+            </GlassCard>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

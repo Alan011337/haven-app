@@ -18,10 +18,12 @@ import {
   useDailySyncStatus,
   useHomeAppreciationHistory,
   useJournals,
+  useLoveMapSystem,
   usePartnerJournals,
   usePartnerStatus,
 } from '@/hooks/queries';
 import { getJournalSafetyBand } from '@/lib/safety';
+import { buildAnalysisV2UnderstandingBrief } from '@/lib/analysis-v2-understanding-brief';
 import {
   fetchWeeklyReport,
   type AppreciationPublic,
@@ -44,6 +46,7 @@ import {
   AnalysisSection,
   AnalysisSignalCard,
   AnalysisStatePanel,
+  AnalysisUnderstandingBrief,
 } from '@/app/analysis/AnalysisPrimitives';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -378,6 +381,7 @@ export default function AnalysisContent() {
   const partnerJournalsQuery = usePartnerJournals();
   const dailySyncQuery = useDailySyncStatus();
   const appreciationHistoryQuery = useHomeAppreciationHistory();
+  const loveMapSystemQuery = useLoveMapSystem();
 
   const weeklyReportQuery = useQuery<WeeklyReportPublic>({
     queryKey: ['analysis', 'weekly-report'],
@@ -406,6 +410,7 @@ export default function AnalysisContent() {
 
   const weeklyReport = weeklyReportQuery.data ?? null;
   const monthlyReport = monthlyReportQuery.data ?? null;
+  const loveMapSystem = loveMapSystemQuery.data ?? null;
   const appreciationHistory = appreciationHistoryQuery.data ?? null;
   const appreciationRecent = appreciationHistory?.recent ?? EMPTY_APPRECIATIONS;
   const appreciationThisWeek = appreciationHistory?.thisWeek ?? EMPTY_APPRECIATIONS;
@@ -417,6 +422,29 @@ export default function AnalysisContent() {
   const syncCompletionPct = percentFromRate(weeklyReport?.daily_sync_completion_rate);
   const alignmentPct = percentFromRate(weeklyReport?.pair_sync_alignment_rate);
   const topTopics = monthlyReport?.top_topics ?? EMPTY_TOPICS;
+  const relationshipCompass = loveMapSystem?.relationship_compass ?? null;
+  const repairAgreements = loveMapSystem?.essentials?.repair_agreements ?? null;
+  const weeklyTask = loveMapSystem?.essentials?.weekly_task ?? null;
+  const hasHeartCare = Boolean(
+    loveMapSystem?.essentials?.my_care_profile?.support_me ||
+      loveMapSystem?.essentials?.my_care_profile?.avoid_when_stressed ||
+      loveMapSystem?.essentials?.my_care_profile?.small_delights ||
+      loveMapSystem?.essentials?.partner_care_profile?.support_me ||
+      loveMapSystem?.essentials?.partner_care_profile?.avoid_when_stressed ||
+      loveMapSystem?.essentials?.partner_care_profile?.small_delights,
+  );
+  const hasLoveMapSignal = Boolean(
+    relationshipCompass?.identity_statement ||
+      relationshipCompass?.story_anchor ||
+      relationshipCompass?.future_direction ||
+      repairAgreements?.protect_what_matters ||
+      repairAgreements?.avoid_in_conflict ||
+      repairAgreements?.repair_reentry ||
+      hasHeartCare ||
+      weeklyTask ||
+      loveMapSystem?.story?.moments?.length ||
+      loveMapSystem?.wishlist_items?.length,
+  );
 
   const allJournals = useMemo(
     () =>
@@ -473,6 +501,7 @@ export default function AnalysisContent() {
     topTopics.length > 0;
   const hasAnySignal =
     hasJournalData ||
+    hasLoveMapSignal ||
     hasAppreciationSignal ||
     hasInsightData ||
     Boolean(partnerStatus?.has_partner) ||
@@ -485,6 +514,7 @@ export default function AnalysisContent() {
     myJournalsQuery.isError,
     partnerJournalsQuery.isError,
     appreciationHistoryQuery.isError,
+    loveMapSystemQuery.isError,
     weeklyReportQuery.isError,
     monthlyReportQuery.isError,
     dailySyncQuery.isError,
@@ -495,6 +525,7 @@ export default function AnalysisContent() {
       partnerStatusQuery.isLoading ||
       myJournalsQuery.isLoading ||
       partnerJournalsQuery.isLoading ||
+      loveMapSystemQuery.isLoading ||
       weeklyReportQuery.isLoading ||
       monthlyReportQuery.isLoading) &&
     !hasAnySignal;
@@ -505,6 +536,7 @@ export default function AnalysisContent() {
       myJournalsQuery,
       partnerJournalsQuery,
       appreciationHistoryQuery,
+      loveMapSystemQuery,
       dailySyncQuery,
       weeklyReportQuery,
       monthlyReportQuery,
@@ -516,6 +548,7 @@ export default function AnalysisContent() {
       myJournalsQuery.refetch(),
       partnerJournalsQuery.refetch(),
       appreciationHistoryQuery.refetch(),
+      loveMapSystemQuery.refetch(),
       dailySyncQuery.refetch(),
       weeklyReportQuery.refetch(),
       monthlyReportQuery.refetch(),
@@ -533,6 +566,34 @@ export default function AnalysisContent() {
     partnerMoodLabel: partnerMoodSummary.topLabels[0]?.[0] ?? null,
     myNeed: latestMyNeedJournal?.emotional_needs ?? null,
     partnerNeed: latestPartnerNeedJournal?.emotional_needs ?? null,
+  });
+
+  const understandingBrief = buildAnalysisV2UnderstandingBrief({
+    hasPartner,
+    pulseScore: score,
+    syncCompletionPct,
+    alignmentPct,
+    journalCount14,
+    myJournalCount14,
+    partnerJournalCount14,
+    highTensionCount14,
+    appreciationCount:
+      weeklyReport?.appreciation_count ??
+      appreciationThisWeek.length ??
+      appreciationRecent.length,
+    topTopics,
+    currentRead,
+    patternTitle: patternRead.title,
+    monthlyTrendSummary: monthlyReport?.emotion_trend_summary ?? null,
+    healthSuggestion: monthlyReport?.health_suggestion ?? null,
+    todaySyncState: getDailySyncStateText(todaySync, hasPartner),
+    relationshipCompass,
+    repairAgreements,
+    hasHeartCare,
+    weeklyTask,
+    storyMomentCount: loveMapSystem?.story?.moments?.length ?? 0,
+    wishlistCount: loveMapSystem?.wishlist_items?.length ?? 0,
+    loveMapAvailable: Boolean(loveMapSystem && !loveMapSystemQuery.isError),
   });
 
   const attentionSignals: AnalysisSignal[] = [];
@@ -1250,6 +1311,11 @@ export default function AnalysisContent() {
             />
           </>
         }
+      />
+
+      <AnalysisUnderstandingBrief
+        model={understandingBrief}
+        onSelectEvidence={focusEvidenceLens}
       />
 
       {sourceErrorCount > 0 && hasAnySignal ? (
