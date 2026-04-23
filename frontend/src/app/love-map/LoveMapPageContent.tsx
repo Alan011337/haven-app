@@ -40,8 +40,11 @@ import {
   LOVE_LANGUAGE_OPTIONS,
   normalizeLoveLanguagePreference,
   upsertLoveMapHeartProfile,
+  upsertLoveMapRelationshipCompass,
   upsertLoveMapRepairAgreements,
   type LoveMapHeartProfileUpsertPayload,
+  type LoveMapRelationshipCompassChangePublic,
+  type LoveMapRelationshipCompassUpsertPayload,
   type LoveMapRepairAgreementChangePublic,
   type LoveMapRepairAgreementsUpsertPayload,
   type LoveLanguagePreferenceKey,
@@ -55,6 +58,10 @@ import {
   upsertBaseline,
 } from '@/services/relationship-api';
 import { updateUserMe } from '@/services/user';
+import {
+  formatCompassChangedAt,
+  summarizeCompassChange,
+} from '@/features/love-map/relationship-compass-revision';
 import LoveMapSkeleton from './LoveMapSkeleton';
 import {
   LoveMapEssentialField,
@@ -120,6 +127,12 @@ const EMPTY_HEART_PLAYBOOK_DRAFT: LoveMapHeartProfileUpsertPayload = {
   support_me: '',
   avoid_when_stressed: '',
   small_delights: '',
+};
+
+const EMPTY_RELATIONSHIP_COMPASS_DRAFT: LoveMapRelationshipCompassUpsertPayload = {
+  identity_statement: '',
+  story_anchor: '',
+  future_direction: '',
 };
 
 const EMPTY_REPAIR_AGREEMENTS_DRAFT: LoveMapRepairAgreementsUpsertPayload = {
@@ -250,6 +263,38 @@ function buildHeartPlaybookDraft(
     avoid_when_stressed: profile?.avoid_when_stressed ?? '',
     small_delights: profile?.small_delights ?? '',
   };
+}
+
+function buildRelationshipCompassDraft(
+  compass?: {
+    identity_statement?: string | null;
+    story_anchor?: string | null;
+    future_direction?: string | null;
+  } | null,
+): LoveMapRelationshipCompassUpsertPayload {
+  return {
+    identity_statement: compass?.identity_statement ?? '',
+    story_anchor: compass?.story_anchor ?? '',
+    future_direction: compass?.future_direction ?? '',
+  };
+}
+
+function countRelationshipCompassCompletion(
+  compass?: {
+    identity_statement?: string | null;
+    story_anchor?: string | null;
+    future_direction?: string | null;
+  } | null,
+) {
+  let count = 0;
+  if (compass?.identity_statement?.trim()) count += 1;
+  if (compass?.story_anchor?.trim()) count += 1;
+  if (compass?.future_direction?.trim()) count += 1;
+  return count;
+}
+
+function formatCompassCountLabel(count: number) {
+  return `已留下 ${count}/3 個 Compass 線索`;
 }
 
 function countCareCueCompletion(
@@ -402,6 +447,7 @@ export default function LoveMapPageContent() {
   const [savingGoal, setSavingGoal] = useState(false);
   const [savingWishlist, setSavingWishlist] = useState(false);
   const [savingIdentity, setSavingIdentity] = useState(false);
+  const [savingRelationshipCompass, setSavingRelationshipCompass] = useState(false);
   const [savingHeartPlaybook, setSavingHeartPlaybook] = useState(false);
   const [savingRepairAgreements, setSavingRepairAgreements] = useState(false);
   const [dismissingRepairOutcomeCapture, setDismissingRepairOutcomeCapture] = useState(false);
@@ -424,6 +470,8 @@ export default function LoveMapPageContent() {
   const [wishTitle, setWishTitle] = useState('');
   const [wishNotes, setWishNotes] = useState('');
   const [displayNameDraft, setDisplayNameDraft] = useState('');
+  const [relationshipCompassDraft, setRelationshipCompassDraft] =
+    useState<LoveMapRelationshipCompassUpsertPayload>(EMPTY_RELATIONSHIP_COMPASS_DRAFT);
   const [heartPlaybookDraft, setHeartPlaybookDraft] =
     useState<LoveMapHeartProfileUpsertPayload>(EMPTY_HEART_PLAYBOOK_DRAFT);
   const [repairAgreementsDraft, setRepairAgreementsDraft] =
@@ -435,6 +483,12 @@ export default function LoveMapPageContent() {
   // presence alone never enables the Save button — a note without a field
   // change is a no-op, same as today.
   const [repairAgreementsRevisionNoteDraft, setRepairAgreementsRevisionNoteDraft] = useState('');
+  // Same separation for Relationship Compass: note sits outside the 3-field
+  // draft so `relationshipCompassChanged` (compared via JSON.stringify below)
+  // stays "did the compass move?" rather than "did anything in the form
+  // change?". A note without any field delta is a no-op server-side, and we
+  // want the Save button to reflect that.
+  const [relationshipCompassRevisionNoteDraft, setRelationshipCompassRevisionNoteDraft] = useState('');
 
   useEffect(() => {
     if (!systemQuery.data) {
@@ -455,6 +509,7 @@ export default function LoveMapPageContent() {
     });
     setGoalDraft(systemQuery.data.couple_goal?.goal_slug ?? '');
     setDisplayNameDraft(systemQuery.data.me.full_name ?? '');
+    setRelationshipCompassDraft(buildRelationshipCompassDraft(systemQuery.data.relationship_compass));
     setHeartPlaybookDraft(
       buildHeartPlaybookDraft(
         systemQuery.data.essentials?.my_care_preferences,
@@ -538,6 +593,29 @@ export default function LoveMapPageContent() {
       showToast('這次沒有順利更新你的名稱，稍後再試一次。', 'error');
     } finally {
       setSavingIdentity(false);
+    }
+  };
+
+  const handleSaveRelationshipCompass = async () => {
+    setSavingRelationshipCompass(true);
+    try {
+      const trimmedRevisionNote = relationshipCompassRevisionNoteDraft.trim();
+      const revisionNotePayload = trimmedRevisionNote.length > 0 ? trimmedRevisionNote : null;
+      await upsertLoveMapRelationshipCompass({
+        ...relationshipCompassDraft,
+        revision_note: revisionNotePayload,
+      });
+      await invalidateRelationshipViews();
+      // Clear the draft so the next save must be a deliberate new note.
+      // Whitespace-only drafts never reach the server anyway, so this
+      // avoids a ghost note lingering visually after a successful save.
+      setRelationshipCompassRevisionNoteDraft('');
+      showToast('Relationship Compass 已更新。', 'success');
+    } catch (error) {
+      logClientError('love-map-relationship-compass-save-failed', error);
+      showToast('這次沒有順利更新 Relationship Compass，稍後再試一次。', 'error');
+    } finally {
+      setSavingRelationshipCompass(false);
     }
   };
 
@@ -836,6 +914,8 @@ export default function LoveMapPageContent() {
   const filledLayerCount = LAYERS.filter((layer) => noteDrafts[layer].trim().length > 0).length;
   const lastActivityLabel = formatShortDateTime(system.stats.last_activity_at);
   const storyAnchorCount = system.story?.moments.length ?? 0;
+  const topStoryMoment = system.story?.moments[0] ?? null;
+  const topFutureItem = system.wishlist_items[0] ?? null;
   const storyHasCapsule = Boolean(system.story?.time_capsule);
   const pendingSuggestions = Array.isArray(suggestionQuery.data) ? suggestionQuery.data : [];
   const pendingRefinements = Array.isArray(refinementQuery.data) ? refinementQuery.data : [];
@@ -854,11 +934,16 @@ export default function LoveMapPageContent() {
   const partnerCareProfile = system.essentials?.partner_care_profile ?? null;
   const pendingRepairOutcomeCapture = system.essentials?.pending_repair_outcome_capture ?? null;
   const weeklyTask = system.essentials?.weekly_task ?? null;
+  const relationshipCompass = system.relationship_compass ?? null;
+  const relationshipCompassHistoryEntries: LoveMapRelationshipCompassChangePublic[] =
+    system.relationship_compass_history ?? [];
+  const currentRelationshipCompass = buildRelationshipCompassDraft(relationshipCompass);
   const currentHeartPlaybook = buildHeartPlaybookDraft(myCarePreferences, myCareProfile);
   const currentRepairAgreements = buildRepairAgreementsDraft(repairAgreements);
   const repairAgreementHistoryEntries = repairAgreementHistory ?? [];
   const myCareCueCount = countCareCueCompletion(myCarePreferences, myCareProfile);
   const partnerCareCueCount = countCareCueCompletion(partnerCarePreferences, partnerCareProfile);
+  const compassCueCount = countRelationshipCompassCompletion(relationshipCompass);
   const repairAgreementCount = countRepairAgreementCompletion(repairAgreements);
   const myCarePlaybookUpdatedAt = formatShortDateTime(
     myCareProfile?.updated_at ?? system.essentials?.my_care_preferences?.updated_at,
@@ -867,16 +952,17 @@ export default function LoveMapPageContent() {
     partnerCareProfile?.updated_at ?? system.essentials?.partner_care_preferences?.updated_at,
   );
   const repairAgreementsUpdatedAt = formatShortDateTime(repairAgreements?.updated_at);
+  const relationshipCompassUpdatedAt = formatShortDateTime(relationshipCompass?.updated_at);
   const pendingRepairOutcomeCaptureUpdatedAt = formatShortDateTime(
     pendingRepairOutcomeCapture?.updated_at ?? pendingRepairOutcomeCapture?.created_at,
   );
   const pendingRepairOutcomeCaptureSelected =
     pendingRepairOutcomeCapture?.id === selectedOutcomeCaptureId;
   const identityMetricValue = system.has_partner
-    ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'}`
+    ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'} · Compass ${compassCueCount}/3`
     : '等待雙向配對';
   const identityMetricFootnote = system.has_partner
-    ? `目前方向：${activeGoalLabel} · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
+    ? `目前方向：${activeGoalLabel} · ${formatCompassCountLabel(compassCueCount)} · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
     : '先完成雙向伴侶連結，這裡才會變成真正的共享 Relationship System。';
   const heartMetricValue = !system.has_partner
     ? '等待雙向配對'
@@ -897,6 +983,8 @@ export default function LoveMapPageContent() {
     ? `目前有 ${aiPendingCount} 則待你審核的提案。`
     : '目前沒有待審核提案，已接受的片段仍會留在這裡。';
   const displayNameChanged = displayNameDraft.trim() !== (system.me.full_name?.trim() ?? '');
+  const relationshipCompassChanged =
+    JSON.stringify(relationshipCompassDraft) !== JSON.stringify(currentRelationshipCompass);
   const heartPlaybookChanged =
     JSON.stringify(heartPlaybookDraft) !== JSON.stringify(currentHeartPlaybook);
   const repairAgreementsChanged =
@@ -1035,9 +1123,9 @@ export default function LoveMapPageContent() {
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
               <p className="type-micro uppercase text-primary/78">Identity</p>
               <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
-                {system.has_partner ? '已配對' : '等待配對'}
+                {system.has_partner ? `${compassCueCount}/3` : '等待配對'}
               </p>
-              <p className="mt-2 type-caption text-muted-foreground">誰在這個系統裡、目前方向是什麼、管理入口在哪裡，都從這裡開始。</p>
+              <p className="mt-2 type-caption text-muted-foreground">Relationship Compass 會把你們是誰、想記得什麼、正一起靠近什麼，固定在 Identity。</p>
             </div>
 
             <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
@@ -1292,6 +1380,177 @@ export default function LoveMapPageContent() {
               </>
             )}
           </LoveMapKnowledgeBlock>
+
+          <div className="xl:col-span-2">
+            <LoveMapKnowledgeBlock
+              dataTestId="relationship-identity-compass-card"
+              eyebrow="Relationship Compass"
+              title="把 Identity、Story 與 Future 接成一張 pair-maintained compass。"
+              description="這不是 Haven 自動整理的結論，也不是伴侶審批流程。它是一張你們可以一起維護的小型關係羅盤：現在怎麼理解彼此、想把哪段故事帶著走、接下來要靠近什麼。"
+              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? 'Pair-maintained' : 'Partner required'}</Badge>}
+              footer={
+                system.has_partner ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="type-caption text-muted-foreground">
+                      Compass 會在 Story 與 Future 裡被再次看見，但不會自動改寫 Memory 或 Blueprint。
+                    </p>
+                    <Button
+                      loading={savingRelationshipCompass}
+                      disabled={savingRelationshipCompass || !relationshipCompassChanged}
+                      onClick={() => void handleSaveRelationshipCompass()}
+                    >
+                      保存 Relationship Compass
+                    </Button>
+                  </div>
+                ) : undefined
+              }
+            >
+              {!system.has_partner ? (
+                <LoveMapStatePanel
+                  eyebrow="Partner required"
+                  title="先完成伴侶連結，Relationship Compass 才會成為共享關係知識。"
+                  description="這三句話屬於 pair-maintained 的 shared layer。沒有雙向配對時，Haven 不會假裝它已經是你們共同留下的 Compass。"
+                  tone="quiet"
+                  actionLabel="去設定完成連結"
+                  onAction={goToSettings}
+                />
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                  <div className="space-y-4">
+                    <Textarea
+                      id="love-map-compass-identity-statement"
+                      label="我們現在是什麼樣的關係"
+                      value={relationshipCompassDraft.identity_statement}
+                      onChange={(event) =>
+                        setRelationshipCompassDraft((current) => ({
+                          ...current,
+                          identity_statement: event.target.value,
+                        }))
+                      }
+                      placeholder="例如：我們是在忙裡仍願意回來對話、也願意把重要的事留下來的伴侶。"
+                      maxLength={500}
+                      helperText="這是你們目前願意共同承認的關係身份，不需要寫成永遠不變的定義。"
+                    />
+
+                    <Textarea
+                      id="love-map-compass-story-anchor"
+                      label="我們想一起記得哪段故事"
+                      value={relationshipCompassDraft.story_anchor}
+                      onChange={(event) =>
+                        setRelationshipCompassDraft((current) => ({
+                          ...current,
+                          story_anchor: event.target.value,
+                        }))
+                      }
+                      placeholder="例如：即使很忙，我們仍然用咖啡、散步和一句感謝把彼此帶回來。"
+                      maxLength={500}
+                      helperText="這會在 Story 裡被回聲顯示，但不會改寫 Memory。"
+                    />
+
+                    <Textarea
+                      id="love-map-compass-future-direction"
+                      label="接下來一起靠近什麼"
+                      value={relationshipCompassDraft.future_direction}
+                      onChange={(event) =>
+                        setRelationshipCompassDraft((current) => ({
+                          ...current,
+                          future_direction: event.target.value,
+                        }))
+                      }
+                      placeholder="例如：一起把週末慢下來，讓散步、晚餐和真正對話成為固定節奏。"
+                      maxLength={500}
+                      helperText="這會在 Future 裡被回聲顯示，但不會自動新增 Blueprint 片段。"
+                    />
+
+                    <Textarea
+                      id="love-map-compass-revision-note"
+                      data-testid="relationship-identity-compass-revision-note-input"
+                      label="為這次更新留下一句原因（選填）"
+                      value={relationshipCompassRevisionNoteDraft}
+                      onChange={(event) =>
+                        setRelationshipCompassRevisionNoteDraft(event.target.value)
+                      }
+                      placeholder="例如：這次不是重寫，是因為我們開始相信自己可以慢一點。"
+                      maxLength={300}
+                      rows={2}
+                      className="!min-h-[4.5rem]"
+                      disabled={savingRelationshipCompass}
+                      helperText="僅在這次真的有改動時才會被保留；未來會在 Compass 下方淡淡顯示。"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div
+                      className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
+                      data-testid="relationship-identity-compass-updated-by"
+                    >
+                      <p className="type-micro uppercase text-primary/80">Last updated by</p>
+                      <p className="mt-2 type-section-title text-card-foreground">
+                        {relationshipCompass?.updated_by_name ?? '尚未建立'}
+                      </p>
+                      <p className="mt-1 type-caption text-muted-foreground">
+                        {relationshipCompassUpdatedAt ?? '先一起留下第一版。'}
+                      </p>
+                    </div>
+
+                    <LoveMapEssentialField
+                      label="Nearby Story"
+                      value={topStoryMoment?.title}
+                      emptyLabel="Story 還沒有足夠的 memory anchor。"
+                      dataTestId="relationship-identity-compass-story-context"
+                    />
+                    <LoveMapEssentialField
+                      label="Nearby Future"
+                      value={topFutureItem?.title}
+                      emptyLabel="Shared Future 還沒有片段。"
+                      dataTestId="relationship-identity-compass-future-context"
+                    />
+                    <p className="type-caption text-muted-foreground">
+                      旁邊的 Story/Future 只是附近脈絡，不會自動帶入欄位，也不會變成 Haven 推論出的 shared truth。
+                    </p>
+                  </div>
+                </div>
+              )}
+            </LoveMapKnowledgeBlock>
+
+            {system.has_partner && relationshipCompassHistoryEntries.length > 0 ? (
+              <div
+                data-testid="relationship-identity-compass-history"
+                className="mt-4 rounded-[1.35rem] border border-white/58 bg-white/72 px-5 py-5 shadow-soft md:px-6"
+              >
+                <p className="type-micro uppercase text-primary/80">Compass 如何改變</p>
+                <ol className="mt-3 space-y-3">
+                  {relationshipCompassHistoryEntries.map((change) => (
+                    <li
+                      key={change.id}
+                      data-testid="relationship-identity-compass-history-entry"
+                    >
+                      <p className="type-caption text-card-foreground">
+                        <span className="text-muted-foreground">
+                          {formatCompassChangedAt(change.changed_at)}
+                        </span>
+                        <span className="mx-2 text-muted-foreground/60">·</span>
+                        <span className="text-card-foreground">
+                          {change.changed_by_name ?? '—'}
+                        </span>
+                        <span className="ml-2 text-muted-foreground">
+                          {summarizeCompassChange(change)}
+                        </span>
+                      </p>
+                      {change.revision_note ? (
+                        <p
+                          className="mt-1.5 font-art italic text-[0.95rem] leading-[1.75] text-muted-foreground"
+                          data-testid="relationship-identity-compass-history-note"
+                        >
+                          「{change.revision_note}」
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+          </div>
 
           <div className="xl:col-span-2">
             <LoveMapKnowledgeBlock
@@ -2290,6 +2549,32 @@ export default function LoveMapPageContent() {
               />
             ) : null}
 
+            <LoveMapKnowledgeBlock
+              dataTestId="relationship-story-compass-echo-card"
+              eyebrow="Relationship Compass echo"
+              title="你們選擇帶著哪段故事往前走。"
+              description="這裡只回聲顯示 Identity 裡手動留下的 Compass，不替 Memory 補寫意義，也不把故事錨點改成自動生成的結論。"
+              badge={<Badge variant="status" size="sm">Pair-maintained</Badge>}
+              footer={
+                <Link
+                  href="#identity"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                >
+                  回到 Identity 編輯 Compass
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                </Link>
+              }
+            >
+              <div className="rounded-[1.45rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft">
+                <p className="type-micro uppercase text-primary/80">我們想一起記得</p>
+                <p className="mt-2 type-body text-card-foreground">
+                  {relationshipCompass?.story_anchor?.trim()
+                    ? relationshipCompass.story_anchor
+                    : 'Relationship Compass 還沒有留下要一起帶著走的故事。'}
+                </p>
+              </div>
+            </LoveMapKnowledgeBlock>
+
             {system.story.moments.length > 0 ? (
               <div className="grid gap-4 xl:grid-cols-3">
                 {system.story.moments.map((moment) => (
@@ -2371,6 +2656,32 @@ export default function LoveMapPageContent() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
             <div className="grid gap-4">
+              <LoveMapKnowledgeBlock
+                dataTestId="relationship-future-compass-echo-card"
+                eyebrow="Relationship Compass echo"
+                title="把你們接下來想靠近的方向，放在 Future 的最上方。"
+                description="這裡只顯示 Identity 裡手動留下的 Compass，不會自動新增 Blueprint 片段，也不會替你們改寫 Shared Future。"
+                badge={<Badge variant="status" size="sm">Pair-maintained</Badge>}
+                footer={
+                  <Link
+                    href="#identity"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium"
+                  >
+                    回到 Identity 編輯 Compass
+                    <Sparkles className="h-4 w-4" aria-hidden />
+                  </Link>
+                }
+              >
+                <div className="rounded-[1.45rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft">
+                  <p className="type-micro uppercase text-primary/80">接下來一起靠近</p>
+                  <p className="mt-2 type-body text-card-foreground">
+                    {relationshipCompass?.future_direction?.trim()
+                      ? relationshipCompass.future_direction
+                      : 'Relationship Compass 還沒有留下共同靠近的方向。'}
+                  </p>
+                </div>
+              </LoveMapKnowledgeBlock>
+
               <LoveMapFutureComposer
                 eyebrow="AI 提案審核"
                 title="先由 Haven 提案，再由你決定什麼能進入 Shared Future。"

@@ -898,6 +898,20 @@
     {
       "auth_policy": "authenticated",
       "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.upsert_relationship_compass",
+      "method": "PUT",
+      "name": "upsert_relationship_compass",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/identity/compass",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_map.list_love_map_notes",
       "method": "GET",
       "name": "list_love_map_notes",

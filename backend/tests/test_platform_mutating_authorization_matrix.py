@@ -8,6 +8,7 @@
 # AUTHZ_MATRIX: POST /api/daily-sync
 # AUTHZ_MATRIX: PUT /api/love-languages/preference
 # AUTHZ_MATRIX: POST /api/love-languages/weekly-task/complete
+# AUTHZ_MATRIX: PUT /api/love-map/identity/compass
 # AUTHZ_MATRIX: PUT /api/love-map/essentials/heart-profile
 # AUTHZ_MATRIX: PUT /api/love-map/essentials/repair-agreements
 # AUTHZ_MATRIX: POST /api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss
@@ -113,6 +114,15 @@ class PlatformMutatingAuthRequirementTests(unittest.TestCase):
             ("POST", "/api/daily-sync", {"mood_score": 3, "question_id": "q0", "answer_text": "check-in"}),
             ("PUT", "/api/love-languages/preference", {"preference": {"primary": "words", "secondary": "time"}}),
             ("POST", "/api/love-languages/weekly-task/complete", None),
+            (
+                "PUT",
+                "/api/love-map/identity/compass",
+                {
+                    "identity_statement": "我們是在忙裡仍願意回來對話的伴侶。",
+                    "story_anchor": "想一起記得那些有走回彼此的時刻。",
+                    "future_direction": "接下來一起靠近更穩定的週末節奏。",
+                },
+            ),
             (
                 "PUT",
                 "/api/love-map/essentials/heart-profile",

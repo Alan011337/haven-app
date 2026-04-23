@@ -422,6 +422,26 @@ export interface LoveMapStoryPublic {
   time_capsule: LoveMapStoryCapsulePublic | null;
 }
 
+export type LoveMapRelationshipCompassPublic = {
+  identity_statement: string | null; story_anchor: string | null; future_direction: string | null; updated_by_name: string | null; updated_at: string | null;
+};
+
+export interface LoveMapRelationshipCompassFieldChangePublic {
+  key: 'identity_statement' | 'story_anchor' | 'future_direction';
+  label: string;
+  change_kind: 'added' | 'updated' | 'cleared';
+  before_text: string | null;
+  after_text: string | null;
+}
+
+export interface LoveMapRelationshipCompassChangePublic {
+  id: string;
+  changed_at: string | null;
+  changed_by_name: string | null;
+  fields: LoveMapRelationshipCompassFieldChangePublic[];
+  revision_note: string | null;
+}
+
 export interface LoveMapSystemStatsPublic {
   filled_note_layers: number;
   baseline_ready_mine: boolean;
@@ -447,6 +467,8 @@ export interface LoveMapSystemResponse {
   partner: LoveMapSystemPartnerPublic | null;
   baseline: BaselineSummaryPublic;
   couple_goal: CoupleGoalPublic | null;
+  relationship_compass: LoveMapRelationshipCompassPublic | null;
+  relationship_compass_history: LoveMapRelationshipCompassChangePublic[];
   story: LoveMapStoryPublic;
   notes: LoveMapNotePublic[];
   wishlist_items: WishlistItemPublic[];
@@ -487,6 +509,8 @@ export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
   const response = await apiGet<LoveMapSystemResponse>('/love-map/system');
   return {
     ...response,
+    relationship_compass: response.relationship_compass ?? null,
+    relationship_compass_history: response.relationship_compass_history ?? [],
     essentials: {
       my_care_preferences: response.essentials?.my_care_preferences
         ? {
@@ -515,6 +539,13 @@ export interface LoveMapHeartProfileUpsertPayload extends LoveLanguagePreference
   avoid_when_stressed: string;
   small_delights: string;
 }
+
+export type LoveMapRelationshipCompassUpsertPayload = {
+  identity_statement: string;
+  story_anchor: string;
+  future_direction: string;
+  revision_note?: string | null;
+};
 
 export interface LoveMapHeartProfileSavePublic {
   care_preferences: LoveMapCarePreferencesPublic;
@@ -547,6 +578,17 @@ export const upsertLoveMapHeartProfile = async (
     },
     care_profile: response.care_profile,
   };
+};
+
+export const upsertLoveMapRelationshipCompass = async (
+  payload: LoveMapRelationshipCompassUpsertPayload,
+): Promise<LoveMapRelationshipCompassPublic> => {
+  return apiPut<LoveMapRelationshipCompassPublic>('/love-map/identity/compass', {
+    identity_statement: payload.identity_statement,
+    story_anchor: payload.story_anchor,
+    future_direction: payload.future_direction,
+    revision_note: payload.revision_note ?? null,
+  });
 };
 
 export const upsertLoveMapRepairAgreements = async (

@@ -20,6 +20,7 @@ from app.api.routers import love_language, love_map  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.models.love_language import LoveLanguagePreference  # noqa: E402
 from app.models.relationship_care_profile import RelationshipCareProfile  # noqa: E402
+from app.models.relationship_compass import RelationshipCompass  # noqa: E402
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement  # noqa: E402
 from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange  # noqa: E402
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture  # noqa: E402
@@ -136,6 +137,26 @@ class LoveMapSystemApiTests(unittest.TestCase):
                     small_delights="提醒我去陽台透氣。",
                 )
             )
+            session.add(
+                RelationshipCompass(
+                    user_id=min(alice.id, bob.id),
+                    partner_id=max(alice.id, bob.id),
+                    identity_statement="我們是在忙裡仍願意回來對話的伴侶。",
+                    story_anchor="想一起記得那些有走回彼此的時刻。",
+                    future_direction="接下來一起靠近更穩定的週末節奏。",
+                    updated_by_user_id=alice.id,
+                )
+            )
+            session.add(
+                RelationshipCompass(
+                    user_id=min(carol.id, dave.id),
+                    partner_id=max(carol.id, dave.id),
+                    identity_statement="Carol and Dave private compass",
+                    story_anchor="Carol and Dave private story",
+                    future_direction="Carol and Dave private future",
+                    updated_by_user_id=carol.id,
+                )
+            )
             alice_bob_repair_agreement = RelationshipRepairAgreement(
                 user_id=min(alice.id, bob.id),
                 partner_id=max(alice.id, bob.id),
@@ -249,6 +270,12 @@ class LoveMapSystemApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
+        compass = payload["relationship_compass"]
+        self.assertEqual(compass["identity_statement"], "我們是在忙裡仍願意回來對話的伴侶。")
+        self.assertEqual(compass["story_anchor"], "想一起記得那些有走回彼此的時刻。")
+        self.assertEqual(compass["future_direction"], "接下來一起靠近更穩定的週末節奏。")
+        self.assertEqual(compass["updated_by_name"], "Alice")
+        self.assertNotIn("Carol and Dave", str(compass))
         essentials = payload["essentials"]
         self.assertEqual(essentials["my_care_preferences"]["primary"], "words")
         self.assertEqual(essentials["my_care_preferences"]["secondary"], "time")
@@ -292,6 +319,7 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertIsNone(essentials["my_care_profile"])
         self.assertIsNone(essentials["partner_care_profile"])
         self.assertIsNone(essentials["repair_agreements"])
+        self.assertIsNone(payload["relationship_compass"])
         self.assertEqual(essentials["repair_agreement_history"], [])
         self.assertIsNone(essentials["weekly_task"])
 
@@ -318,6 +346,14 @@ class LoveMapSystemApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         essentials = payload["essentials"]
+        self.assertEqual(
+            payload["relationship_compass"]["identity_statement"],
+            "我們是在忙裡仍願意回來對話的伴侶。",
+        )
+        self.assertNotEqual(
+            payload["relationship_compass"]["identity_statement"],
+            "Carol and Dave private compass",
+        )
         self.assertEqual(essentials["partner_care_preferences"]["primary"], "acts")
         self.assertNotEqual(essentials["partner_care_preferences"]["primary"], "gifts")
         self.assertEqual(

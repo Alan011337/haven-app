@@ -78,6 +78,41 @@ class LoveMapStoryPublic(BaseModel):
     time_capsule: LoveMapStoryCapsulePublic | None = None
 
 
+class LoveMapRelationshipCompassPublic(BaseModel):
+    identity_statement: str | None = None
+    story_anchor: str | None = None
+    future_direction: str | None = None
+    updated_by_name: str | None = None
+    updated_at: str | None = None
+
+
+class LoveMapRelationshipCompassUpsert(BaseModel):
+    identity_statement: str = Field(default="", max_length=500)
+    story_anchor: str = Field(default="", max_length=500)
+    future_direction: str = Field(default="", max_length=500)
+    # Optional human-authored revision note persisted on the change-history row.
+    # Max 300 mirrors the Heart revision-note cap (and outcome-capture
+    # `improvement_note` cap) for consistency across the Relationship System.
+    revision_note: str | None = Field(default=None, max_length=300)
+
+
+class LoveMapRelationshipCompassFieldChangePublic(BaseModel):
+    key: str
+    label: str
+    change_kind: Literal["added", "updated", "cleared"]
+    before_text: str | None = None
+    after_text: str | None = None
+
+
+class LoveMapRelationshipCompassChangePublic(BaseModel):
+    id: str
+    changed_at: str | None = None
+    changed_by_name: str | None = None
+    fields: list[LoveMapRelationshipCompassFieldChangePublic] = Field(default_factory=list)
+    # Optional short human-authored note left at save-time; null when absent.
+    revision_note: str | None = None
+
+
 class RelationshipKnowledgeSuggestionEvidencePublic(BaseModel):
     source_kind: str
     source_id: str
@@ -211,6 +246,10 @@ class LoveMapSystemResponse(BaseModel):
     partner: LoveMapSystemPartnerPublic | None = None
     baseline: BaselineSummaryPublic
     couple_goal: CoupleGoalPublic | None = None
+    relationship_compass: LoveMapRelationshipCompassPublic | None = None
+    relationship_compass_history: list[LoveMapRelationshipCompassChangePublic] = Field(
+        default_factory=list
+    )
     story: LoveMapStoryPublic = Field(default_factory=LoveMapStoryPublic)
     notes: list[LoveMapNotePublic] = Field(default_factory=list)
     wishlist_items: list[WishlistItemPublic] = Field(default_factory=list)

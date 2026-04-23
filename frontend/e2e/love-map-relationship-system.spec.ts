@@ -45,6 +45,7 @@ async function mockLoveMapApi(page: Page) {
   const notePayloads: Array<Record<string, unknown>> = [];
   const wishlistPayloads: Array<Record<string, unknown>> = [];
   const identityPayloads: Array<Record<string, unknown>> = [];
+  const compassPayloads: Array<Record<string, unknown>> = [];
   const heartProfilePayloads: Array<Record<string, unknown>> = [];
   const repairAgreementPayloads: Array<Record<string, unknown>> = [];
   let weeklyTaskCompletionCount = 0;
@@ -99,6 +100,59 @@ async function mockLoveMapApi(page: Page) {
       goal_slug: 'better_communication',
       chosen_at: new Date(now - 18 * 60 * 60 * 1000).toISOString(),
     },
+    relationship_compass: {
+      identity_statement: '我們是在忙裡仍願意回來對話的伴侶。',
+      story_anchor: '想一起記得那些有走回彼此的時刻。',
+      future_direction: '接下來一起靠近更穩定的週末節奏。',
+      updated_by_name: 'Alice Chen',
+      updated_at: new Date(now - 9 * 60 * 60 * 1000).toISOString(),
+    },
+    // Seed a single prior history entry so the Compass timeline renders on
+    // first load. Server ordering is most-recent-first; this represents
+    // the first time the current Compass wording was written down.
+    relationship_compass_history: [
+      {
+        id: 'compass-change-seed-1',
+        changed_at: new Date(now - 9 * 60 * 60 * 1000).toISOString(),
+        changed_by_name: 'Alice Chen',
+        fields: [
+          {
+            key: 'identity_statement',
+            label: '身份',
+            change_kind: 'added',
+            before_text: null,
+            after_text: '我們是在忙裡仍願意回來對話的伴侶。',
+          },
+          {
+            key: 'story_anchor',
+            label: '故事',
+            change_kind: 'added',
+            before_text: null,
+            after_text: '想一起記得那些有走回彼此的時刻。',
+          },
+          {
+            key: 'future_direction',
+            label: '未來',
+            change_kind: 'added',
+            before_text: null,
+            after_text: '接下來一起靠近更穩定的週末節奏。',
+          },
+        ],
+        revision_note: null,
+      },
+    ] as Array<{
+      id: string;
+      changed_at: string;
+      changed_by_name: string;
+      fields: Array<{
+        key: string;
+        label: string;
+        change_kind: 'added' | 'updated' | 'cleared';
+        before_text: string | null;
+        after_text: string | null;
+      }>;
+      revision_note: string | null;
+    }>,
     story: {
       available: true,
       moments: [
@@ -346,6 +400,89 @@ async function mockLoveMapApi(page: Page) {
 
     if (path.endsWith('/love-map/system') && method === 'GET') {
       await fulfillJson(route, system);
+      return;
+    }
+
+    if (path.endsWith('/love-map/identity/compass') && method === 'PUT') {
+      const payload = route.request().postDataJSON() as {
+        identity_statement?: string | null;
+        story_anchor?: string | null;
+        future_direction?: string | null;
+        revision_note?: string | null;
+      };
+      compassPayloads.push(payload);
+
+      // Mirror backend semantics: derive per-field before/after from the
+      // previous compass vs. the incoming payload, drop unchanged fields,
+      // and skip the history row entirely when nothing moved. Whitespace-
+      // only revision_note normalizes to null. This keeps the e2e path
+      // honest about the no-op guard the server enforces.
+      const prev = system.relationship_compass ?? {
+        identity_statement: null,
+        story_anchor: null,
+        future_direction: null,
+        updated_by_name: null,
+        updated_at: null,
+      };
+      const normalizedFields = {
+        identity_statement: payload.identity_statement?.trim() || null,
+        story_anchor: payload.story_anchor?.trim() || null,
+        future_direction: payload.future_direction?.trim() || null,
+      } as const;
+      const fieldLabels: Record<keyof typeof normalizedFields, string> = {
+        identity_statement: '身份',
+        story_anchor: '故事',
+        future_direction: '未來',
+      };
+      const changedFields: Array<{
+        key: string;
+        label: string;
+        change_kind: 'added' | 'updated' | 'cleared';
+        before_text: string | null;
+        after_text: string | null;
+      }> = [];
+      (Object.keys(normalizedFields) as Array<keyof typeof normalizedFields>).forEach((key) => {
+        const before = prev[key] ?? null;
+        const after = normalizedFields[key];
+        if (before === after) return;
+        let changeKind: 'added' | 'updated' | 'cleared';
+        if (before === null) changeKind = 'added';
+        else if (after === null) changeKind = 'cleared';
+        else changeKind = 'updated';
+        changedFields.push({
+          key,
+          label: fieldLabels[key],
+          change_kind: changeKind,
+          before_text: before,
+          after_text: after,
+        });
+      });
+
+      const trimmedRevisionNote = payload.revision_note?.trim() ?? '';
+      const normalizedRevisionNote = trimmedRevisionNote.length > 0 ? trimmedRevisionNote : null;
+      const savedAtIso = new Date().toISOString();
+
+      if (changedFields.length > 0) {
+        system.relationship_compass = {
+          ...normalizedFields,
+          updated_by_name: system.me.full_name,
+          updated_at: savedAtIso,
+        };
+        system.stats.last_activity_at = savedAtIso;
+
+        system.relationship_compass_history = [
+          {
+            id: `compass-change-${system.relationship_compass_history.length + 1}`,
+            changed_at: savedAtIso,
+            changed_by_name: system.me.full_name,
+            fields: changedFields,
+            revision_note: normalizedRevisionNote,
+          },
+          ...system.relationship_compass_history,
+        ];
+      }
+
+      await fulfillJson(route, system.relationship_compass);
       return;
     }
 
@@ -856,6 +993,7 @@ async function mockLoveMapApi(page: Page) {
   return {
     baselinePayloads,
     identityPayloads,
+    compassPayloads,
     heartProfilePayloads,
     repairAgreementPayloads,
     get weeklyTaskCompletionCount() {
@@ -950,8 +1088,13 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByRole('heading', { level: 2, name: '讓真正被留下來的 shared memory，變成可回來看的關係敘事。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把你們想一起靠近的生活，留在能持續維護的共享藍圖裡。' })).toBeVisible();
     await expect(page.getByText('共享、pair-visible 與私人反思，分開呈現。')).toBeVisible();
+    await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('Relationship Compass');
+    await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('我們是在忙裡仍願意回來對話的伴侶。');
+    await expect(page.getByTestId('relationship-identity-compass-updated-by')).toContainText('Alice Chen');
     await expect(page.getByText('謝謝你每天早上幫我準備咖啡')).toBeVisible();
     await expect(page.getByText('一年前的這幾天（3/21 – 3/27）：1 則日記、1 則共同卡片回憶、1 則感恩。')).toBeVisible();
+    await expect(page.getByTestId('relationship-story-compass-echo-card')).toContainText('想一起記得那些有走回彼此的時刻。');
+    await expect(page.getByTestId('relationship-future-compass-echo-card')).toContainText('接下來一起靠近更穩定的週末節奏。');
     await expect(page.getByText('目前沒有待你審核的 Shared Future 提案。')).toBeVisible();
     await expect(page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' })).toBeVisible();
 
@@ -960,6 +1103,40 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect.poll(() => apiState.identityPayloads.length).toBe(1);
     expect(apiState.identityPayloads[0]).toEqual({ full_name: 'Alice System' });
     await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('Alice System × Bob');
+
+    await page.getByLabel('我們現在是什麼樣的關係').fill('我們是願意把重要事情留下來、也願意回來調整的伴侶。');
+    await page.getByLabel('我們想一起記得哪段故事').fill('想一起記得那段忙到快散掉、但仍然靠咖啡和散步回來的週末。');
+    await page.getByLabel('接下來一起靠近什麼').fill('接下來一起靠近更穩定的週日早晨節奏。');
+    await page.getByRole('button', { name: '保存 Relationship Compass' }).click();
+    await expect.poll(() => apiState.compassPayloads.length).toBe(1);
+    expect(apiState.compassPayloads[0]).toEqual({
+      identity_statement: '我們是願意把重要事情留下來、也願意回來調整的伴侶。',
+      story_anchor: '想一起記得那段忙到快散掉、但仍然靠咖啡和散步回來的週末。',
+      future_direction: '接下來一起靠近更穩定的週日早晨節奏。',
+      // Client always sends this field; `null` when no note was typed.
+      revision_note: null,
+    });
+    await expect(page.getByTestId('relationship-story-compass-echo-card')).toContainText('想一起記得那段忙到快散掉');
+    await expect(page.getByTestId('relationship-future-compass-echo-card')).toContainText('更穩定的週日早晨節奏');
+
+    // Timeline renders with a fresh entry after the save. The seeded entry
+    // gets pushed down but stays within the last-3 window, and the new
+    // update has no revision note, so no italic quote under it. The display
+    // name stamped on the new row reflects the identity rename that happened
+    // earlier in the flow ('Alice System'); the seed row was authored before
+    // the rename and still reads 'Alice Chen'.
+    await expect(page.getByTestId('relationship-identity-compass-history')).toBeVisible();
+    await expect(page.getByTestId('relationship-identity-compass-history-entry')).toHaveCount(2);
+    await expect(
+      page.getByTestId('relationship-identity-compass-history-entry').first(),
+    ).toContainText('Alice System');
+    await expect(
+      page.getByTestId('relationship-identity-compass-history-entry').first(),
+    ).toContainText('調整了');
+    await expect(
+      page.getByTestId('relationship-identity-compass-history-entry').nth(1),
+    ).toContainText('Alice Chen');
+    await expect(page.getByTestId('relationship-identity-compass-history-note')).toHaveCount(0);
 
     await expect(page.getByTestId('relationship-heart-playbook-card')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
@@ -1055,7 +1232,13 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).toBeVisible();
     await page.getByRole('button', { name: '接受' }).first().click();
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
-    await expect(page.getByText('每逢紀念日一起重看一則回憶')).toBeVisible();
+    // Accepted ritual lands as a new Shared Future wishlist item. Scope the
+    // assertion to the Future section card — the compass's Nearby Future
+    // sidebar also mirrors wishlist_items[0].title, which would otherwise
+    // make `getByText` ambiguous.
+    await expect(
+      page.locator('#future').getByText('每逢紀念日一起重看一則回憶'),
+    ).toBeVisible();
 
     await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
@@ -1132,6 +1315,48 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' })).toBeVisible();
 
+  });
+
+  test('compass save with revision note renders italic quote in timeline', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.goto('/love-map');
+
+    // Timeline already renders with the seeded entry before any save.
+    await expect(page.getByTestId('relationship-identity-compass-history')).toBeVisible();
+    await expect(page.getByTestId('relationship-identity-compass-history-entry')).toHaveCount(1);
+
+    await page.getByLabel('我們現在是什麼樣的關係').fill('我們是慢下來也還找得到彼此的伴侶。');
+    await page.getByLabel('我們想一起記得哪段故事').fill('想一起記得那個清晨沒急著說話、只是一起煮咖啡的早上。');
+    await page.getByLabel('接下來一起靠近什麼').fill('接下來不趕，讓一個下午只屬於我們。');
+    await page.getByTestId('relationship-identity-compass-revision-note-input')
+      .fill('這次不是重寫，是因為我們開始相信自己可以慢一點。');
+
+    await page.getByRole('button', { name: '保存 Relationship Compass' }).click();
+
+    await expect.poll(() => apiState.compassPayloads.length).toBe(1);
+    expect(apiState.compassPayloads[0]).toEqual({
+      identity_statement: '我們是慢下來也還找得到彼此的伴侶。',
+      story_anchor: '想一起記得那個清晨沒急著說話、只是一起煮咖啡的早上。',
+      future_direction: '接下來不趕，讓一個下午只屬於我們。',
+      revision_note: '這次不是重寫，是因為我們開始相信自己可以慢一點。',
+    });
+
+    // New top entry shows up with the typed note rendered as italic quote.
+    await expect(page.getByTestId('relationship-identity-compass-history-entry')).toHaveCount(2);
+    const note = page.getByTestId('relationship-identity-compass-history-note').first();
+    await expect(note).toBeVisible();
+    await expect(note).toContainText('這次不是重寫，是因為我們開始相信自己可以慢一點。');
+
+    // Draft clears after a successful save so the next save must be
+    // deliberate.
+    await expect(page.getByTestId('relationship-identity-compass-revision-note-input'))
+      .toHaveValue('');
   });
 
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {
@@ -1220,6 +1445,21 @@ test.describe('Relationship System naming and IA polish', () => {
     await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
     await expectGuideSecondaryHref(page, 'relationship-system-guide-story', '/memory');
     await expectGuideSecondaryHref(page, 'relationship-system-guide-future', '/blueprint');
+
+    await page.getByTestId('relationship-system-guide-identity-primary-action').click();
+    await expect(page).toHaveURL(/\/love-map#identity$/);
+    await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('Relationship Compass');
+    await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('我們是在忙裡仍願意回來對話');
+    await page.getByLabel('我們現在是什麼樣的關係').fill('Live compass identity proof：我們願意把重要事情留下來。');
+    await page.getByLabel('我們想一起記得哪段故事').fill('Live compass story proof：咖啡、散步和感謝把我們帶回來。');
+    await page.getByLabel('接下來一起靠近什麼').fill('Live compass future proof：每個月至少留一晚給彼此。');
+    await page.getByRole('button', { name: '保存 Relationship Compass' }).click();
+    await expect(page.getByTestId('relationship-identity-compass-updated-by')).toContainText('Alice Chen');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByLabel('我們現在是什麼樣的關係')).toHaveValue('Live compass identity proof：我們願意把重要事情留下來。');
+    await expect(page.getByTestId('relationship-story-compass-echo-card')).toContainText('Live compass story proof');
+    await expect(page.getByTestId('relationship-future-compass-echo-card')).toContainText('Live compass future proof');
+
     await page.getByTestId('relationship-system-guide-heart-primary-action').click();
     await expect(page).toHaveURL(/\/love-map#heart$/);
 

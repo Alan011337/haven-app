@@ -19,6 +19,8 @@ from app.models.journal import Journal
 from app.models.love_language import LoveLanguagePreference
 from app.models.love_map_note import LoveMapNote
 from app.models.relationship_care_profile import RelationshipCareProfile
+from app.models.relationship_compass import RelationshipCompass
+from app.models.relationship_compass_change import RelationshipCompassChange
 from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
 from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
@@ -40,6 +42,10 @@ from app.schemas.love_map import (
     LoveMapRepairAgreementsPublic,
     LoveMapRepairAgreementsUpsert,
     LoveMapRepairOutcomeCapturePublic,
+    LoveMapRelationshipCompassChangePublic,
+    LoveMapRelationshipCompassFieldChangePublic,
+    LoveMapRelationshipCompassPublic,
+    LoveMapRelationshipCompassUpsert,
     LoveMapNoteCreate,
     LoveMapNotePublic,
     LoveMapStoryCapsulePublic,
@@ -101,6 +107,12 @@ REPAIR_AGREEMENT_FIELD_LABELS = {
     "avoid_in_conflict": "卡住或升高時，我們先避免什麼",
     "repair_reentry": "要重新開啟修復時，我們怎麼回來",
 }
+COMPASS_FIELD_LABELS: dict[str, str] = {
+    "identity_statement": "身份",
+    "story_anchor": "故事",
+    "future_direction": "未來",
+}
+COMPASS_HISTORY_LIMIT = 3
 
 
 def _depth_to_layer(d: int) -> str:
@@ -257,6 +269,22 @@ def _to_repair_agreements_public(
     )
 
 
+def _to_relationship_compass_public(
+    row: RelationshipCompass | None,
+    *,
+    updated_by_name: str | None = None,
+) -> LoveMapRelationshipCompassPublic | None:
+    if row is None:
+        return None
+    return LoveMapRelationshipCompassPublic(
+        identity_statement=row.identity_statement,
+        story_anchor=row.story_anchor,
+        future_direction=row.future_direction,
+        updated_by_name=updated_by_name,
+        updated_at=row.updated_at.isoformat() + "Z" if row.updated_at else None,
+    )
+
+
 def _to_repair_outcome_capture_public(
     row: RelationshipRepairOutcomeCapture | None,
     *,
@@ -343,6 +371,21 @@ def _load_care_profile(
     ).first()
 
 
+def _load_relationship_compass(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+) -> RelationshipCompass | None:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(RelationshipCompass).where(
+            RelationshipCompass.user_id == uid1,
+            RelationshipCompass.partner_id == uid2,
+        )
+    ).first()
+
+
 def _load_repair_agreements(
     *,
     session,
@@ -406,6 +449,66 @@ def _load_repair_agreement_history(
             RelationshipRepairAgreementChange.user_id == uid1,
             RelationshipRepairAgreementChange.partner_id == uid2,
         ).order_by(RelationshipRepairAgreementChange.changed_at.desc()).limit(limit)
+    ).all()
+
+
+def _build_relationship_compass_field_changes(
+    row: RelationshipCompassChange,
+) -> list[LoveMapRelationshipCompassFieldChangePublic]:
+    out: list[LoveMapRelationshipCompassFieldChangePublic] = []
+    for key, label in COMPASS_FIELD_LABELS.items():
+        before = getattr(row, f"{key}_before")
+        after = getattr(row, f"{key}_after")
+        if before == after:
+            continue
+        if before is None:
+            change_kind = "added"
+        elif after is None:
+            change_kind = "cleared"
+        else:
+            change_kind = "updated"
+        out.append(
+            LoveMapRelationshipCompassFieldChangePublic(
+                key=key,
+                label=label,
+                change_kind=change_kind,
+                before_text=before,
+                after_text=after,
+            )
+        )
+    return out
+
+
+def _to_relationship_compass_change_public(
+    row: RelationshipCompassChange,
+    *,
+    changed_by_name: str | None,
+) -> LoveMapRelationshipCompassChangePublic:
+    return LoveMapRelationshipCompassChangePublic(
+        id=str(row.id),
+        changed_at=row.changed_at.isoformat() + "Z" if row.changed_at else None,
+        changed_by_name=changed_by_name,
+        fields=_build_relationship_compass_field_changes(row),
+        revision_note=row.revision_note,
+    )
+
+
+def _load_relationship_compass_history(
+    *,
+    session,
+    user_id: UUID,
+    partner_id: UUID,
+    limit: int = COMPASS_HISTORY_LIMIT,
+) -> list[RelationshipCompassChange]:
+    uid1, uid2 = _pair_scope_ids(user_id, partner_id)
+    return session.exec(
+        select(RelationshipCompassChange)
+        .where(
+            RelationshipCompassChange.user_id == uid1,
+            RelationshipCompassChange.partner_id == uid2,
+        )
+        .order_by(RelationshipCompassChange.changed_at.desc())
+        .limit(limit)
     ).all()
 
 
@@ -834,6 +937,10 @@ def get_love_map_system(
     wishlist_items: list[WishlistItemPublic] = []
     note_rows: list[LoveMapNote] = []
     wishlist_rows: list[WishlistItem] = []
+    relationship_compass_row = None
+    relationship_compass = None
+    relationship_compass_history_rows: list[RelationshipCompassChange] = []
+    relationship_compass_history: list[LoveMapRelationshipCompassChangePublic] = []
     story = LoveMapStoryPublic()
     my_care_preferences = load_love_language_preference_summary(
         session=session,
@@ -860,6 +967,45 @@ def get_love_map_system(
         ).first()
         if goal_row:
             couple_goal = CoupleGoalPublic(goal_slug=goal_row.goal_slug, chosen_at=goal_row.chosen_at)
+
+        relationship_compass_row = _load_relationship_compass(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        compass_updated_by_user = (
+            session.get(User, relationship_compass_row.updated_by_user_id)
+            if relationship_compass_row and relationship_compass_row.updated_by_user_id
+            else None
+        )
+        relationship_compass = _to_relationship_compass_public(
+            relationship_compass_row,
+            updated_by_name=_resolve_user_name(compass_updated_by_user),
+        )
+
+        relationship_compass_history_rows = _load_relationship_compass_history(
+            session=session,
+            user_id=current_user.id,
+            partner_id=verified_partner_id,
+        )
+        compass_history_user_ids = {
+            row.changed_by_user_id
+            for row in relationship_compass_history_rows
+            if row.changed_by_user_id is not None
+        }
+        compass_history_users = {
+            user_id: session.get(User, user_id)
+            for user_id in compass_history_user_ids
+        }
+        relationship_compass_history = [
+            _to_relationship_compass_change_public(
+                row,
+                changed_by_name=_resolve_user_name(
+                    compass_history_users.get(row.changed_by_user_id)
+                ),
+            )
+            for row in relationship_compass_history_rows
+        ]
 
         note_rows = session.exec(
             select(LoveMapNote).where(
@@ -965,6 +1111,8 @@ def get_love_map_system(
         timestamps.append(partner_baseline.filled_at)
     if couple_goal:
         timestamps.append(couple_goal.chosen_at)
+    if relationship_compass_row and relationship_compass_row.updated_at:
+        timestamps.append(relationship_compass_row.updated_at)
     timestamps.extend(row.updated_at for row in note_rows)
     timestamps.extend(row.created_at for row in wishlist_rows)
     if my_care_preferences and my_care_preferences.updated_at:
@@ -1005,6 +1153,8 @@ def get_love_map_system(
             partner=_to_baseline_public(partner_baseline) if partner_baseline else None,
         ),
         couple_goal=couple_goal,
+        relationship_compass=relationship_compass,
+        relationship_compass_history=relationship_compass_history,
         story=story,
         notes=notes,
         wishlist_items=wishlist_items,
@@ -1026,6 +1176,80 @@ def get_love_map_system(
             weekly_task=_to_weekly_task_public(weekly_task),
         ),
     )
+
+
+@router.put("/identity/compass", response_model=LoveMapRelationshipCompassPublic)
+def upsert_relationship_compass(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: LoveMapRelationshipCompassUpsert,
+) -> LoveMapRelationshipCompassPublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
+    compass = _load_relationship_compass(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    current_values = {
+        key: getattr(compass, key) if compass else None
+        for key in COMPASS_FIELD_LABELS
+    }
+    next_values = {
+        key: _normalize_short_text(getattr(body, key))
+        for key in COMPASS_FIELD_LABELS
+    }
+    has_changes = any(
+        current_values[key] != next_values[key] for key in COMPASS_FIELD_LABELS
+    )
+    # Whitespace-only note → None so empty chips never leak into the timeline.
+    # Over-length rejected earlier by Pydantic `max_length=300`.
+    normalized_revision_note = (body.revision_note or "").strip() or None
+    saved_at = utcnow()
+
+    if has_changes:
+        if compass is None:
+            compass = RelationshipCompass(user_id=uid1, partner_id=uid2)
+        for key in COMPASS_FIELD_LABELS:
+            setattr(compass, key, next_values[key])
+        compass.updated_by_user_id = current_user.id
+        compass.updated_at = saved_at
+        session.add(compass)
+        session.flush()
+
+        session.add(
+            RelationshipCompassChange(
+                user_id=uid1,
+                partner_id=uid2,
+                changed_by_user_id=current_user.id,
+                changed_at=saved_at,
+                identity_statement_before=current_values["identity_statement"],
+                identity_statement_after=next_values["identity_statement"],
+                story_anchor_before=current_values["story_anchor"],
+                story_anchor_after=next_values["story_anchor"],
+                future_direction_before=current_values["future_direction"],
+                future_direction_after=next_values["future_direction"],
+                revision_note=normalized_revision_note,
+            )
+        )
+
+        commit_with_error_handling(
+            session,
+            logger=logger,
+            action="Upsert love map relationship compass",
+            conflict_detail="儲存 Relationship Compass 時發生衝突。",
+            failure_detail="儲存 Relationship Compass 失敗。",
+        )
+        session.refresh(compass)
+
+    return _to_relationship_compass_public(
+        compass,
+        updated_by_name=_resolve_user_name(current_user),
+    ) or LoveMapRelationshipCompassPublic()
 
 
 @router.put("/essentials/heart-profile", response_model=LoveMapHeartProfileSavePublic)

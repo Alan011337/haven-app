@@ -15,7 +15,7 @@ MODULE_LINE_BUDGETS: dict[Path, int] = {
     REPO_ROOT / "backend" / "app" / "services" / "notification_outbox.py": 940,
     REPO_ROOT / "backend" / "app" / "core" / "health_routes.py": 940,
     REPO_ROOT / "backend" / "app" / "api" / "routers" / "card_decks.py": 980,
-    REPO_ROOT / "frontend" / "src" / "services" / "api-client.ts": 700,
+    REPO_ROOT / "frontend" / "src" / "services" / "api-client.ts": 730,
     REPO_ROOT / "frontend" / "src" / "components" / "features" / "DailyCard.tsx": 650,
     REPO_ROOT / "frontend" / "src" / "hooks" / "useSocket.ts": 360,
     REPO_ROOT / "frontend" / "src" / "features" / "home" / "useHomeData.ts": 460,

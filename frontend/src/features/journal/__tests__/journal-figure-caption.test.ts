@@ -4,6 +4,15 @@ import {
   isAltWorthRendering,
   resolveJournalFigureCaption,
 } from '../journal-figure-caption.ts';
+import { JOURNAL_IMAGE_ALT_FALLBACK } from '../editor/journal-attachment-markdown.ts';
+
+// Drift guard: the helper inlines 'journal image' to avoid cross-file .ts
+// relative imports. This test imports the source-of-truth constant and
+// asserts the helper still rejects it. If someone edits the exported
+// constant in isolation, this test fails loudly.
+test('isAltWorthRendering: rejects the exported JOURNAL_IMAGE_ALT_FALLBACK (drift guard)', () => {
+  assert.equal(isAltWorthRendering(JOURNAL_IMAGE_ALT_FALLBACK), false);
+});
 
 // ---- resolveJournalFigureCaption: 8 cases ----
 

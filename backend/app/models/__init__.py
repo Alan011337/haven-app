@@ -48,6 +48,8 @@ from .love_language import LoveLanguagePreference, LoveLanguageTaskAssignment
 from .cool_down_session import CoolDownSession
 from .love_map_note import LoveMapNote, LoveMapLayer
 from .relationship_care_profile import RelationshipCareProfile
+from .relationship_compass import RelationshipCompass
+from .relationship_compass_change import RelationshipCompassChange
 from .relationship_repair_agreement import RelationshipRepairAgreement
 from .relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from .relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
@@ -107,6 +109,8 @@ __all__ = [
     "PushSubscription",
     "PushSubscriptionState",
     "RelationshipCareProfile",
+    "RelationshipCompass",
+    "RelationshipCompassChange",
     "RelationshipRepairAgreement",
     "RelationshipRepairAgreementChange",
     "RelationshipRepairOutcomeCapture",

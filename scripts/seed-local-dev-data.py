@@ -73,6 +73,7 @@ from app.models.journal_attachment import JournalAttachment
 from app.models.love_language import LoveLanguagePreference
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.relationship_care_profile import RelationshipCareProfile
+from app.models.relationship_compass import RelationshipCompass
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
 from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
@@ -419,6 +420,7 @@ def seed_relationship_system(session: Session) -> None:
     wishlist_exists = session.exec(select(WishlistItem).limit(1)).first()
     preference_exists = session.exec(select(LoveLanguagePreference).limit(1)).first()
     care_profile_exists = session.exec(select(RelationshipCareProfile).limit(1)).first()
+    compass_exists = session.exec(select(RelationshipCompass).limit(1)).first()
     repair_agreement_exists = session.exec(select(RelationshipRepairAgreement).limit(1)).first()
     repair_outcome_capture_exists = session.exec(select(RelationshipRepairOutcomeCapture).limit(1)).first()
     repair_agreement_change_exists = session.exec(select(RelationshipRepairAgreementChange).limit(1)).first()
@@ -430,6 +432,7 @@ def seed_relationship_system(session: Session) -> None:
         and wishlist_exists
         and preference_exists
         and care_profile_exists
+        and compass_exists
         and repair_agreement_exists
         and repair_outcome_capture_exists
         and repair_agreement_change_exists
@@ -556,6 +559,22 @@ def seed_relationship_system(session: Session) -> None:
             session.add(care_profile)
         session.commit()
         print("[seed] relationship_system: seeded 2 Heart care playbooks")
+
+    if not compass_exists:
+        session.add(
+            RelationshipCompass(
+                user_id=min(ALICE_ID, BOB_ID),
+                partner_id=max(ALICE_ID, BOB_ID),
+                identity_statement="我們是在忙裡仍願意回來對話、也願意把重要的事留在同一張圖上的伴侶。",
+                story_anchor="想一起記得：即使一週很滿，我們還是會用咖啡、散步和被說出口的感謝，把彼此帶回來。",
+                future_direction="接下來一起靠近更穩定的週末節奏：每個月至少留一晚給晚餐、散步和慢慢對話。",
+                updated_by_user_id=ALICE_ID,
+                created_at=_days_ago(1),
+                updated_at=_days_ago(0),
+            )
+        )
+        session.commit()
+        print("[seed] relationship_system: seeded Relationship Compass")
 
     if not repair_agreement_exists:
         session.add(
