@@ -56,6 +56,18 @@ test.describe('Analysis understanding center', () => {
         action_for_user: '先說一件今天真心感謝的事。',
         safety_tier: 0,
       },
+      {
+        id: 'mine-3',
+        user_id: 'me',
+        content: '上週比較平穩，只是有點忙。',
+        created_at: hoursAgo(now, 216),
+        mood_label: '平穩',
+        mood_score: 62,
+        emotional_needs: '我需要保留一點自己的空間。',
+        advice_for_user: '先把節奏放慢。',
+        action_for_user: '找一段可以休息的時間。',
+        safety_tier: 0,
+      },
     ];
 
     const partnerJournals = [
@@ -81,6 +93,18 @@ test.describe('Analysis understanding center', () => {
         emotional_needs: '我需要一個不會立刻變成爭執的入口。',
         advice_for_user: '從比較小的問題重新開始。',
         action_for_user: '先說今天最想被理解的一件事。',
+        safety_tier: 0,
+      },
+      {
+        id: 'partner-3',
+        user_id: 'partner',
+        content: '上週我們雖然忙，但還有互相確認。',
+        created_at: hoursAgo(now, 240),
+        mood_label: '安定',
+        mood_score: 64,
+        emotional_needs: '我需要知道我們還有在同一邊。',
+        advice_for_user: '保留確認彼此的習慣。',
+        action_for_user: '說一句具體的確認。',
         safety_tier: 0,
       },
     ];
@@ -112,7 +136,7 @@ test.describe('Analysis understanding center', () => {
 
     await page.route(`${API_ORIGIN}/users/me**`, async (route) => {
       await fulfillJson(route, {
-        id: 'user-1',
+        id: 'me',
         email: 'analysis@example.com',
         full_name: 'Analysis User',
         is_active: true,
@@ -209,7 +233,15 @@ test.describe('Analysis understanding center', () => {
           updated_by_name: 'Analysis User',
           updated_at: hoursAgo(now, 8),
         },
-        relationship_compass_history: [],
+        relationship_compass_history: [
+          {
+            id: 'compass-change-1',
+            changed_at: hoursAgo(now, 20),
+            changed_by_name: 'Analysis User',
+            fields: [],
+            revision_note: '把方向校準到週末節奏。',
+          },
+        ],
         story: {
           available: true,
           moments: [
@@ -264,7 +296,19 @@ test.describe('Analysis understanding center', () => {
             updated_by_name: 'Analysis User',
             updated_at: hoursAgo(now, 9),
           },
-          repair_agreement_history: [],
+          repair_agreement_history: [
+            {
+              id: 'repair-change-1',
+              changed_at: hoursAgo(now, 16),
+              changed_by_name: 'Analysis User',
+              origin_kind: 'manual_edit',
+              source_outcome_capture_id: null,
+              source_captured_by_name: null,
+              source_captured_at: null,
+              fields: [],
+              revision_note: '把安全感放到前面。',
+            },
+          ],
           pending_repair_outcome_capture: null,
           weekly_task: {
             task_slug: 'slow-check-in',
@@ -311,6 +355,11 @@ test.describe('Analysis understanding center', () => {
           body_text: '你有記得回來確認我的狀態，這對我真的很重要。',
           created_at: hoursAgo(now, 88),
         },
+        {
+          id: 14,
+          body_text: '上週謝謝你願意留下來聽我說完。',
+          created_at: hoursAgo(now, 216),
+        },
       ]);
     });
 
@@ -328,7 +377,7 @@ test.describe('Analysis understanding center', () => {
     await expect(page.getByText('最近你們反覆回到「修復」')).toBeVisible();
     await expect(page.getByText('安全感', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('最近比較常浮出的需要')).toBeVisible();
-    await expect(page.getByText('我需要安全感和更慢一點的回應。')).toBeVisible();
+    await expect(page.getByText('我需要安全感和更慢一點的回應。').last()).toBeVisible();
     await expect(page.getByRole('link', { name: '回到今天同步' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把判讀拆回真正的依據' })).toBeVisible();
     await expect(page.getByTestId('analysis-v2-brief')).toBeVisible();
@@ -343,14 +392,49 @@ test.describe('Analysis understanding center', () => {
     await expect(page.getByTestId('analysis-v2-brief-card-attention')).toContainText('3/3 個 Repair Agreements');
     await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('Relationship Compass');
     await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('接下來一起靠近更穩定的週末節奏。');
+    await expect(page.getByTestId('analysis-v2-brief-card-attention')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-v2-brief-card-attention')).toContainText('我需要先被理解，而不是立刻被糾正。');
+    await expect(page.getByTestId('analysis-v2-brief-card-strength')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-v2-brief-card-strength')).toContainText('謝謝你昨天願意先說出自己的真實感受');
+    await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('最近一次 Relationship Compass 修訂');
+
+    await expect(
+      page.getByTestId('analysis-evidence-preview-row-你-mine-1').first(),
+    ).toHaveAttribute('href', /\/journal\/mine-1\?from=analysis&date=\d{4}-\d{2}-\d{2}/);
+    await expect(
+      page.getByTestId('analysis-evidence-preview-row-伴侶-partner-1').first(),
+    ).toHaveAttribute('href', /\/memory\?date=\d{4}-\d{2}-\d{2}&kind=journal&id=partner-1/);
+    await expect(
+      page.getByTestId('analysis-evidence-preview-row-appreciation-11').first(),
+    ).toHaveAttribute('href', /\/memory\?date=\d{4}-\d{2}-\d{2}&kind=appreciation&id=11&open=1/);
+    await expect(
+      page.getByTestId('analysis-v2-brief-card-direction').getByRole('link', { name: /打開 Compass 修訂/ }),
+    ).toHaveAttribute('href', '/love-map#relationship-compass-history-compass-change-1');
+
+    await expect(page.getByTestId('analysis-weekly-change')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '上週以來，哪裡有變化' })).toBeVisible();
+    await expect(page.getByTestId('analysis-weekly-change')).toContainText('近 7 天 / 前 7 天');
+    await expect(page.getByTestId('analysis-weekly-change-card-closer')).toContainText('更靠近了什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-closer')).toContainText('感謝比前一週更常被說出口');
+    await expect(page.getByTestId('analysis-weekly-change-card-closer')).toContainText('Appreciation');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('變脆弱了什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('高張力片段比前一週更需要先被照顧');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('Repair Agreements');
+    await expect(page.getByTestId('analysis-weekly-change-card-steady')).toContainText('仍然穩定的是什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-focus')).toContainText('現在最值得留意的是什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-closer')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('高張力');
 
     await page
-      .getByTestId('analysis-v2-brief-card-attention')
-      .getByRole('button', { name: '查看修復依據' })
+      .getByTestId('analysis-weekly-change-card-fragile')
+      .getByRole('button', { name: '展開完整依據' })
       .click();
-    const briefEvidencePanel = page.getByTestId('analysis-evidence-panel');
     await expect(
-      briefEvidencePanel.getByRole('heading', { level: 3, name: '最近需要先照顧安全感的地方' }),
+      page
+        .getByTestId('analysis-evidence-panel')
+        .getByRole('heading', { level: 3, name: '最近需要先照顧安全感的地方' }),
     ).toBeVisible();
 
     await page
@@ -371,7 +455,10 @@ test.describe('Analysis understanding center', () => {
       evidencePanel.getByText('我需要先被理解，而不是立刻被糾正。'),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: '展開雙方模式依據' }).nth(1).click();
+    await page
+      .getByTestId('analysis-v2-brief-card-current')
+      .getByRole('button', { name: '展開完整依據' })
+      .click();
     await expect(
       evidencePanel.getByRole('heading', {
         level: 3,
@@ -461,6 +548,16 @@ test.describe('Analysis understanding center', () => {
     await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('Relationship Compass');
     await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('更穩定的週末節奏');
     await expect(page.getByText('Repair Agreements').first()).toBeVisible();
+    await expect(page.getByTestId('analysis-v2-brief-card-attention')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-v2-brief-card-direction')).toContainText('這個判讀主要根據');
+    await expect(page.getByTestId('analysis-weekly-change')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '上週以來，哪裡有變化' })).toBeVisible();
+    await expect(page.getByTestId('analysis-weekly-change')).toContainText('近 7 天 / 前 7 天');
+    await expect(page.getByTestId('analysis-weekly-change-card-closer')).toContainText('更靠近了什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('變脆弱了什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-steady')).toContainText('仍然穩定的是什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-focus')).toContainText('現在最值得留意的是什麼');
+    await expect(page.getByTestId('analysis-weekly-change-card-fragile')).toContainText('這個判讀主要根據');
     await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
 
     const currentAction = page.getByTestId('analysis-v2-brief-card-current').getByRole('button').first();

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +27,7 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import type { MemoryDayRevealArtifact, MemoryDayRevealModel } from '@/lib/memory-day-reveal';
 import type { CalendarDay, TimelineAttachmentMeta } from '@/services/memoryService';
 
 export type MemoryCardKind = 'capsule' | 'journal' | 'card' | 'appreciation' | 'photo' | 'empty';
@@ -662,6 +664,177 @@ export function MemoryArtifactDialog({
         </GlassModal>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface MemoryDayRevealSummaryProps {
+  model: MemoryDayRevealModel;
+  onOpenArtifact: (artifactKey: string) => void;
+  onJumpToArtifact: (artifactKey: string) => void;
+}
+
+function MemoryDayRevealKindChip({
+  label,
+  count,
+}: {
+  label: string;
+  count: number;
+}) {
+  if (count <= 0) return null;
+  return (
+    <Badge variant="metadata" size="sm" className="border-white/56 bg-white/74">
+      {label} {count}
+    </Badge>
+  );
+}
+
+function MemoryDayRevealRow({
+  artifact,
+  onOpenArtifact,
+  onJumpToArtifact,
+}: {
+  artifact: MemoryDayRevealArtifact;
+  onOpenArtifact: (artifactKey: string) => void;
+  onJumpToArtifact: (artifactKey: string) => void;
+}) {
+  return (
+    <div
+      data-testid={`memory-day-reveal-row-${artifact.key}`}
+      className="rounded-[1.45rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" size="sm" className="border-white/56 bg-white/74">
+              {artifact.typeLabel}
+            </Badge>
+            <Badge variant="metadata" size="sm" className="border-white/56 bg-white/70">
+              {artifact.contextLabel}
+            </Badge>
+            {artifact.metaLabel ? (
+              <span className="type-caption text-muted-foreground">{artifact.metaLabel}</span>
+            ) : null}
+          </div>
+          <div className="space-y-1">
+            <h4 className="type-section-title text-card-foreground">{artifact.title}</h4>
+            <p className="type-caption leading-6 text-muted-foreground">{artifact.excerpt}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full"
+            onClick={() => onJumpToArtifact(artifact.key)}
+          >
+            定位片段
+          </Button>
+          {artifact.canOpen ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              onClick={() => onOpenArtifact(artifact.key)}
+            >
+              {artifact.actionLabel}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MemoryDayRevealSummary({
+  model,
+  onOpenArtifact,
+  onJumpToArtifact,
+}: MemoryDayRevealSummaryProps) {
+  const primaryArtifact = model.mode === 'single' ? model.artifacts[0] : null;
+
+  return (
+    <GlassCard
+      data-testid="memory-day-reveal-summary"
+      className="overflow-hidden rounded-[2.35rem] border-white/56 bg-[linear-gradient(165deg,rgba(255,252,248,0.96),rgba(244,238,231,0.92))] p-5 shadow-lift backdrop-blur-xl md:p-6"
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="warning" size="sm">
+                Artifact Reveal
+              </Badge>
+              <p className="type-micro uppercase text-primary/80">Calendar Open-Through</p>
+            </div>
+            <h3 className="type-h3 text-card-foreground">這一天打開了真實片段</h3>
+            <p className="type-body-muted text-muted-foreground">
+              {model.summaryLabel}
+              {model.date ? ` · ${model.date}` : ''}。月曆上的亮點會在這裡拆回真正留下的內容。
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <MemoryDayRevealKindChip label="日記" count={model.counts.journal} />
+            <MemoryDayRevealKindChip label="卡片" count={model.counts.card} />
+            <MemoryDayRevealKindChip label="感謝" count={model.counts.appreciation} />
+            <MemoryDayRevealKindChip label="照片" count={model.counts.photo} />
+          </div>
+        </div>
+
+        {primaryArtifact ? (
+          <div className="rounded-[1.7rem] border border-primary/14 bg-primary/7 px-4 py-4 shadow-soft">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="type-caption uppercase tracking-[0.16em] text-primary/76">Single artifact day</p>
+                <p className="type-body-muted text-card-foreground">
+                  這一天只有一個主要片段，可以直接打開，不需要再猜月曆標記指的是什麼。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => onJumpToArtifact(primaryArtifact.key)}
+                >
+                  定位片段
+                </Button>
+                {primaryArtifact.canOpen ? (
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => onOpenArtifact(primaryArtifact.key)}
+                  >
+                    {primaryArtifact.actionLabel}
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {model.artifacts.length > 0 ? (
+          <div className="grid gap-3">
+            {model.artifacts.map((artifact) => (
+              <MemoryDayRevealRow
+                key={artifact.key}
+                artifact={artifact}
+                onOpenArtifact={onOpenArtifact}
+                onJumpToArtifact={onJumpToArtifact}
+              />
+            ))}
+          </div>
+        ) : (
+          <MemoryStatePanel
+            tone="quiet"
+            eyebrow="No artifacts returned"
+            title="這一天目前沒有可展開的片段。"
+            description="月曆如果有亮點但明細沒有回來，Haven 會直接說清楚，不補寫不存在的回憶。"
+          />
+        )}
+      </div>
+    </GlassCard>
   );
 }
 

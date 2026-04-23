@@ -27,12 +27,17 @@ import type {
   TimelinePhotoItem,
 } from '@/services/memoryService';
 import { memoryService } from '@/services/memoryService';
+import {
+  buildMemoryDayRevealModel,
+  getMemoryDayRevealArtifactKey,
+} from '@/lib/memory-day-reveal';
 import MemorySkeleton from './MemorySkeleton';
 import {
   type MemoryCardKind,
   MemoryCalendarAtlas,
   MemoryCompanionMemoryCard,
   MemoryCover,
+  MemoryDayRevealSummary,
   MemoryArtifactDialog,
   MemoryFeaturedMemoryCard,
   MemoryModeRail,
@@ -135,6 +140,10 @@ function normalizeAppreciationId(rawId: string) {
     return null;
   }
   return parsedId;
+}
+
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, '\\$&');
 }
 
 function buildJournalModel(item: TimelineJournalItem): TimelineMemoryModel {
@@ -346,14 +355,20 @@ export default function MemoryPageContent() {
   const deepLinkDate = searchParams.get('date');
   const focusKind = searchParams.get('kind');
   const focusId = searchParams.get('id');
+  const shouldOpenFocusedArtifact = searchParams.get('open') === '1';
   const deepLinkedCalendarDate = useMemo(
     () => (deepLinkDate && DATE_ONLY_PATTERN.test(deepLinkDate) ? deepLinkDate : null),
     [deepLinkDate],
   );
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(deepLinkedCalendarDate);
+  const dayRevealRef = useRef<HTMLDivElement>(null);
+  const pendingRevealScrollDate = useRef<string | null>(null);
   const focusKey = useMemo(
-    () => (deepLinkDate && focusKind && focusId ? `${deepLinkDate}:${focusKind}:${focusId}` : null),
-    [deepLinkDate, focusId, focusKind],
+    () =>
+      deepLinkDate && focusKind && focusId
+        ? `${deepLinkDate}:${focusKind}:${focusId}:${shouldOpenFocusedArtifact ? 'open' : 'focus'}`
+        : null,
+    [deepLinkDate, focusId, focusKind, shouldOpenFocusedArtifact],
   );
   useEffect(() => {
     if (deepLinkedCalendarDate) {
@@ -372,6 +387,8 @@ export default function MemoryPageContent() {
       params.set('date', date);
       params.delete('kind');
       params.delete('id');
+      params.delete('open');
+      pendingRevealScrollDate.current = date;
 
       const nextQuery = params.toString();
       router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
@@ -392,8 +409,10 @@ export default function MemoryPageContent() {
 
   const focusRef = useRef<HTMLDivElement>(null);
   const hasScrolledToFocus = useRef(false);
+  const hasOpenedFocusedArtifact = useRef(false);
   useEffect(() => {
     hasScrolledToFocus.current = false;
+    hasOpenedFocusedArtifact.current = false;
   }, [focusKey]);
 
   const featuredTimelineItem = items[0] ?? null;
@@ -446,6 +465,21 @@ export default function MemoryPageContent() {
     staleTime: MEMORY_DAY_STALE_TIME_MS,
   });
   const selectedDayItems = useMemo(() => selectedDayQuery.data?.items ?? [], [selectedDayQuery.data?.items]);
+  const selectedDayRevealModel = useMemo(
+    () =>
+      buildMemoryDayRevealModel({
+        date: activeSelectedCalendarDate,
+        items: selectedDayItems,
+      }),
+    [activeSelectedCalendarDate, selectedDayItems],
+  );
+  const selectedDayItemByRevealKey = useMemo(() => {
+    const map = new Map<string, TimelineItem>();
+    for (const item of selectedDayItems) {
+      map.set(getMemoryDayRevealArtifactKey(item), item);
+    }
+    return map;
+  }, [selectedDayItems]);
   const hasFocusedDayItem = useMemo(
     () => Boolean(focusKey) && selectedDayItems.some((item) => isFocusTarget(item)),
     [focusKey, isFocusTarget, selectedDayItems],
@@ -490,6 +524,39 @@ export default function MemoryPageContent() {
       isMine: item.is_mine,
     });
   }, []);
+
+  const handleJumpToDayArtifact = useCallback((artifactKey: string) => {
+    const target = document.querySelector(
+      `[data-memory-artifact-key="${escapeAttributeValue(artifactKey)}"]`,
+    );
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
+
+  const handleOpenDayRevealArtifact = useCallback(
+    (artifactKey: string) => {
+      if (!activeSelectedCalendarDate) return;
+      const item = selectedDayItemByRevealKey.get(artifactKey);
+      if (!item) return;
+
+      if (item.type === 'journal') {
+        handleOpenJournalArtifact(item.id, activeSelectedCalendarDate);
+      } else if (item.type === 'card') {
+        handleOpenCardArtifact(item, activeSelectedCalendarDate);
+      } else if (item.type === 'appreciation') {
+        handleOpenAppreciationArtifact(item, activeSelectedCalendarDate);
+      } else {
+        handleJumpToDayArtifact(artifactKey);
+      }
+    },
+    [
+      activeSelectedCalendarDate,
+      handleJumpToDayArtifact,
+      handleOpenAppreciationArtifact,
+      handleOpenCardArtifact,
+      handleOpenJournalArtifact,
+      selectedDayItemByRevealKey,
+    ],
+  );
 
   const buildDaySpotlightAction = useCallback(
     (item: TimelineItem) => {
@@ -551,8 +618,58 @@ export default function MemoryPageContent() {
     return () => window.clearTimeout(timer);
   }, [focusKey, hasFocusedDayItem, view]);
   useEffect(() => {
+    if (
+      view !== 'calendar' ||
+      selectedDayQuery.isLoading ||
+      !activeSelectedCalendarDate ||
+      pendingRevealScrollDate.current !== activeSelectedCalendarDate ||
+      !dayRevealRef.current
+    ) {
+      return;
+    }
+
+    pendingRevealScrollDate.current = null;
+    const timer = window.setTimeout(() => {
+      dayRevealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [activeSelectedCalendarDate, selectedDayQuery.isLoading, view]);
+
+  useEffect(() => {
+    if (
+      !shouldOpenFocusedArtifact ||
+      !focusKey ||
+      !activeSelectedCalendarDate ||
+      view !== 'calendar' ||
+      hasOpenedFocusedArtifact.current
+    ) {
+      return;
+    }
+
+    const focusItem = selectedDayItems.find((item) => isFocusTarget(item));
+    if (!focusItem) return;
+
+    if (focusItem.type === 'appreciation') {
+      hasOpenedFocusedArtifact.current = true;
+      handleOpenAppreciationArtifact(focusItem, activeSelectedCalendarDate);
+    } else if (focusItem.type === 'card') {
+      hasOpenedFocusedArtifact.current = true;
+      handleOpenCardArtifact(focusItem, activeSelectedCalendarDate);
+    }
+  }, [
+    activeSelectedCalendarDate,
+    focusKey,
+    handleOpenAppreciationArtifact,
+    handleOpenCardArtifact,
+    isFocusTarget,
+    selectedDayItems,
+    shouldOpenFocusedArtifact,
+    view,
+  ]);
+  useEffect(() => {
+    if (shouldOpenFocusedArtifact && focusKey) return;
     setArtifactDialog(null);
-  }, [activeSelectedCalendarDate]);
+  }, [activeSelectedCalendarDate, focusKey, shouldOpenFocusedArtifact]);
   useEffect(() => {
     if (view !== 'calendar') {
       setArtifactDialog(null);
@@ -1059,8 +1176,17 @@ export default function MemoryPageContent() {
 
                   {!selectedDayQuery.isLoading && !selectedDayQuery.isError && selectedDayItems.length > 0 ? (
                     <>
+                      <div ref={dayRevealRef} tabIndex={-1}>
+                        <MemoryDayRevealSummary
+                          model={selectedDayRevealModel}
+                          onOpenArtifact={handleOpenDayRevealArtifact}
+                          onJumpToArtifact={handleJumpToDayArtifact}
+                        />
+                      </div>
+
                       {selectedDayFeaturedModel && selectedDayItems[0] ? (() => {
                         const featuredFocused = isFocusTarget(selectedDayItems[0]);
+                        const featuredKey = getMemoryDayRevealArtifactKey(selectedDayItems[0]);
                         const card = (
                           <MemoryFeaturedMemoryCard
                             kind={selectedDayFeaturedModel.kind}
@@ -1076,7 +1202,14 @@ export default function MemoryPageContent() {
                             footer={buildDaySpotlightAction(selectedDayItems[0])}
                           />
                         );
-                        return featuredFocused ? <div ref={focusRef}>{card}</div> : card;
+                        return (
+                          <div
+                            data-memory-artifact-key={featuredKey}
+                            ref={featuredFocused ? focusRef : undefined}
+                          >
+                            {card}
+                          </div>
+                        );
                       })() : null}
 
                       {selectedDayStreamItems.length > 0 ? (
@@ -1085,6 +1218,7 @@ export default function MemoryPageContent() {
                             const model = buildTimelineModel(item);
                             const itemFocused = isFocusTarget(item);
                             const itemKey = item.type === 'card' ? `day-card-${item.session_id}` : `day-${item.type}-${item.id}`;
+                            const artifactKey = getMemoryDayRevealArtifactKey(item);
                             const card = (
                               <MemoryStreamMemoryCard
                                 kind={model.kind}
@@ -1100,9 +1234,15 @@ export default function MemoryPageContent() {
                                 footer={buildDaySpotlightAction(item)}
                               />
                             );
-                            return itemFocused
-                              ? <div key={itemKey} ref={focusRef}>{card}</div>
-                              : <div key={itemKey}>{card}</div>;
+                            return (
+                              <div
+                                key={itemKey}
+                                data-memory-artifact-key={artifactKey}
+                                ref={itemFocused ? focusRef : undefined}
+                              >
+                                {card}
+                              </div>
+                            );
                           })}
                         </div>
                       ) : null}

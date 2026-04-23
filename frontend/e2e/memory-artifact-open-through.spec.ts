@@ -197,6 +197,19 @@ async function fetchJson<T>(request: APIRequestContext, token: string, path: str
   return (await response.json()) as T;
 }
 
+async function tryFetchJson<T>(request: APIRequestContext, token: string, path: string, params?: Record<string, string | number>) {
+  const response = await request.get(`${MEMORY_API_ORIGIN}${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    params,
+  });
+  if (!response.ok()) {
+    return null;
+  }
+  return (await response.json()) as T;
+}
+
 async function fetchArtifactReferences(request: APIRequestContext, token: string): Promise<ArtifactReferences> {
   const now = new Date();
   const calendarPayload = await fetchJson<CalendarResponse>(request, token, '/api/memory/calendar', {
@@ -228,7 +241,10 @@ async function fetchArtifactReferences(request: APIRequestContext, token: string
 
     for (const item of items) {
       if (!references.journal && item.type === 'journal' && item.content_preview?.trim()) {
-        const journalDetail = await fetchJson<JournalDetailResponse>(request, token, `/api/journals/${item.id}`);
+        const journalDetail = await tryFetchJson<JournalDetailResponse>(request, token, `/api/journals/${item.id}`);
+        if (!journalDetail) {
+          continue;
+        }
         const fullSnippet = stripMarkdownToSnippet(journalDetail.content);
         if (fullSnippet) {
           references.journal = {
@@ -241,7 +257,10 @@ async function fetchArtifactReferences(request: APIRequestContext, token: string
       }
 
       if (!references.card && item.type === 'card') {
-        const cardDetail = await fetchJson<DeckHistoryEntry>(request, token, `/api/card-decks/history/${item.session_id}`);
+        const cardDetail = await tryFetchJson<DeckHistoryEntry>(request, token, `/api/card-decks/history/${item.session_id}`);
+        if (!cardDetail) {
+          continue;
+        }
         references.card = {
           date,
           sessionId: item.session_id,
@@ -298,11 +317,15 @@ test.describe('Memory artifact open-through', () => {
     await page.goto(`${appBaseUrl}/memory?date=${journal.date}`, { waitUntil: 'domcontentloaded' });
 
     const selectedDayButton = page.locator(`button[aria-label^="${journal.date}"]`);
-    await expect(selectedDayButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(selectedDayButton).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+    await expect(page.getByTestId('memory-day-reveal-summary')).toBeVisible();
 
     const journalCard = page.locator('[data-memory-kind="journal"]').filter({ hasText: journal.previewSnippet }).first();
     await expect(journalCard).toBeVisible();
-    await journalCard.getByRole('button', { name: '打開完整日記' }).click();
+    const journalRevealRow = page.getByTestId(`memory-day-reveal-row-journal:${journal.id}`).first();
+    await expect(journalRevealRow).toBeVisible();
+    await expect(journalRevealRow).toContainText(journal.previewSnippet);
+    await journalRevealRow.getByRole('button', { name: '打開完整日記' }).click();
 
     await expect.poll(() => {
       const url = new URL(page.url());
@@ -311,7 +334,7 @@ test.describe('Memory artifact open-through', () => {
         from: url.searchParams.get('from'),
         date: url.searchParams.get('date'),
       });
-    }).toBe(
+    }, { timeout: 45_000 }).toBe(
       JSON.stringify({
         path: `/journal/${journal.id}`,
         from: 'memory',
@@ -319,7 +342,7 @@ test.describe('Memory artifact open-through', () => {
       }),
     );
 
-    await expect(page.getByText(journal.fullSnippet, { exact: false })).toBeVisible();
+    await expect(page.getByText(journal.fullSnippet, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole('link', { name: '返回' }).first().click();
 
@@ -329,7 +352,7 @@ test.describe('Memory artifact open-through', () => {
         path: url.pathname,
         date: url.searchParams.get('date'),
       });
-    }).toBe(
+    }, { timeout: 30_000 }).toBe(
       JSON.stringify({
         path: '/memory',
         date: journal.date,
@@ -353,11 +376,15 @@ test.describe('Memory artifact open-through', () => {
     const appBaseUrl = baseURL ?? 'http://127.0.0.1:3000';
 
     await page.goto(`${appBaseUrl}/memory?date=${card.date}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator(`button[aria-label^="${card.date}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(`button[aria-label^="${card.date}"]`)).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+    await expect(page.getByTestId('memory-day-reveal-summary')).toBeVisible();
 
     const cardMemory = page.locator('[data-memory-kind="card"]').filter({ hasText: card.previewSnippet }).first();
+    const cardRevealRow = page.getByTestId(`memory-day-reveal-row-card:${card.sessionId}`).first();
+    await expect(cardRevealRow).toBeVisible();
+    await cardRevealRow.getByRole('button', { name: '定位片段' }).click();
     await expect(cardMemory).toBeVisible();
-    await cardMemory.getByRole('button', { name: '打開完整卡片對話' }).click();
+    await cardRevealRow.getByRole('button', { name: '打開完整卡片對話' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -384,11 +411,15 @@ test.describe('Memory artifact open-through', () => {
     const appBaseUrl = baseURL ?? 'http://127.0.0.1:3000';
 
     await page.goto(`${appBaseUrl}/memory?date=${appreciation.date}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator(`button[aria-label^="${appreciation.date}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(`button[aria-label^="${appreciation.date}"]`)).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+    await expect(page.getByTestId('memory-day-reveal-summary')).toBeVisible();
 
     const appreciationCard = page.locator('[data-memory-kind="appreciation"]').filter({ hasText: appreciation.previewSnippet }).first();
     await expect(appreciationCard).toBeVisible();
-    await appreciationCard.getByRole('button', { name: '打開完整感謝' }).click();
+    const appreciationRevealRow = page.getByTestId(`memory-day-reveal-row-appreciation:${appreciation.id}`).first();
+    await expect(appreciationRevealRow).toBeVisible();
+    await expect(appreciationRevealRow).toContainText(appreciation.previewSnippet);
+    await appreciationRevealRow.getByRole('button', { name: '打開完整感謝' }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();

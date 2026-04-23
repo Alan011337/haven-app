@@ -18,7 +18,12 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import type {
+  AnalysisEvidencePreviewMap,
+  AnalysisEvidencePreviewModel,
+} from '@/lib/analysis-v2-evidence-preview';
 import type { AnalysisUnderstandingBriefModel } from '@/lib/analysis-v2-understanding-brief';
+import type { AnalysisWeeklyChangeBriefModel } from '@/lib/analysis-v2-weekly-change';
 
 type AnalysisTone = 'default' | 'strength' | 'attention' | 'quiet' | 'error';
 
@@ -45,6 +50,40 @@ function toneIcon(tone: AnalysisTone) {
   if (tone === 'attention') return <Target className="h-[18px] w-[18px]" aria-hidden />;
   if (tone === 'error') return <BellRing className="h-[18px] w-[18px]" aria-hidden />;
   return <Lightbulb className="h-[18px] w-[18px]" aria-hidden />;
+}
+
+function resolvePreviewForAction(
+  previews: AnalysisEvidencePreviewMap | undefined,
+  action: { evidenceId?: string; href?: string },
+) {
+  if (!previews) return undefined;
+  if (action.evidenceId) return previews[action.evidenceId];
+  if (action.href) return previews[action.href];
+  return undefined;
+}
+
+function renderClaimAction(
+  action: { label: string; evidenceId?: string; href?: string },
+  onSelectEvidence: (evidenceId: string) => void,
+) {
+  if (action.evidenceId) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="rounded-full"
+        onClick={() => onSelectEvidence(action.evidenceId as string)}
+      >
+        {action.label}
+      </Button>
+    );
+  }
+
+  if (action.href) {
+    return <AnalysisLinkAction href={action.href} label={action.label} />;
+  }
+
+  return null;
 }
 
 export function AnalysisShell({ children }: { children: ReactNode }) {
@@ -227,9 +266,11 @@ export function AnalysisPulseCard({
 export function AnalysisUnderstandingBrief({
   model,
   onSelectEvidence,
+  evidencePreviews,
 }: {
   model: AnalysisUnderstandingBriefModel;
   onSelectEvidence: (evidenceId: string) => void;
+  evidencePreviews?: AnalysisEvidencePreviewMap;
 }) {
   return (
     <section
@@ -255,73 +296,296 @@ export function AnalysisUnderstandingBrief({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
-          {model.cards.map((card) => (
-            <GlassCard
-              key={card.key}
-              data-testid={`analysis-v2-brief-card-${card.key}`}
-              className={cn(
-                'overflow-hidden rounded-[2rem] p-5 shadow-soft backdrop-blur-md',
-                stateToneClasses[card.tone],
-              )}
-            >
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <span
-                    className={cn(
-                      'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[1.1rem] border shadow-soft',
-                      card.tone === 'attention'
-                        ? 'border-primary/18 bg-primary/10 text-primary'
-                        : card.tone === 'strength'
-                          ? 'border-accent/18 bg-accent/10 text-card-foreground'
-                          : 'border-white/56 bg-white/72 text-primary',
-                    )}
-                  >
-                    {toneIcon(card.tone)}
-                  </span>
-                  <div className="min-w-0 space-y-2">
-                    <p className="type-micro uppercase text-primary/76">{card.question}</p>
-                    <h3 className="type-section-title text-card-foreground">{card.title}</h3>
-                    <p className="type-body-muted text-muted-foreground">{card.description}</p>
+          {model.cards.map((card) => {
+            const preview = resolvePreviewForAction(evidencePreviews, card.action);
+            return (
+              <GlassCard
+                key={card.key}
+                data-testid={`analysis-v2-brief-card-${card.key}`}
+                className={cn(
+                  'overflow-hidden rounded-[2rem] p-5 shadow-soft backdrop-blur-md',
+                  stateToneClasses[card.tone],
+                )}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[1.1rem] border shadow-soft',
+                        card.tone === 'attention'
+                          ? 'border-primary/18 bg-primary/10 text-primary'
+                          : card.tone === 'strength'
+                            ? 'border-accent/18 bg-accent/10 text-card-foreground'
+                            : 'border-white/56 bg-white/72 text-primary',
+                      )}
+                    >
+                      {toneIcon(card.tone)}
+                    </span>
+                    <div className="min-w-0 space-y-2">
+                      <p className="type-micro uppercase text-primary/76">{card.question}</p>
+                      <h3 className="type-section-title text-card-foreground">{card.title}</h3>
+                      <p className="type-body-muted text-muted-foreground">{card.description}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2" aria-label={`${card.question} 的依據來源`}>
-                  {card.sources.length ? (
-                    card.sources.map((source) => (
-                      <Badge
-                        key={source}
-                        variant="outline"
-                        size="sm"
-                        className="border-white/54 bg-white/72"
-                      >
-                        {source}
+                  <div className="flex flex-wrap gap-2" aria-label={`${card.question} 的依據來源`}>
+                    {card.sources.length ? (
+                      card.sources.map((source) => (
+                        <Badge
+                          key={source}
+                          variant="outline"
+                          size="sm"
+                          className="border-white/54 bg-white/72"
+                        >
+                          {source}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                        等待更多來源
                       </Badge>
-                    ))
+                    )}
+                  </div>
+
+                  {preview ? (
+                    <AnalysisClaimEvidencePreview
+                      preview={preview}
+                      onSelectEvidence={onSelectEvidence}
+                    />
                   ) : (
-                    <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
-                      等待更多來源
-                    </Badge>
+                    renderClaimAction(card.action, onSelectEvidence)
                   )}
                 </div>
-
-                {card.action.evidenceId ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={() => onSelectEvidence(card.action.evidenceId as string)}
-                  >
-                    {card.action.label}
-                  </Button>
-                ) : card.action.href ? (
-                  <AnalysisLinkAction href={card.action.href} label={card.action.label} />
-                ) : null}
-              </div>
-            </GlassCard>
-          ))}
+              </GlassCard>
+            );
+          })}
         </div>
       </div>
     </section>
+  );
+}
+
+export function AnalysisWeeklyChangeBrief({
+  model,
+  onSelectEvidence,
+  evidencePreviews,
+}: {
+  model: AnalysisWeeklyChangeBriefModel;
+  onSelectEvidence: (evidenceId: string) => void;
+  evidencePreviews?: AnalysisEvidencePreviewMap;
+}) {
+  return (
+    <section
+      data-testid="analysis-weekly-change"
+      className="overflow-hidden rounded-[2.6rem] border border-white/56 bg-[linear-gradient(165deg,rgba(250,252,249,0.94),rgba(238,242,235,0.88))] p-5 shadow-lift backdrop-blur-xl md:p-6"
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                Movement
+              </Badge>
+              <p className="type-micro uppercase text-primary/80">Week Over Week</p>
+            </div>
+            <h2 className="type-h3 text-card-foreground">{model.title}</h2>
+            <p className="type-body-muted text-muted-foreground">{model.description}</p>
+          </div>
+          <div className="max-w-sm rounded-[1.6rem] border border-white/56 bg-white/72 p-4 shadow-soft">
+            <p className="type-caption uppercase tracking-[0.18em] text-primary/76">Comparison</p>
+            <p className="mt-2 type-body-muted text-card-foreground">{model.sourceNote}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
+          {model.cards.map((card) => {
+            const preview = resolvePreviewForAction(evidencePreviews, card.action);
+            return (
+              <GlassCard
+                key={card.key}
+                data-testid={`analysis-weekly-change-card-${card.key}`}
+                className={cn(
+                  'overflow-hidden rounded-[2rem] p-5 shadow-soft backdrop-blur-md',
+                  stateToneClasses[card.tone],
+                )}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[1.1rem] border shadow-soft',
+                        card.tone === 'attention'
+                          ? 'border-primary/18 bg-primary/10 text-primary'
+                          : card.tone === 'strength'
+                            ? 'border-accent/18 bg-accent/10 text-card-foreground'
+                            : 'border-white/56 bg-white/72 text-primary',
+                      )}
+                    >
+                      {toneIcon(card.tone)}
+                    </span>
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="type-micro uppercase text-primary/76">{card.question}</p>
+                        <Badge variant={toneBadgeVariant(card.tone)} size="sm">
+                          {card.movementLabel}
+                        </Badge>
+                      </div>
+                      <h3 className="type-section-title text-card-foreground">{card.title}</h3>
+                      <p className="type-body-muted text-muted-foreground">{card.description}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2" aria-label={`${card.question} 的變化依據`}>
+                    {card.sources.length ? (
+                      card.sources.map((source) => (
+                        <Badge
+                          key={source}
+                          variant="outline"
+                          size="sm"
+                          className="border-white/54 bg-white/72"
+                        >
+                          {source}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                        等待更多來源
+                      </Badge>
+                    )}
+                  </div>
+
+                  {preview ? (
+                    <AnalysisClaimEvidencePreview
+                      preview={preview}
+                      onSelectEvidence={onSelectEvidence}
+                    />
+                  ) : (
+                    renderClaimAction(card.action, onSelectEvidence)
+                  )}
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function AnalysisClaimEvidencePreview({
+  preview,
+  onSelectEvidence,
+}: {
+  preview: AnalysisEvidencePreviewModel;
+  onSelectEvidence: (evidenceId: string) => void;
+}) {
+  return (
+    <div
+      data-testid={`analysis-evidence-preview-${preview.key}`}
+      className="space-y-3 rounded-[1.55rem] border border-white/56 bg-white/70 p-3.5 shadow-soft"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="type-caption uppercase tracking-[0.18em] text-primary/76">
+          這個判讀主要根據
+        </p>
+        {preview.action.evidenceId ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 rounded-full px-3"
+            onClick={() => onSelectEvidence(preview.action.evidenceId as string)}
+          >
+            {preview.action.label}
+          </Button>
+        ) : preview.action.href ? (
+          <Link
+            href={preview.action.href}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/16 bg-primary/8 px-3 text-xs font-medium text-card-foreground transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-primary/12 focus-ring-premium"
+          >
+            {preview.action.label}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        {preview.items.map((item) => {
+          const rowClassName =
+            'block w-full rounded-[1.25rem] border border-white/54 bg-white/74 px-3 py-3 text-left transition-all duration-haven ease-haven focus-ring-premium';
+          const interactiveClassName = `${rowClassName} hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white/88 hover:shadow-soft`;
+          const rowContent = (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="metadata" size="sm" className="border-white/54 bg-white/72">
+                    {item.source}
+                  </Badge>
+                  {item.badges.slice(0, 2).map((badge) => (
+                    <Badge
+                      key={badge}
+                      variant="outline"
+                      size="sm"
+                      className="border-white/54 bg-white/72"
+                    >
+                      {badge}
+                    </Badge>
+                  ))}
+                </div>
+                {item.meta ? (
+                  <span className="type-caption text-muted-foreground">{item.meta}</span>
+                ) : null}
+              </div>
+              <h4 className="mt-2 text-sm font-semibold text-card-foreground">{item.title}</h4>
+              <p className="mt-1 type-caption text-card-foreground/76">{item.excerpt}</p>
+              {item.action ? (
+                <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary/82">
+                  {item.action.label}
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              ) : null}
+            </>
+          );
+
+          if (item.action?.href) {
+            return (
+              <Link
+                key={item.id}
+                href={item.action.href}
+                className={interactiveClassName}
+                data-testid={`analysis-evidence-preview-row-${item.id}`}
+              >
+                {rowContent}
+              </Link>
+            );
+          }
+
+          if (item.action?.evidenceId) {
+            const evidenceId = item.action.evidenceId;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={interactiveClassName}
+                data-testid={`analysis-evidence-preview-row-${item.id}`}
+                onClick={() => onSelectEvidence(evidenceId)}
+              >
+                {rowContent}
+              </button>
+            );
+          }
+
+          return (
+            <div
+              key={item.id}
+              className={rowClassName}
+              data-testid={`analysis-evidence-preview-row-${item.id}`}
+            >
+              {rowContent}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

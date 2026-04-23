@@ -73,7 +73,9 @@ type DayReference = {
   date: string;
   headingDate: string;
   snippet: string;
+  revealSnippet: string;
   focus: FocusTarget;
+  artifactCount: number;
 };
 
 const MEMORY_API_ORIGIN = 'http://127.0.0.1:8000';
@@ -113,9 +115,23 @@ function buildVisibleSnippet(item: TimelineItem) {
   return item.caption?.trim() ?? '';
 }
 
+function buildRevealSnippet(item: TimelineItem) {
+  if (item.type === 'appreciation') {
+    return item.body_text.trim();
+  }
+  if (item.type === 'card') {
+    return item.card_question.trim() || item.card_title.trim();
+  }
+  if (item.type === 'journal') {
+    return item.content_preview?.trim() ?? '';
+  }
+  return item.caption?.trim() ?? '';
+}
+
 function buildDayReference(date: string, items: TimelineItem[]): DayReference | null {
   for (const item of items) {
     const snippet = buildVisibleSnippet(item);
+    const revealSnippet = buildRevealSnippet(item);
     if (!snippet) {
       continue;
     }
@@ -124,7 +140,9 @@ function buildDayReference(date: string, items: TimelineItem[]): DayReference | 
       date,
       headingDate: formatHeadingDate(date),
       snippet,
+      revealSnippet,
       focus: buildFocusTarget(item),
+      artifactCount: items.length,
     };
   }
 
@@ -258,6 +276,9 @@ test.describe('Memory calendar trust recovery', () => {
     const daySpotlight = page.getByText('Day Spotlight').locator('..');
     await expect(daySpotlight).toBeVisible({ timeout: 15_000 });
     await expect(daySpotlight.getByRole('heading', { level: 3 })).toContainText(dayA.headingDate);
+    await expect(page.getByTestId('memory-day-reveal-summary')).toBeVisible();
+    await expect(page.getByTestId('memory-day-reveal-summary')).toContainText('這一天打開了真實片段');
+    await expect(page.getByTestId('memory-day-reveal-summary')).toContainText(dayA.revealSnippet);
     await expect(page.getByText(dayA.snippet)).toBeVisible();
     await expect(page.locator('[data-memory-focused="true"]')).toHaveCount(1);
 
@@ -284,6 +305,20 @@ test.describe('Memory calendar trust recovery', () => {
 
     await expect(targetDayButton).toHaveAttribute('aria-pressed', 'true');
     await expect(daySpotlight.getByRole('heading', { level: 3 })).toContainText(dayB.headingDate);
+    await expect(page.getByTestId('memory-day-reveal-summary')).toBeVisible();
+    await expect(page.getByTestId('memory-day-reveal-summary')).toContainText('這一天打開了真實片段');
+    await expect(page.getByTestId('memory-day-reveal-summary')).toContainText(dayB.revealSnippet);
+    await expect(page.getByTestId('memory-day-reveal-summary')).toContainText(
+      dayB.artifactCount === 1 ? '這一天有 1 個真實片段' : `這一天有 ${dayB.artifactCount} 個真實片段`,
+    );
+    await expect
+      .poll(async () =>
+        page.getByTestId('memory-day-reveal-summary').evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.top >= 0 && rect.top < window.innerHeight * 0.85;
+        }),
+      )
+      .toBe(true);
     await expect(page.getByText(dayB.snippet)).toBeVisible();
     await expect(page.getByText(dayA.snippet)).not.toBeVisible();
     await expect(page.locator('[data-memory-focused="true"]')).toHaveCount(0);

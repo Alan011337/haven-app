@@ -23,7 +23,9 @@ import {
   usePartnerStatus,
 } from '@/hooks/queries';
 import { getJournalSafetyBand } from '@/lib/safety';
+import { buildAnalysisEvidencePreviewMap } from '@/lib/analysis-v2-evidence-preview';
 import { buildAnalysisV2UnderstandingBrief } from '@/lib/analysis-v2-understanding-brief';
+import { buildAnalysisV2WeeklyChangeBrief } from '@/lib/analysis-v2-weekly-change';
 import {
   fetchWeeklyReport,
   type AppreciationPublic,
@@ -47,6 +49,7 @@ import {
   AnalysisSignalCard,
   AnalysisStatePanel,
   AnalysisUnderstandingBrief,
+  AnalysisWeeklyChangeBrief,
 } from '@/app/analysis/AnalysisPrimitives';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -98,6 +101,11 @@ type AnalysisEvidenceEntry = {
   description: string;
   meta?: string;
   badges?: string[];
+  action?: {
+    label: string;
+    href?: string;
+    evidenceId?: string;
+  };
 };
 
 type AnalysisEvidenceLens = {
@@ -160,6 +168,39 @@ function truncateText(value: string | null | undefined, max = 72) {
   return `${normalized.slice(0, max - 1)}…`;
 }
 
+function toDateOnly(value: string | null | undefined) {
+  return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+}
+
+function buildJournalArtifactHref(journal: Journal, viewerId: string | undefined) {
+  const date = toDateOnly(journal.created_at);
+  if (!date) return null;
+  const id = encodeURIComponent(journal.id);
+  if (viewerId && journal.user_id === viewerId) {
+    return `/journal/${id}?from=analysis&date=${encodeURIComponent(date)}`;
+  }
+  return `/memory?date=${encodeURIComponent(date)}&kind=journal&id=${id}`;
+}
+
+function buildAppreciationArtifactHref(appreciation: AppreciationPublic) {
+  const date = toDateOnly(appreciation.created_at);
+  if (!date) return null;
+  return `/memory?date=${encodeURIComponent(date)}&kind=appreciation&id=${encodeURIComponent(
+    String(appreciation.id),
+  )}&open=1`;
+}
+
+function buildCompassHistoryHref(changeId: string | null | undefined) {
+  if (!changeId) return '/love-map#identity';
+  return `/love-map#relationship-compass-history-${encodeURIComponent(changeId)}`;
+}
+
+function buildRepairHistoryHref(changeId: string | null | undefined) {
+  if (!changeId) return '/love-map#heart';
+  const encoded = encodeURIComponent(changeId);
+  return `/love-map?repairHistory=${encoded}#relationship-repair-agreement-history-${encoded}`;
+}
+
 function percentFromRate(rate: number | null | undefined) {
   if (typeof rate !== 'number' || Number.isNaN(rate)) return 0;
   if (rate <= 1) return Math.round(rate * 100);
@@ -206,7 +247,11 @@ function buildNeedEchoes(ownerLabel: string, journals: Journal[]): JournalNeedEc
     }));
 }
 
-function buildJournalEvidenceEntry(ownerLabel: string, journal: Journal): AnalysisEvidenceEntry {
+function buildJournalEvidenceEntry(
+  ownerLabel: string,
+  journal: Journal,
+  viewerId: string | undefined,
+): AnalysisEvidenceEntry {
   const badges = [journal.mood_label, journal.emotional_needs ? '提到需要' : null].filter(
     Boolean,
   ) as string[];
@@ -214,6 +259,8 @@ function buildJournalEvidenceEntry(ownerLabel: string, journal: Journal): Analys
   if (getJournalSafetyBand(journal) !== 'normal') {
     badges.push('高張力');
   }
+
+  const href = buildJournalArtifactHref(journal, viewerId);
 
   return {
     id: `${ownerLabel}-${journal.id}`,
@@ -227,6 +274,12 @@ function buildJournalEvidenceEntry(ownerLabel: string, journal: Journal): Analys
       '這則紀錄本身就是一段值得慢下來看的訊號。',
     meta: formatDateTime(journal.created_at),
     badges,
+    action: href
+      ? {
+          label: ownerLabel === '你' ? '打開完整日記' : '回到 Memory 片段',
+          href,
+        }
+      : undefined,
   };
 }
 
@@ -234,6 +287,7 @@ function buildAppreciationEvidenceEntry(
   appreciation: AppreciationPublic,
   index: number,
 ): AnalysisEvidenceEntry {
+  const href = buildAppreciationArtifactHref(appreciation);
   return {
     id: `appreciation-${appreciation.id}`,
     eyebrow: 'Appreciation',
@@ -241,6 +295,12 @@ function buildAppreciationEvidenceEntry(
     description: truncateText(appreciation.body_text, 126),
     meta: formatDateTime(appreciation.created_at),
     badges: ['被說出口', '正向連結'],
+    action: href
+      ? {
+          label: '打開完整感謝',
+          href,
+        }
+      : undefined,
   };
 }
 
@@ -375,6 +435,7 @@ function getDailySyncStateText(
 
 export default function AnalysisContent() {
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [analysisNowMs] = useState(() => Date.now());
   const { user, isLoading: authLoading } = useAuth();
   const partnerStatusQuery = usePartnerStatus();
   const myJournalsQuery = useJournals();
@@ -424,6 +485,8 @@ export default function AnalysisContent() {
   const topTopics = monthlyReport?.top_topics ?? EMPTY_TOPICS;
   const relationshipCompass = loveMapSystem?.relationship_compass ?? null;
   const repairAgreements = loveMapSystem?.essentials?.repair_agreements ?? null;
+  const latestRelationshipCompassChange = loveMapSystem?.relationship_compass_history?.[0] ?? null;
+  const latestRepairAgreementChange = loveMapSystem?.essentials?.repair_agreement_history?.[0] ?? null;
   const weeklyTask = loveMapSystem?.essentials?.weekly_task ?? null;
   const hasHeartCare = Boolean(
     loveMapSystem?.essentials?.my_care_profile?.support_me ||
@@ -593,6 +656,41 @@ export default function AnalysisContent() {
     weeklyTask,
     storyMomentCount: loveMapSystem?.story?.moments?.length ?? 0,
     wishlistCount: loveMapSystem?.wishlist_items?.length ?? 0,
+    loveMapAvailable: Boolean(loveMapSystem && !loveMapSystemQuery.isError),
+  });
+
+  const repairAgreementFieldCount = [
+    repairAgreements?.protect_what_matters,
+    repairAgreements?.avoid_in_conflict,
+    repairAgreements?.repair_reentry,
+  ].filter((value) => Boolean(value?.trim())).length;
+
+  const weeklyChangeBrief = buildAnalysisV2WeeklyChangeBrief({
+    nowMs: analysisNowMs,
+    hasPartner,
+    journals: allJournals.map((journal) => {
+      const owner: 'me' | 'partner' | 'unknown' =
+        user?.id && journal.user_id === user.id ? 'me' : hasPartner ? 'partner' : 'unknown';
+      return {
+        created_at: journal.created_at,
+        owner,
+        isHighTension: getJournalSafetyBand(journal) !== 'normal',
+      };
+    }),
+    appreciations: appreciationRecent.map((appreciation) => ({
+      created_at: appreciation.created_at,
+    })),
+    relationshipCompassChanges: (loveMapSystem?.relationship_compass_history ?? []).map((change) => ({
+      changed_at: change.changed_at,
+    })),
+    repairAgreementChanges: (loveMapSystem?.essentials?.repair_agreement_history ?? []).map((change) => ({
+      changed_at: change.changed_at,
+    })),
+    syncCompletionPct,
+    alignmentPct,
+    repairAgreementFieldCount,
+    hasHeartCare,
+    topTopics,
     loveMapAvailable: Boolean(loveMapSystem && !loveMapSystemQuery.isError),
   });
 
@@ -799,7 +897,7 @@ export default function AnalysisContent() {
         .slice(0, 3);
       const tensionEntries = tensionJournals
         .map((journal) =>
-          buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal),
+          buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal, user?.id),
         );
 
       lenses.push({
@@ -841,10 +939,10 @@ export default function AnalysisContent() {
     if (weeklyReport || todaySync) {
       const syncEntries: AnalysisEvidenceEntry[] = [];
       if (latestMyJournal) {
-        syncEntries.push(buildJournalEvidenceEntry('你', latestMyJournal));
+        syncEntries.push(buildJournalEvidenceEntry('你', latestMyJournal, user?.id));
       }
       if (latestPartnerJournal) {
-        syncEntries.push(buildJournalEvidenceEntry('伴侶', latestPartnerJournal));
+        syncEntries.push(buildJournalEvidenceEntry('伴侶', latestPartnerJournal, user?.id));
       }
       if (todaySync?.partner_answer_text) {
         syncEntries.push({
@@ -902,10 +1000,10 @@ export default function AnalysisContent() {
     if ((partnerStatus?.unread_notification_count ?? 0) > 0) {
       const signalEntries: AnalysisEvidenceEntry[] = [];
       if (latestPartnerJournal) {
-        signalEntries.push(buildJournalEvidenceEntry('伴侶', latestPartnerJournal));
+        signalEntries.push(buildJournalEvidenceEntry('伴侶', latestPartnerJournal, user?.id));
       }
       if (latestMyJournal) {
-        signalEntries.push(buildJournalEvidenceEntry('你', latestMyJournal));
+        signalEntries.push(buildJournalEvidenceEntry('你', latestMyJournal, user?.id));
       }
       if (todaySync?.partner_answer_text) {
         signalEntries.push({
@@ -1030,7 +1128,7 @@ export default function AnalysisContent() {
         entries: [latestMyJournal, latestPartnerJournal]
           .filter((journal): journal is Journal => Boolean(journal))
           .map((journal) =>
-            buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal),
+            buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal, user?.id),
           ),
         emptyMessage: '等雙方都再多留下一些內容後，這裡會更清楚顯示彼此的雙向痕跡。',
         href: '/memory',
@@ -1073,7 +1171,7 @@ export default function AnalysisContent() {
         entries: [latestMyNeedJournal, latestPartnerNeedJournal]
           .filter((journal): journal is Journal => Boolean(journal))
           .map((journal) =>
-            buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal),
+            buildJournalEvidenceEntry(getJournalOwnerLabel(journal, user?.id), journal, user?.id),
           ),
         emptyMessage: '等情緒語氣與需要更清楚後，這裡會顯示更完整的雙方模式。',
         href: '/memory',
@@ -1114,6 +1212,155 @@ export default function AnalysisContent() {
     user?.id,
     weeklyReport,
   ]);
+
+  const evidencePreviewMap = useMemo(
+    () =>
+      buildAnalysisEvidencePreviewMap({
+        lenses: evidenceLenses.map((lens) => ({
+          id: lens.id,
+          eyebrow: lens.eyebrow,
+          title: lens.title,
+          summary: lens.summary,
+          meta: lens.meta,
+          stats: lens.stats,
+          entries: lens.entries,
+          emptyMessage: lens.emptyMessage,
+        })),
+        artifacts: [
+          {
+            key: '/love-map#identity',
+            source: 'Relationship Compass',
+            title: latestRelationshipCompassChange
+              ? '最近一次 Relationship Compass 修訂'
+              : '你們自己寫下的共同方向',
+            excerpt:
+              latestRelationshipCompassChange?.revision_note ??
+              relationshipCompass?.future_direction ??
+              relationshipCompass?.identity_statement ??
+              relationshipCompass?.story_anchor,
+            meta: latestRelationshipCompassChange?.changed_at
+              ? `修訂於 ${formatDateTime(latestRelationshipCompassChange.changed_at)}`
+              : relationshipCompass?.updated_at
+                ? `更新於 ${formatDateTime(relationshipCompass.updated_at)}`
+                : null,
+            badges: latestRelationshipCompassChange
+              ? ['Pair-maintained', 'Compass revision']
+              : ['Pair-maintained', 'Identity'],
+            href: latestRelationshipCompassChange
+              ? buildCompassHistoryHref(latestRelationshipCompassChange.id)
+              : '/love-map#identity',
+            action: {
+              label: latestRelationshipCompassChange ? '打開 Compass 修訂' : '打開 Relationship Compass',
+              href: latestRelationshipCompassChange
+                ? buildCompassHistoryHref(latestRelationshipCompassChange.id)
+                : '/love-map#identity',
+            },
+          },
+          {
+            key: '/love-map#heart',
+            source: 'Repair Agreements',
+            title: latestRepairAgreementChange ? '最近一次 Repair Agreements 修訂' : '衝突後可以回來看的修復約定',
+            excerpt:
+              latestRepairAgreementChange?.revision_note ??
+              latestRepairAgreementChange?.fields?.[0]?.after_text ??
+              repairAgreements?.protect_what_matters ??
+              repairAgreements?.repair_reentry ??
+              repairAgreements?.avoid_in_conflict,
+            meta: latestRepairAgreementChange?.changed_at
+              ? `修訂於 ${formatDateTime(latestRepairAgreementChange.changed_at)}`
+              : repairAgreements?.updated_at
+                ? `更新於 ${formatDateTime(repairAgreements.updated_at)}`
+                : null,
+            badges: latestRepairAgreementChange
+              ? ['Pair-maintained', 'Repair revision']
+              : ['Pair-maintained', 'Heart'],
+            href: latestRepairAgreementChange
+              ? buildRepairHistoryHref(latestRepairAgreementChange.id)
+              : '/love-map#heart',
+            action: {
+              label: latestRepairAgreementChange ? '打開修復修訂' : '打開 Heart',
+              href: latestRepairAgreementChange
+                ? buildRepairHistoryHref(latestRepairAgreementChange.id)
+                : '/love-map#heart',
+            },
+          },
+          {
+            key: '/memory',
+            source: 'Memory',
+            title: topTopics.length ? `月度主題 · ${topTopics.slice(0, 2).join(' · ')}` : '最近回憶與模式',
+            excerpt: monthlyReport?.emotion_trend_summary ?? monthlyReport?.health_suggestion,
+            meta: monthlyReport?.generated_at
+              ? `生成於 ${formatDateTime(monthlyReport.generated_at)}`
+              : null,
+            badges: ['Memory'],
+            href: '/memory',
+          },
+          {
+            key: '/',
+            source: 'Daily Sync',
+            title: '今天的同步入口',
+            excerpt: getDailySyncStateText(todaySync, hasPartner),
+            meta: todaySync?.today ?? null,
+            badges: ['Daily Sync'],
+            href: '/',
+          },
+          {
+            key: '/love-map',
+            source: 'Relationship System',
+            title: '回到共同關係系統',
+            excerpt:
+              relationshipCompass?.identity_statement ??
+              relationshipCompass?.future_direction ??
+              (hasLoveMapSignal ? '這份判讀連到你們已經留下的共同關係知識。' : null),
+            meta: loveMapSystem?.stats?.last_activity_at
+              ? `最近更新 ${formatDateTime(loveMapSystem.stats.last_activity_at)}`
+              : null,
+            badges: ['Relationship System'],
+            href: '/love-map',
+          },
+          {
+            key: '/mediation',
+            source: 'Repair',
+            title: '把高張力片段帶進安全修復',
+            excerpt:
+              repairAgreements?.repair_reentry ??
+              repairAgreements?.protect_what_matters ??
+              monthlyReport?.health_suggestion,
+            meta: highTensionCount14 > 0 ? `近兩週高張力 ${highTensionCount14} 則` : null,
+            badges: ['Repair'],
+            href: '/mediation',
+          },
+          {
+            key: '/notifications',
+            source: 'Relationship Signals',
+            title: '還沒被接住的訊號',
+            excerpt:
+              (partnerStatus?.unread_notification_count ?? 0) > 0
+                ? `目前還有 ${partnerStatus?.unread_notification_count ?? 0} 則提醒等待被接住。`
+                : null,
+            meta: latestTraceAt ? `最近痕跡 ${formatShortDate(latestTraceAt)}` : null,
+            badges: ['Signals'],
+            href: '/notifications',
+          },
+        ],
+      }),
+    [
+      evidenceLenses,
+      hasLoveMapSignal,
+      hasPartner,
+      highTensionCount14,
+      latestTraceAt,
+      loveMapSystem,
+      latestRelationshipCompassChange,
+      latestRepairAgreementChange,
+      monthlyReport,
+      partnerStatus?.unread_notification_count,
+      relationshipCompass,
+      repairAgreements,
+      todaySync,
+      topTopics,
+    ],
+  );
 
   const selectedEvidence =
     evidenceLenses.find((lens) => lens.id === selectedEvidenceId) ?? evidenceLenses[0] ?? null;
@@ -1316,6 +1563,13 @@ export default function AnalysisContent() {
       <AnalysisUnderstandingBrief
         model={understandingBrief}
         onSelectEvidence={focusEvidenceLens}
+        evidencePreviews={evidencePreviewMap}
+      />
+
+      <AnalysisWeeklyChangeBrief
+        model={weeklyChangeBrief}
+        onSelectEvidence={focusEvidenceLens}
+        evidencePreviews={evidencePreviewMap}
       />
 
       {sourceErrorCount > 0 && hasAnySignal ? (

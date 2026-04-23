@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { HeartHandshake, PenLine, Sparkles } from 'lucide-react';
@@ -431,6 +432,7 @@ function scoreLabel(score?: number | null) {
 }
 
 export default function LoveMapPageContent() {
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const systemQuery = useLoveMapSystem();
@@ -478,6 +480,7 @@ export default function LoveMapPageContent() {
     useState<LoveMapRepairAgreementsUpsertPayload>(EMPTY_REPAIR_AGREEMENTS_DRAFT);
   const [selectedOutcomeCaptureId, setSelectedOutcomeCaptureId] = useState<string | null>(null);
   const [expandedHistoryEntries, setExpandedHistoryEntries] = useState<Record<string, boolean>>({});
+  const focusedRepairHistoryId = searchParams.get('repairHistory');
   // Optional short human-authored note, saved alongside a meaningful Repair
   // Agreements change. Kept separate from `repairAgreementsDraft` so note
   // presence alone never enables the Save button — a note without a field
@@ -489,6 +492,31 @@ export default function LoveMapPageContent() {
   // change?". A note without any field delta is a no-op server-side, and we
   // want the Save button to reflect that.
   const [relationshipCompassRevisionNoteDraft, setRelationshipCompassRevisionNoteDraft] = useState('');
+
+  useEffect(() => {
+    if (!focusedRepairHistoryId) return;
+    setExpandedHistoryEntries((current) => ({
+      ...current,
+      [focusedRepairHistoryId]: true,
+    }));
+  }, [focusedRepairHistoryId]);
+
+  useEffect(() => {
+    if (!systemQuery.data || typeof window === 'undefined') return;
+    const targetId = window.location.hash.replace(/^#/, '');
+    if (
+      !targetId.startsWith('relationship-compass-history-') &&
+      !targetId.startsWith('relationship-repair-agreement-history-')
+    ) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+  }, [systemQuery.data]);
 
   useEffect(() => {
     if (!systemQuery.data) {
@@ -1523,7 +1551,9 @@ export default function LoveMapPageContent() {
                   {relationshipCompassHistoryEntries.map((change) => (
                     <li
                       key={change.id}
+                      id={`relationship-compass-history-${change.id}`}
                       data-testid="relationship-identity-compass-history-entry"
+                      className="scroll-mt-28"
                     >
                       <p className="type-caption text-card-foreground">
                         <span className="text-muted-foreground">
@@ -1885,7 +1915,8 @@ export default function LoveMapPageContent() {
                           return (
                             <div
                               key={change.id}
-                              className="rounded-[1.2rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                              id={`relationship-repair-agreement-history-${change.id}`}
+                              className="scroll-mt-28 rounded-[1.2rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
                               data-testid={`relationship-heart-repair-agreements-history-entry-${index}`}
                             >
                               <div className="flex flex-wrap items-center justify-between gap-3">
