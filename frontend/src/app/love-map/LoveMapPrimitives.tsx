@@ -86,6 +86,7 @@ interface LoveMapSystemCoverProps {
   primaryLabel: string;
   highlights: ReactNode;
   aside: ReactNode;
+  dataTestId?: string;
 }
 
 export function LoveMapSystemCover({
@@ -97,9 +98,13 @@ export function LoveMapSystemCover({
   primaryLabel,
   highlights,
   aside,
+  dataTestId,
 }: LoveMapSystemCoverProps) {
   return (
-    <section className="relative overflow-hidden rounded-[3.1rem] border border-white/54 bg-[linear-gradient(165deg,rgba(255,253,250,0.94),rgba(246,239,230,0.9))] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10">
+    <section
+      className="relative overflow-hidden rounded-[3.1rem] border border-white/54 bg-[linear-gradient(165deg,rgba(255,253,250,0.94),rgba(246,239,230,0.9))] p-6 shadow-lift backdrop-blur-xl md:p-8 xl:p-10"
+      data-testid={dataTestId}
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_36%),radial-gradient(circle_at_86%_12%,rgba(255,255,255,0.34),transparent_22%)]" aria-hidden />
       <div className="pointer-events-none absolute right-[-4rem] top-[-2rem] h-72 w-72 rounded-full bg-primary/10 blur-hero-orb" aria-hidden />
       <div className="pointer-events-none absolute bottom-[-3rem] left-[-1rem] h-64 w-64 rounded-full bg-accent/10 blur-hero-orb-sm" aria-hidden />
@@ -133,6 +138,145 @@ export function LoveMapSystemCover({
         </div>
 
         <div className="space-y-4">{aside}</div>
+      </div>
+    </section>
+  );
+}
+
+type LoveMapSystemStatusTone = 'saved' | 'pending' | 'evolving';
+
+const systemStatusToneClasses: Record<LoveMapSystemStatusTone, string> = {
+  saved: 'border-primary/12 bg-primary/8',
+  pending: 'border-accent/18 bg-accent/10',
+  evolving: 'border-white/58 bg-white/74',
+};
+
+interface LoveMapSystemStatusCardProps {
+  eyebrow: string;
+  title: string;
+  value: string;
+  description: string;
+  tone: LoveMapSystemStatusTone;
+  dataTestId?: string;
+}
+
+export function LoveMapSystemStatusCard({
+  eyebrow,
+  title,
+  value,
+  description,
+  tone,
+  dataTestId,
+}: LoveMapSystemStatusCardProps) {
+  return (
+    <div
+      className={cn(
+        'rounded-[1.85rem] border px-4 py-4 shadow-soft backdrop-blur-md',
+        systemStatusToneClasses[tone],
+      )}
+      data-testid={dataTestId}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="type-micro uppercase text-primary/78">{eyebrow}</p>
+          <p className="type-section-title text-card-foreground">{title}</p>
+        </div>
+        <Badge variant={tone === 'pending' ? 'status' : tone === 'saved' ? 'success' : 'metadata'} size="sm">
+          {value}
+        </Badge>
+      </div>
+      <p className="mt-3 type-caption text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+interface LoveMapSystemSectionNavItem {
+  key: string;
+  label: string;
+  description: string;
+  href: string;
+  statusLabel: string;
+}
+
+interface LoveMapSystemSectionNavProps {
+  items: LoveMapSystemSectionNavItem[];
+  nextAction: {
+    label: string;
+    description: string;
+    href: string;
+  };
+}
+
+function LoveMapNavLink({
+  href,
+  className,
+  children,
+  dataTestId,
+}: {
+  href: string;
+  className: string;
+  children: ReactNode;
+  dataTestId?: string;
+}) {
+  if (href.startsWith('#')) {
+    return (
+      <a href={href} className={className} data-testid={dataTestId}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className} data-testid={dataTestId}>
+      {children}
+    </Link>
+  );
+}
+
+export function LoveMapSystemSectionNav({
+  items,
+  nextAction,
+}: LoveMapSystemSectionNavProps) {
+  const itemClassName =
+    'flex min-w-[12rem] flex-1 items-center justify-between gap-3 rounded-[1.35rem] border border-white/58 bg-white/72 px-4 py-3 text-left shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-white/84 hover:shadow-lift focus-ring-premium md:min-w-[13.5rem]';
+
+  return (
+    <section
+      aria-label="Relationship System section navigation"
+      className="rounded-[2rem] border border-white/54 bg-white/70 p-3 shadow-soft backdrop-blur-xl lg:sticky lg:top-4 lg:z-20"
+      data-testid="relationship-system-section-nav"
+    >
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch">
+        <div className="flex flex-wrap gap-2 xl:flex-1">
+          {items.map((item) => (
+            <LoveMapNavLink
+              key={item.key}
+              href={item.href}
+              className={itemClassName}
+              dataTestId={`relationship-system-section-nav-${item.key}`}
+            >
+              <span className="min-w-0">
+                <span className="block type-section-title text-card-foreground">{item.label}</span>
+                <span className="mt-1 block type-caption text-muted-foreground">{item.description}</span>
+              </span>
+              <Badge variant={item.statusLabel === '待審核' ? 'status' : item.statusLabel === '已保存' ? 'success' : 'metadata'} size="sm">
+                {item.statusLabel}
+              </Badge>
+            </LoveMapNavLink>
+          ))}
+        </div>
+
+        <LoveMapNavLink
+          href={nextAction.href}
+          className="flex items-center justify-between gap-3 rounded-[1.35rem] border border-primary/18 bg-primary/10 px-4 py-3 shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-primary/14 hover:shadow-lift focus-ring-premium xl:w-[21rem]"
+          dataTestId="relationship-system-next-action"
+        >
+          <span className="min-w-0">
+            <span className="block type-micro uppercase text-primary/80">Next</span>
+            <span className="mt-1 block type-section-title text-card-foreground">{nextAction.label}</span>
+            <span className="mt-1 block type-caption text-muted-foreground">{nextAction.description}</span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+        </LoveMapNavLink>
       </div>
     </section>
   );
@@ -257,7 +401,7 @@ export function LoveMapSystemGuideCard({
         </div>
 
         <div className="space-y-2">
-          <p className="type-caption uppercase tracking-[0.18em] text-primary/72">What belongs here</p>
+          <p className="type-caption uppercase tracking-[0.18em] text-primary/72">這裡放什麼</p>
           <p className="type-body-muted text-muted-foreground">{belongsHere}</p>
         </div>
 
@@ -1181,7 +1325,7 @@ export function LoveMapRefinementSuggestionCard({
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/10 px-3 py-1.5 shadow-soft">
               <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-              <span className="type-micro uppercase text-primary/80">Refinement suggestion</span>
+              <span className="type-micro uppercase text-primary/80">Haven 建議</span>
             </div>
             <p className="type-section-title text-card-foreground">{targetTitle}</p>
             <p className="type-body-muted text-muted-foreground">
@@ -1191,7 +1335,7 @@ export function LoveMapRefinementSuggestionCard({
           </div>
 
           <Badge variant="metadata" size="sm">
-            Personal review only
+            僅你可見（待審核）
           </Badge>
         </div>
 
@@ -1203,7 +1347,7 @@ export function LoveMapRefinementSuggestionCard({
 
         {evidence.length > 0 ? (
           <div className="space-y-3">
-            <p className="type-caption text-card-foreground/82">What this builds on</p>
+            <p className="type-caption text-card-foreground/82">這個建議根據</p>
             <div className="grid gap-3">
               {evidence.map((item, index) => (
                 <div

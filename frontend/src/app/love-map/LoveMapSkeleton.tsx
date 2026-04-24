@@ -30,6 +30,18 @@ export default function LoveMapSkeleton() {
         </div>
       </GlassCard>
 
+      <GlassCard className="overflow-hidden rounded-[2rem] border-white/54 bg-white/72 p-3">
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-20 min-w-[12rem] flex-1 animate-pulse rounded-[1.35rem] bg-white/76 shadow-soft"
+              aria-hidden
+            />
+          ))}
+        </div>
+      </GlassCard>
+
       {Array.from({ length: 4 }).map((_, index) => (
         <GlassCard
           key={index}

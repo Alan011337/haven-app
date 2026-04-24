@@ -79,6 +79,7 @@ import {
   formatCompassChangedAt,
   summarizeCompassChange,
 } from '@/features/love-map/relationship-compass-revision';
+import { buildRelationshipSystemHomeModel } from '@/features/love-map/relationship-system-home';
 import LoveMapSkeleton from './LoveMapSkeleton';
 import {
   LoveMapEssentialField,
@@ -92,12 +93,14 @@ import {
   LoveMapSharedFutureNotesPanel,
   LoveMapSnapshotCard,
   LoveMapStatePanel,
+  LoveMapSystemSectionNav,
   LoveMapStoryCapsuleCard,
   LoveMapStoryMomentCard,
   LoveMapSuggestedUpdateCard,
   LoveMapSystemCover,
   LoveMapSystemGuide,
   LoveMapSystemGuideCard,
+  LoveMapSystemStatusCard,
 } from './LoveMapPrimitives';
 
 const LAYERS = ['safe', 'medium', 'deep'] as const;
@@ -1082,6 +1085,22 @@ export default function LoveMapPageContent() {
   );
   const pendingRepairOutcomeCaptureSelected =
     pendingRepairOutcomeCapture?.id === selectedOutcomeCaptureId;
+  const relationshipSystemHome = buildRelationshipSystemHomeModel({
+    hasPartner: system.has_partner,
+    compassCueCount,
+    careCueCount: myCareCueCount,
+    repairAgreementCount,
+    storyAnchorCount,
+    wishlistCount: system.stats.wishlist_count,
+    filledLayerCount,
+    compassPendingCount,
+    futurePendingCount: pendingSuggestions.length,
+    refinementPendingCount: pendingRefinements.length,
+    repairPendingCount: pendingRepairOutcomeCapture ? 1 : 0,
+    compassHistoryCount: relationshipCompassHistoryEntries.length,
+    repairHistoryCount: repairAgreementHistoryEntries.length,
+    lastActivityLabel,
+  });
   const identityMetricValue = system.has_partner
     ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'} · Compass ${compassCueCount}/3`
     : '等待雙向配對';
@@ -1094,7 +1113,7 @@ export default function LoveMapPageContent() {
     ? '等待雙向配對'
     : `照顧 ${myCareCueCount}/5 · 修復 ${repairAgreementCount}/3`;
   const heartMetricFootnote = !system.has_partner
-    ? '完成配對後，Heart Care Playbook 會變成 pair-visible，本週任務也會開始出現。'
+    ? '完成配對後，Heart Care Playbook 會變成伴侶可見，本週任務也會開始出現。'
     : pendingRepairOutcomeCapture
       ? `${formatCareCueCountLabel(myCareCueCount)}；Repair Agreements ${repairAgreementCount}/3；有 1 則待審核修復結果可以帶回 Heart。`
     : weeklyTask?.completed
@@ -1234,56 +1253,41 @@ export default function LoveMapPageContent() {
   return (
     <div className="space-y-[clamp(1.75rem,3vw,3rem)]">
       <LoveMapSystemCover
-        eyebrow="Relationship System"
-        title="把關係的 Identity、Heart、Story 與 Future，放進同一個可維護的系統裡。"
-        description="這裡不只是 Love Map，也不只是被導覽得更清楚的長頁。它是 Haven 的 shared relationship knowledge center：把你們是誰、現在怎麼樣、哪些故事值得被記住，以及正在一起靠近的未來，放進同一張系統首頁。"
+        dataTestId="relationship-system-cover"
+        eyebrow="Relationship System｜我們的關係系統"
+        title="你們的關係地圖"
+        description="把彼此的理解、照顧方式、故事與未來方向，整理成可以一起回看的共同真相。這裡保存你們共同確認的內容，也清楚標出 Haven 建議與最近演進。"
         pulse={
           system.has_partner
-            ? `Haven 現在會用四個長期域來整理你們的關係：Identity、Heart、Story、Future。這裡已經有 ${storyAnchorCount} 個故事錨點、${filledLayerCount}/3 層 Inner Landscape 筆記、${system.stats.wishlist_count} 個 Shared Future 片段；而 Heart Care Playbook、Repair Agreements 與本週照顧任務也會一起放回 Heart。`
-            : '你還沒有完成雙向伴侶連結，所以 Haven 目前只能先保留你的單邊脈動與可編輯 profile。完成連結後，這裡才會變成真正的 shared relationship system。'
+            ? `Haven 可以提出建議；只有你們接受後，才會寫入共同真相。目前已有 ${relationshipSystemHome.savedDomainCount}/4 個系統域留下內容，${relationshipSystemHome.pendingReviewCount} 則更新待審核，${relationshipSystemHome.evolutionCount} 次最近演進可回看。`
+            : '完成雙向伴侶連結後，這裡才會從個人可編輯頁，變成可以一起回看的 Relationship System。'
         }
-        primaryHref={system.has_partner ? '#identity' : '/settings#settings-relationship'}
-        primaryLabel={system.has_partner ? '進入 Relationship System' : '先完成伴侶連結'}
+        primaryHref={relationshipSystemHome.nextAction.href}
+        primaryLabel={relationshipSystemHome.nextAction.label}
         highlights={
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/78">Identity</p>
-              <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
-                {system.has_partner ? `${compassCueCount}/3` : '等待配對'}
-              </p>
-              <p className="mt-2 type-caption text-muted-foreground">Relationship Compass 會把你們是誰、想記得什麼、正一起靠近什麼，固定在 Identity。</p>
-            </div>
-
-            <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/78">Heart</p>
-              <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">
-                {myCareCueCount}/5 · {repairAgreementCount}/3
-              </p>
-              <p className="mt-2 type-caption text-muted-foreground">Relationship Pulse、Repair Agreements、Care Playbook、本週任務與 Inner Landscape 都在這裡對齊。</p>
-            </div>
-
-            <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/78">Story</p>
-              <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">{storyAnchorCount}</p>
-              <p className="mt-2 type-caption text-muted-foreground">只引用真的被留下的 shared memory，讓故事能被再次打開，而不是被補寫。</p>
-            </div>
-
-            <div className="rounded-[1.85rem] border border-white/56 bg-white/74 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/78">Future</p>
-              <p className="mt-2 font-art text-[2rem] leading-none text-card-foreground">{system.stats.wishlist_count}</p>
-              <p className="mt-2 type-caption text-muted-foreground">你們真正接受的 Shared Future 片段與待審核提案，都能在這裡回到同一張藍圖。</p>
-            </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {relationshipSystemHome.statusCards.map((card) => (
+              <LoveMapSystemStatusCard
+                key={card.key}
+                eyebrow={card.eyebrow}
+                title={card.title}
+                value={card.value}
+                description={card.description}
+                tone={card.key}
+                dataTestId={`relationship-system-status-${card.key}`}
+              />
+            ))}
           </div>
         }
         aside={
           <>
             <LoveMapSnapshotCard
-              eyebrow="System snapshot"
+              eyebrow="系統快照"
               title={system.partner?.partner_name ? `${system.me.full_name || '你'} × ${system.partner.partner_name}` : '尚未完成共享配對'}
               description={
                 system.has_partner
-                  ? '這一頁只展示目前真的有資料支持、而且能被維護的 relationship knowledge。還沒有被看見的部分，Haven 不會假裝自己已經知道。'
-                  : '完成伴侶連結後，Haven 才能把這裡從單邊可編輯頁，變成真正的 pair-visible relationship system。'
+                  ? '這一頁只展示目前真的有資料支持、而且能被維護的關係知識。還沒有被看見的部分，Haven 不會假裝自己已經知道。'
+                  : '完成伴侶連結後，Haven 才能把這裡從單邊可編輯頁，變成真正的共同關係系統。'
               }
             >
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -1299,26 +1303,26 @@ export default function LoveMapPageContent() {
             </LoveMapSnapshotCard>
 
             <LoveMapSnapshotCard
-              eyebrow="Trust boundaries"
-              title="共享、pair-visible 與私人反思，分開呈現。"
-              description="Identity 與 Future 是系統層的共享輪廓；Heart 裡的 Care Playbook 會變成 pair-visible，而 Inner Landscape 仍只屬於你；Story 則只引用已被記住的 shared memory。"
+              eyebrow="信任邊界"
+              title="共享、伴侶可見與私人反思，分開呈現。"
+              description="Identity 與 Future 是系統層的共享輪廓；Heart 裡的 Care Playbook 會變成伴侶可見，而 Inner Landscape 仍只屬於你；Story 則只引用已被記住的共同記憶。"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
                   <span className="type-section-title text-card-foreground">Identity</span>
-                  <Badge variant="success" size="sm">Shared truth</Badge>
+                  <Badge variant="success" size="sm">已保存的共同真相</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
                   <span className="type-section-title text-card-foreground">Heart</span>
-                  <Badge variant="status" size="sm">Layered trust</Badge>
+                  <Badge variant="status" size="sm">分層信任</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
                   <span className="type-section-title text-card-foreground">Story</span>
-                  <Badge variant="metadata" size="sm">Memory-backed</Badge>
+                  <Badge variant="metadata" size="sm">記憶支撐</Badge>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-[1.45rem] border border-white/50 bg-white/70 px-4 py-3">
                   <span className="type-section-title text-card-foreground">Future</span>
-                  <Badge variant="success" size="sm">Shared truth</Badge>
+                  <Badge variant="success" size="sm">已保存的共同真相</Badge>
                 </div>
               </div>
             </LoveMapSnapshotCard>
@@ -1326,18 +1330,23 @@ export default function LoveMapPageContent() {
         }
       />
 
+      <LoveMapSystemSectionNav
+        items={relationshipSystemHome.navItems}
+        nextAction={relationshipSystemHome.nextAction}
+      />
+
       <LoveMapSystemGuide
-        eyebrow="Relationship domains"
+        eyebrow="關係系統四層"
         title="Identity / Heart / Story / Future"
-        description="Relationship System V1 先把核心 relationship knowledge 固定成四個長期域。每一格都會告訴你它擁有什麼、誰能看見什麼，以及該往哪個更深的 Haven surface 走。"
+        description="Relationship System V1 先把核心關係知識固定成四個長期域。每一格都會告訴你它擁有什麼、誰能看見什麼，以及該往哪個更深的 Haven surface 走。"
       >
         <LoveMapSystemGuideCard
           dataTestId="relationship-system-guide-identity"
           eyebrow="Identity"
           title="我們是誰，現在往哪裡走。"
-          ownershipLabel="System home"
+          ownershipLabel="關係系統入口"
           ownershipTone="success"
-          metricLabel="Relationship identity"
+          metricLabel="關係身份"
           metricValue={identityMetricValue}
           metricFootnote={identityMetricFootnote}
           belongsHere="關係身份、配對狀態、你在 Haven 裡的名字、目前的共同方向，以及需要去 Settings 管理的關係設定。"
@@ -1351,12 +1360,12 @@ export default function LoveMapPageContent() {
           dataTestId="relationship-system-guide-heart"
           eyebrow="Heart"
           title="我們怎麼照顧彼此，現在感覺如何。"
-          ownershipLabel="Layered trust"
+          ownershipLabel="分層信任"
           ownershipTone="status"
-          metricLabel="Heart status"
+          metricLabel="Heart 狀態"
           metricValue={heartMetricValue}
           metricFootnote={heartMetricFootnote}
-          belongsHere="Relationship Pulse、pair-maintained Repair Agreements、pair-visible Heart Care Playbook、本週 care task，以及只屬於你的 Inner Landscape。"
+          belongsHere="Relationship Pulse、共同維護的 Repair Agreements、伴侶可見的 Heart Care Playbook、本週照顧任務，以及只屬於你的 Inner Landscape。"
           primaryHref="#heart"
           primaryLabel="查看 Heart"
           secondaryHref="/journal"
@@ -1367,9 +1376,9 @@ export default function LoveMapPageContent() {
           dataTestId="relationship-system-guide-story"
           eyebrow="Story"
           title="哪些記憶真正定義了我們。"
-          ownershipLabel="Memory-backed"
+          ownershipLabel="記憶支撐"
           ownershipTone="metadata"
-          metricLabel="Story anchors"
+          metricLabel="Story 錨點"
           metricValue={`${storyAnchorCount} 個錨點`}
           metricFootnote={storyMetricFootnote}
           belongsHere="真正被留下、值得回頭重看的 shared memory 與故事回聲，不是 Haven 替你們補寫的總結。"
@@ -1383,7 +1392,7 @@ export default function LoveMapPageContent() {
           dataTestId="relationship-system-guide-future"
           eyebrow="Future"
           title="你們正在一起建造什麼生活。"
-          ownershipLabel="Shared truth"
+          ownershipLabel="已保存的共同真相"
           ownershipTone="success"
           metricLabel="共同未來片段"
           metricValue={`${system.stats.wishlist_count} 個片段`}
@@ -1398,23 +1407,23 @@ export default function LoveMapPageContent() {
 
       <LoveMapSection
         id="identity"
-        eyebrow="Identity"
+        eyebrow="Identity｜我們現在是誰"
         title="把你們是誰、目前在往哪裡走，固定成系統首頁。"
         description="Identity 是 Relationship System 的入口：先把關係身份、配對狀態、你在 Haven 裡的名字，以及現在最值得一起照顧的北極星方向，放進同一個可編輯地方。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Partner link</p>
+              <p className="type-micro uppercase text-primary/80">伴侶連結</p>
               <p className="mt-2 type-section-title text-card-foreground">
                 {system.has_partner ? '已完成' : '待完成'}
               </p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">North star</p>
+              <p className="type-micro uppercase text-primary/80">北極星</p>
               <p className="mt-2 type-section-title text-card-foreground">{activeGoalLabel}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Last activity</p>
+              <p className="type-micro uppercase text-primary/80">最近活動</p>
               <p className="mt-2 type-section-title text-card-foreground">{lastActivityLabel ?? '尚未建立'}</p>
             </div>
           </div>
@@ -1423,10 +1432,10 @@ export default function LoveMapPageContent() {
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
           <LoveMapKnowledgeBlock
             dataTestId="relationship-identity-name-card"
-            eyebrow="How I appear in Haven"
+            eyebrow="我在 Haven 中的名字"
             title="先固定我在這個系統裡的名字。"
             description="這會更新 Relationship System、Settings，以及 Haven 對你的稱呼。它不是深層 profile schema，而是這個共享系統裡最基本、最值得被維護的識別。"
-            badge={<Badge variant="metadata" size="sm">{system.has_partner ? 'Shared context' : 'Personal now'}</Badge>}
+            badge={<Badge variant="metadata" size="sm">{system.has_partner ? '共享脈絡' : '個人設定'}</Badge>}
           >
             <Input
               id="love-map-identity-display-name"
@@ -1454,16 +1463,16 @@ export default function LoveMapPageContent() {
 
           <LoveMapKnowledgeBlock
             dataTestId="relationship-identity-goal-card"
-            eyebrow="North star"
+            eyebrow="北極星"
             title="替你們選一個目前最值得一起照顧的方向。"
             description="北極星目標不需要定一輩子，只需要讓 Haven 知道你們最近真正想一起照顧的是哪一塊。"
-            badge={<Badge variant="success" size="sm">Shared truth</Badge>}
+            badge={<Badge variant="success" size="sm">已保存的共同真相</Badge>}
           >
             {!system.has_partner ? (
               <LoveMapStatePanel
-                eyebrow="Partner required"
+                eyebrow="需要伴侶連結"
                 title="先完成伴侶連結"
-                description="共同方向屬於 shared truth。完成雙向伴侶連結後，這裡才會真正開始累積。"
+                description="共同方向屬於已保存的共同真相。完成雙向伴侶連結後，這裡才會真正開始累積。"
                 tone="quiet"
                 actionLabel="去設定完成連結"
                 onAction={goToSettings}
@@ -1511,9 +1520,9 @@ export default function LoveMapPageContent() {
             <LoveMapKnowledgeBlock
               dataTestId="relationship-identity-compass-card"
               eyebrow="Relationship Compass"
-              title="把 Identity、Story 與 Future 接成一張 pair-maintained compass。"
+              title="把 Identity、Story 與 Future 接成一張共同維護的 Compass。"
               description="這不是 Haven 自動整理的結論，也不是伴侶審批流程。它是一張你們可以一起維護的小型關係羅盤：現在怎麼理解彼此、想把哪段故事帶著走、接下來要靠近什麼。"
-              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? 'Pair-maintained' : 'Partner required'}</Badge>}
+              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? '共同維護' : '需要伴侶連結'}</Badge>}
               footer={
                 system.has_partner ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1533,9 +1542,9 @@ export default function LoveMapPageContent() {
             >
               {!system.has_partner ? (
                 <LoveMapStatePanel
-                  eyebrow="Partner required"
+                  eyebrow="需要伴侶連結"
                   title="先完成伴侶連結，Relationship Compass 才會成為共享關係知識。"
-                  description="這三句話屬於 pair-maintained 的 shared layer。沒有雙向配對時，Haven 不會假裝它已經是你們共同留下的 Compass。"
+                  description="這三句話屬於共同維護的共享層。沒有雙向配對時，Haven 不會假裝它已經是你們共同留下的 Compass。"
                   tone="quiet"
                   actionLabel="去設定完成連結"
                   onAction={goToSettings}
@@ -1611,7 +1620,7 @@ export default function LoveMapPageContent() {
                         className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
                         data-testid="relationship-identity-compass-updated-by"
                       >
-                        <p className="type-micro uppercase text-primary/80">Last updated by</p>
+                        <p className="type-micro uppercase text-primary/80">最近更新者</p>
                         <p className="mt-2 type-section-title text-card-foreground">
                           {relationshipCompass?.updated_by_name ?? '尚未建立'}
                         </p>
@@ -1621,19 +1630,19 @@ export default function LoveMapPageContent() {
                       </div>
 
                       <LoveMapEssentialField
-                        label="Nearby Story"
+                        label="連到 Story"
                         value={topStoryMoment?.title}
-                        emptyLabel="Story 還沒有足夠的 memory anchor。"
+                        emptyLabel="Story 還沒有足夠的記憶錨點。"
                         dataTestId="relationship-identity-compass-story-context"
                       />
                       <LoveMapEssentialField
-                        label="Nearby Future"
+                        label="連到 Future"
                         value={topFutureItem?.title}
                         emptyLabel="Shared Future 還沒有片段。"
                         dataTestId="relationship-identity-compass-future-context"
                       />
                       <p className="type-caption text-muted-foreground">
-                        旁邊的 Story/Future 只是附近脈絡，不會自動帶入欄位，也不會變成 Haven 推論出的 shared truth。
+                        旁邊的 Story/Future 只是附近脈絡，不會自動帶入欄位，也不會變成 Haven 推論出的共同真相。
                       </p>
                     </div>
                   </div>
@@ -1751,11 +1760,9 @@ export default function LoveMapPageContent() {
                         <span className="text-card-foreground">
                           {change.changed_by_name ?? '—'}
                         </span>
-                        {change.origin_kind === 'accepted_suggestion' ? (
-                          <span className="ml-2 inline-flex items-center rounded-full border border-primary/12 bg-primary/8 px-2.5 py-1 type-micro uppercase text-primary/80 shadow-soft">
-                            Haven 建議 · 已接受
-                          </span>
-                        ) : null}
+                        <span className="ml-2 inline-flex items-center rounded-full border border-primary/12 bg-primary/8 px-2.5 py-1 type-micro uppercase text-primary/80 shadow-soft">
+                          {change.origin_kind === 'accepted_suggestion' ? 'Haven 建議 · 已接受' : '手動更新'}
+                        </span>
                         <span className="ml-2 text-muted-foreground">
                           {summarizeCompassChange(change)}
                         </span>
@@ -1783,7 +1790,7 @@ export default function LoveMapPageContent() {
               description={
                 system.has_partner
                   ? 'Identity 先把關係最基本的輪廓固定下來，讓其他 Haven surfaces 不會像分散產品，而是像同一個系統在不同深度的工作台。'
-                  : '你現在仍然可以維護自己的系統名稱與個人 preferences；完成配對後，這裡才會變成真正的 shared relationship center。'
+                  : '你現在仍然可以維護自己的系統名稱與個人偏好；完成配對後，這裡才會變成真正的共同關係中心。'
               }
               footer={
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1802,15 +1809,15 @@ export default function LoveMapPageContent() {
             >
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
-                  <p className="type-micro uppercase text-primary/80">Connection</p>
-                  <p className="mt-2 type-section-title text-card-foreground">{system.has_partner ? 'Paired' : 'Solo'}</p>
+                  <p className="type-micro uppercase text-primary/80">連結狀態</p>
+                  <p className="mt-2 type-section-title text-card-foreground">{system.has_partner ? '已配對' : '尚未配對'}</p>
                 </div>
                 <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
-                  <p className="type-micro uppercase text-primary/80">Direction</p>
+                  <p className="type-micro uppercase text-primary/80">共同方向</p>
                   <p className="mt-2 type-section-title text-card-foreground">{activeGoalLabel}</p>
                 </div>
                 <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
-                  <p className="type-micro uppercase text-primary/80">Last activity</p>
+                  <p className="type-micro uppercase text-primary/80">最近活動</p>
                   <p className="mt-2 type-section-title text-card-foreground">{lastActivityLabel ?? '尚未建立'}</p>
                 </div>
               </div>
@@ -1821,13 +1828,13 @@ export default function LoveMapPageContent() {
 
       <LoveMapSection
         id="heart"
-        eyebrow="Heart"
+        eyebrow="Heart｜我們如何照顧彼此"
         title="把關係現在的感受、照顧方式與私人理解，放回同一層。"
         description="Heart 不是單一欄位，而是 Relationship System 裡最常被維護的一層：Relationship Pulse 負責共享狀態，Repair Agreements 負責留住你們想怎麼處理張力，Heart Care Playbook 與每週照顧任務讓這一層更可執行，而 Inner Landscape 仍然保留你的私人反思。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Pulse coverage</p>
+              <p className="type-micro uppercase text-primary/80">脈動完整度</p>
               <p className="mt-2 type-section-title text-card-foreground">
                 {system.stats.baseline_ready_mine && system.stats.baseline_ready_partner
                   ? '雙方已建立'
@@ -1845,7 +1852,7 @@ export default function LoveMapPageContent() {
               <p className="mt-2 type-section-title text-card-foreground">{formatRepairAgreementCountLabel(repairAgreementCount)}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Weekly task</p>
+              <p className="type-micro uppercase text-primary/80">本週任務</p>
               <p className="mt-2 type-section-title text-card-foreground">{weeklyTask?.completed ? '已完成' : weeklyTask ? '待完成' : '未啟用'}</p>
             </div>
           </div>
@@ -1858,7 +1865,7 @@ export default function LoveMapPageContent() {
             eyebrow="Relationship Pulse"
             title="用五個維度，先對現在誠實。"
             description="這不是評分遊戲，而是替現在的關係建立一個可以回來對照的位置。"
-            badge={<Badge variant="success" size="sm">Shared truth</Badge>}
+            badge={<Badge variant="success" size="sm">已保存的共同真相</Badge>}
             footer={
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="type-caption text-muted-foreground">
@@ -1926,7 +1933,7 @@ export default function LoveMapPageContent() {
                 eyebrow="Post-Mediation Outcome Capture"
                 title="先審核這次修復裡，哪些內容值得被帶回 Heart。"
                 description="這不是自動改寫 Repair Agreements。它只是把剛完成修復流程時留下的共同承諾與改善回顧，帶回 Heart 讓你們明確決定要不要保存。"
-                badge={<Badge variant="status" size="sm">Pending review</Badge>}
+                badge={<Badge variant="status" size="sm">待審核</Badge>}
                 footer={
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="type-caption text-muted-foreground">
@@ -2003,9 +2010,9 @@ export default function LoveMapPageContent() {
             <LoveMapKnowledgeBlock
               dataTestId="relationship-heart-repair-agreements-card"
               eyebrow="Repair Agreements"
-              title="把你們想怎麼走過張力與修復，留成一張可回來看的 pair sheet。"
-              description="這一塊不是 live mediation，也不是 Haven 幫你們自動生成的 shared truth。它是一張 pair-maintained 的 working sheet：把你們想保護什麼、要避免什麼，以及準備怎麼重新開啟修復，留在 Heart 裡。"
-              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? 'Pair-maintained' : 'Pair context'}</Badge>}
+              title="把你們想怎麼走過張力與修復，留成一張可回來看的共同修復表。"
+              description="這一塊不是 live mediation，也不是 Haven 幫你們自動生成的共同真相。它是一張共同維護的 working sheet：把你們想保護什麼、要避免什麼，以及準備怎麼重新開啟修復，留在 Heart 裡。"
+              badge={<Badge variant={system.has_partner ? 'status' : 'metadata'} size="sm">{system.has_partner ? '共同維護' : '共同脈絡'}</Badge>}
               footer={
                 system.has_partner ? (
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2041,9 +2048,9 @@ export default function LoveMapPageContent() {
             >
               {!system.has_partner ? (
                 <LoveMapStatePanel
-                  eyebrow="Partner required"
+                  eyebrow="需要伴侶連結"
                   title="先完成雙向伴侶連結"
-                  description="Repair Agreements 屬於 pair-maintained 的 relationship knowledge。完成配對後，這裡才會變成真正可以一起維護的共享修復層。"
+                  description="Repair Agreements 屬於共同維護的關係知識。完成配對後，這裡才會變成真正可以一起維護的共享修復層。"
                   tone="quiet"
                   actionLabel="去設定完成連結"
                   onAction={goToSettings}
@@ -2067,7 +2074,7 @@ export default function LoveMapPageContent() {
                       className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
                       data-testid="relationship-heart-repair-agreements-updated-by"
                     >
-                      <p className="type-micro uppercase text-primary/80">Last updated by</p>
+                      <p className="type-micro uppercase text-primary/80">最近更新者</p>
                       <p className="mt-2 type-section-title text-card-foreground">
                         {repairAgreements?.updated_by_name ?? '尚未建立'}
                       </p>
@@ -2321,7 +2328,7 @@ export default function LoveMapPageContent() {
                   />
 
                   <p className="type-caption text-muted-foreground">
-                    這是一張 pair-maintained 的 repair sheet：任何一方都能更新，但 Heart 會保留最近是誰留下這版內容，而不把它偽裝成無作者的 shared truth。
+                    這是一張共同維護的 repair sheet：任何一方都能更新，但 Heart 會保留最近是誰留下這版內容，而不把它偽裝成無作者的共同真相。
                   </p>
                 </div>
               )}
@@ -2330,7 +2337,7 @@ export default function LoveMapPageContent() {
             <LoveMapKnowledgeBlock
               dataTestId="relationship-heart-playbook-card"
               eyebrow="Heart Care Playbook"
-              title="把真正有用的照顧線索，留成 pair-visible 的 Heart playbook。"
+              title="把真正有用的照顧線索，留成伴侶可見的 Heart playbook。"
               description="Heart 不只該知道你偏好哪種照顧語言，也該知道當你過載時怎麼先接住你、什麼會讓你更糟，以及哪些小動作最容易真的讓你感到被照顧。"
               badge={<Badge variant={system.has_partner ? 'success' : 'metadata'} size="sm">{system.has_partner ? 'Pair-visible' : 'Starts with you'}</Badge>}
               footer={
@@ -2338,7 +2345,7 @@ export default function LoveMapPageContent() {
                   <p className="type-caption text-muted-foreground">
                     {system.has_partner
                       ? '每個人都只能編輯自己的 Heart Care Playbook；伴侶會在同一塊 Heart 裡看到你最新留下的版本。'
-                      : '先寫下來也沒關係；完成配對後，它會變成 pair-visible 的 relationship essential。'}
+                      : '先寫下來也沒關係；完成配對後，它會變成伴侶可見的 relationship essential。'}
                   </p>
                   <Button
                     loading={savingHeartPlaybook}
@@ -2472,7 +2479,7 @@ export default function LoveMapPageContent() {
                         ? partnerCareCueCount > 0
                           ? `${formatCareCueCountLabel(partnerCareCueCount)}${partnerCarePlaybookUpdatedAt ? ` · 最近更新 ${partnerCarePlaybookUpdatedAt}` : ''}`
                           : '伴侶還沒有在 Relationship System 裡留下 Heart Care Playbook。'
-                        : '完成雙向伴侶連結後，這裡才會顯示 pair-visible 的 partner playbook。'}
+                        : '完成雙向伴侶連結後，這裡才會顯示伴侶可見的 partner playbook。'}
                     </p>
                   </div>
 
@@ -2503,13 +2510,13 @@ export default function LoveMapPageContent() {
                     <LoveMapStatePanel
                       eyebrow="Partner playbook"
                       title="伴侶還沒有留下這一塊。"
-                      description="Heart Care Playbook 不是自動生成的 shared truth。對方實際寫下來之前，這裡會保持空白，而不是讓 Haven 假裝自己已經知道。"
+                      description="Heart Care Playbook 不是自動生成的共同真相。對方實際寫下來之前，這裡會保持空白，而不是讓 Haven 假裝自己已經知道。"
                       tone="quiet"
                     />
                   )}
 
                   <p className="type-caption text-muted-foreground">
-                    這是 pair-visible 的 Heart essentials：每個人都只寫自己的版本，但一旦留下來，就會變成伴侶平常能回來看的照顧參考。
+                    這是伴侶可見的 Heart essentials：每個人都只寫自己的版本，但一旦留下來，就會變成伴侶平常能回來看的照顧參考。
                   </p>
                 </div>
               </div>
@@ -2528,9 +2535,9 @@ export default function LoveMapPageContent() {
             >
               {!system.has_partner ? (
                 <LoveMapStatePanel
-                  eyebrow="Partner required"
+                  eyebrow="需要伴侶連結"
                   title="先完成雙向伴侶連結"
-                  description="週任務屬於 pair context。完成配對後，Haven 才能替你們生成同一個 weekly care task。"
+                  description="週任務屬於共同脈絡。完成配對後，Haven 才能替你們生成同一個 weekly care task。"
                   tone="quiet"
                   actionLabel="去設定完成連結"
                   onAction={goToSettings}
@@ -2585,7 +2592,7 @@ export default function LoveMapPageContent() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="space-y-2">
               <Badge variant="status" size="sm">Inner Landscape</Badge>
-              <h3 className="type-h3 text-card-foreground">把私人理解留在 Heart 裡，但不把它偽裝成 shared truth。</h3>
+              <h3 className="type-h3 text-card-foreground">把私人理解留在 Heart 裡，但不把它偽裝成共同真相。</h3>
               <p className="max-w-[56rem] type-body-muted text-muted-foreground">
                 Inner Landscape 仍然是你的私人 reflection layer。它現在被放進 Heart，是為了讓關係的感受、偏好與私人理解屬於同一個可維護層，而不是因為它變成了共享真理。
               </p>
@@ -2603,7 +2610,7 @@ export default function LoveMapPageContent() {
           {!system.has_partner ? (
             <div className="space-y-4">
               <LoveMapStatePanel
-                eyebrow="Partner required"
+                eyebrow="需要伴侶連結"
                 title="先完成雙向伴侶連結，Relationship System 才會開始成形。"
                 description="現在你仍然可以先看 prompts，但 Haven 不會在沒有 partner pair 的情況下，把這一區當成正式的 Relationship System。"
                 tone="quiet"
@@ -2723,7 +2730,7 @@ export default function LoveMapPageContent() {
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
-              <p className="type-micro uppercase text-primary/80">Story anchors</p>
+              <p className="type-micro uppercase text-primary/80">Story 錨點</p>
               <p className="mt-2 type-section-title text-card-foreground">{storyAnchorCount}</p>
             </div>
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -2741,7 +2748,7 @@ export default function LoveMapPageContent() {
       >
         {!system.has_partner ? (
           <LoveMapStatePanel
-            eyebrow="Partner required"
+            eyebrow="需要伴侶連結"
             title="先完成伴侶連結，故事切片才會長出 shared memory。"
             description="Story 是雙人關係知識的一部分。沒有雙向連結時，Haven 不該假裝它已經看見一段共同的故事。"
             tone="quiet"
@@ -2750,7 +2757,7 @@ export default function LoveMapPageContent() {
           />
         ) : !system.story.available ? (
           <LoveMapStatePanel
-            eyebrow="Story is still quiet"
+            eyebrow="Story 還在累積"
             title="你們的故事還沒有累積到足夠的記憶錨點。"
             description="等更多 journal、共同卡片或 appreciation 被留下來後，這裡才會開始誠實地長出關係故事。"
             tone="quiet"
@@ -2775,10 +2782,10 @@ export default function LoveMapPageContent() {
 
             <LoveMapKnowledgeBlock
               dataTestId="relationship-story-compass-echo-card"
-              eyebrow="Relationship Compass echo"
+              eyebrow="Relationship Compass 回聲"
               title="你們選擇帶著哪段故事往前走。"
               description="這裡只回聲顯示 Identity 裡手動留下的 Compass，不替 Memory 補寫意義，也不把故事錨點改成自動生成的結論。"
-              badge={<Badge variant="status" size="sm">Pair-maintained</Badge>}
+              badge={<Badge variant="status" size="sm">共同維護</Badge>}
               footer={
                 <Link
                   href="#identity"
@@ -2870,7 +2877,7 @@ export default function LoveMapPageContent() {
         <div id="shared-future" className="scroll-mt-24" />
         {!system.has_partner ? (
           <LoveMapStatePanel
-            eyebrow="Partner required"
+            eyebrow="需要伴侶連結"
             title="共同未來需要先有共同配對。"
             description="連結完成後，Shared Future 才會變成真正可以一起累積、一起回看的關係知識。"
             tone="quiet"
@@ -2882,10 +2889,10 @@ export default function LoveMapPageContent() {
             <div className="grid gap-4">
               <LoveMapKnowledgeBlock
                 dataTestId="relationship-future-compass-echo-card"
-                eyebrow="Relationship Compass echo"
+                eyebrow="Relationship Compass 回聲"
                 title="把你們接下來想靠近的方向，放在 Future 的最上方。"
                 description="這裡只顯示 Identity 裡手動留下的 Compass，不會自動新增 Blueprint 片段，也不會替你們改寫 Shared Future。"
-                badge={<Badge variant="status" size="sm">Pair-maintained</Badge>}
+                badge={<Badge variant="status" size="sm">共同維護</Badge>}
                 footer={
                   <Link
                     href="#identity"
@@ -3002,7 +3009,7 @@ export default function LoveMapPageContent() {
 
                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                     <p className="type-caption text-muted-foreground">
-                      Haven 只會在 evidence 足夠清楚時提出提案，並且不會直接寫進 shared truth。
+                      Haven 只會在 evidence 足夠清楚時提出提案，並且不會直接寫進共同真相。
                     </p>
                     <Button
                       variant="secondary"
@@ -3055,7 +3062,7 @@ export default function LoveMapPageContent() {
 
                       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                         <p className="type-caption text-muted-foreground">
-                          這個片段已經是 shared truth。Haven 只能先提出下一步或節奏建議，不能直接改寫它。
+                          這個片段已經是共同真相。Haven 只能先提出下一步或節奏建議，不能直接改寫它。
                         </p>
                         <div className="flex flex-wrap gap-3">
                           <Button

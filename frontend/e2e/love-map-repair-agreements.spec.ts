@@ -527,7 +527,7 @@ test.describe('Repair Agreements deepening', () => {
 
     await page.getByRole('button', { name: '標記本週任務完成' }).click();
     await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
-    await expect(page.getByText('本週任務已完成')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-weekly-task-card').getByText('本週任務已完成')).toBeVisible();
   });
 
   test('edits and persists Repair Agreements on the live local stack', async ({

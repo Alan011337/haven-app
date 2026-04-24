@@ -1209,22 +1209,33 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '把關係的 Identity、Heart、Story 與 Future，放進同一個可維護的系統裡。',
+        name: '你們的關係地圖',
       }),
     ).toBeVisible();
+    await expect(page.getByTestId('relationship-system-cover')).toContainText('已保存的共同真相');
+    await expect(page.getByTestId('relationship-system-status-saved')).toContainText('4/4');
+    await expect(page.getByTestId('relationship-system-status-pending')).toContainText('0 則');
+    await expect(page.getByTestId('relationship-system-status-evolving')).toContainText('1 次');
+    await expect(page.getByTestId('relationship-system-section-nav')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-section-nav-identity')).toHaveAttribute('href', '#identity');
+    await expect(page.getByTestId('relationship-system-section-nav-identity')).toContainText('最近有更新');
+    await expect(page.getByTestId('relationship-system-section-nav-heart')).toHaveAttribute('href', '#heart');
+    await expect(page.getByTestId('relationship-system-section-nav-future')).toHaveAttribute('href', '#future');
+    await expect(page.getByTestId('relationship-system-section-nav-recent-evolution')).toHaveAttribute('href', '#identity');
+    await expect(page.getByTestId('relationship-system-next-action')).toContainText('回看最近演進');
     await expect(page.getByRole('heading', { level: 2, name: 'Identity / Heart / Story / Future' })).toBeVisible();
     await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Blueprint 工作台' })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Memory（完整 Story archive）' })).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('我們是誰，現在往哪裡走。');
-    await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('System home');
+    await expect(page.getByTestId('relationship-system-guide-identity')).toContainText('關係系統入口');
     await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('我們怎麼照顧彼此，現在感覺如何。');
-    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('Layered trust');
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('分層信任');
     await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('照顧 5/5 · 修復 3/3');
     await expect(page.getByTestId('relationship-system-guide-story')).toContainText('哪些記憶真正定義了我們。');
-    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('記憶支撐');
     await expect(page.getByTestId('relationship-system-guide-future')).toContainText('你們正在一起建造什麼生活。');
-    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('Shared truth');
+    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('已保存的共同真相');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-identity', '#identity');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-heart', '#heart');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
@@ -1246,12 +1257,15 @@ test.describe('Relationship System naming and IA polish', () => {
     await page.getByTestId('relationship-system-guide-future-primary-action').click();
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#future');
     await page.goto('/love-map');
+    await page.getByTestId('relationship-system-section-nav-heart').click();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#heart');
+    await page.goto('/love-map');
 
     await expect(page.getByRole('heading', { level: 2, name: '把你們是誰、目前在往哪裡走，固定成系統首頁。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把關係現在的感受、照顧方式與私人理解，放回同一層。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '讓真正被留下來的 shared memory，變成可回來看的關係敘事。' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: '把你們想一起靠近的生活，留在能持續維護的共享藍圖裡。' })).toBeVisible();
-    await expect(page.getByText('共享、pair-visible 與私人反思，分開呈現。')).toBeVisible();
+    await expect(page.getByText('共享、伴侶可見與私人反思，分開呈現。')).toBeVisible();
     await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('Relationship Compass');
     await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('我們是在忙裡仍願意回來對話的伴侶。');
     await expect(page.getByTestId('relationship-identity-compass-updated-by')).toContainText('Alice Chen');
@@ -1329,7 +1343,7 @@ test.describe('Relationship System naming and IA polish', () => {
 
     await page.getByRole('button', { name: '標記本週任務完成' }).click();
     await expect.poll(() => apiState.weeklyTaskCompletionCount).toBe(1);
-    await expect(page.getByText('本週任務已完成')).toBeVisible();
+    await expect(page.getByTestId('relationship-heart-weekly-task-card').getByText('本週任務已完成')).toBeVisible();
 
     const intimacySelect = page.locator('#love-map-baseline-intimacy');
     await intimacySelect.evaluate((node) => {
@@ -1588,6 +1602,35 @@ test.describe('Relationship System naming and IA polish', () => {
       .toHaveValue('');
   });
 
+  test('mobile viewport keeps the Relationship OS cover, section nav, and suggestion review readable', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/love-map');
+
+    await expect(page.getByTestId('relationship-system-cover')).toContainText('你們的關係地圖');
+    await expect(page.getByTestId('relationship-system-status-saved')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-status-pending')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-section-nav')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-section-nav-future')).toContainText('Future');
+
+    await page.getByTestId('relationship-system-section-nav-future').click();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#future');
+    await expect(page.getByTestId('shared-future-suggestion-empty')).toBeVisible();
+
+    await page.getByTestId('shared-future-suggestion-empty-action').click();
+    await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
+    await expect(page.getByTestId('shared-future-suggestion-card').first()).toBeVisible();
+    await expect(page.getByTestId('shared-future-suggestion-card').first()).toContainText('僅你可見（待審核）');
+    await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
+    await expect(page.getByTestId('shared-future-suggestion-card').first().getByText('你的日記')).toHaveCount(0);
+  });
+
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {
     test.setTimeout(90_000);
     test.skip(
@@ -1659,17 +1702,19 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: '把關係的 Identity、Heart、Story 與 Future，放進同一個可維護的系統裡。',
+        name: '你們的關係地圖',
       }),
     ).toBeVisible();
+    await expect(page.getByTestId('relationship-system-cover')).toContainText('已保存的共同真相');
+    await expect(page.getByTestId('relationship-system-section-nav')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'Identity / Heart / Story / Future' })).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-identity')).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-heart')).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-story')).toBeVisible();
     await expect(page.getByTestId('relationship-system-guide-future')).toBeVisible();
-    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('Layered trust');
-    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('Memory-backed');
-    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('Shared truth');
+    await expect(page.getByTestId('relationship-system-guide-heart')).toContainText('分層信任');
+    await expect(page.getByTestId('relationship-system-guide-story')).toContainText('記憶支撐');
+    await expect(page.getByTestId('relationship-system-guide-future')).toContainText('已保存的共同真相');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-heart', '#heart');
     await expectGuidePrimaryHref(page, 'relationship-system-guide-story', '#story');
     await expectGuideSecondaryHref(page, 'relationship-system-guide-story', '/memory');
