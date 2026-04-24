@@ -954,6 +954,62 @@
     {
       "auth_policy": "authenticated",
       "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.list_relationship_compass_suggestions",
+      "method": "GET",
+      "name": "list_relationship_compass_suggestions",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.generate_relationship_compass_review_suggestion",
+      "method": "POST",
+      "name": "generate_relationship_compass_review_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/generate",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.accept_relationship_compass_suggestion",
+      "method": "POST",
+      "name": "accept_relationship_compass_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
+      "endpoint": "app.api.routers.love_map.dismiss_relationship_compass_suggestion",
+      "method": "POST",
+      "name": "dismiss_relationship_compass_suggestion",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/dismiss",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "public",
       "endpoint": "app.api.routers.love_map.list_shared_future_suggestions",
       "method": "GET",
       "name": "list_shared_future_suggestions",

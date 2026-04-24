@@ -40,6 +40,10 @@ class RelationshipKnowledgeSuggestion(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False),
         default_factory=list,
     )
+    candidate_json: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
     dedupe_key: str = Field(max_length=255, index=True)
     target_wishlist_item_id: uuid.UUID | None = Field(
         default=None,

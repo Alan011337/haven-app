@@ -1,13 +1,15 @@
 'use client';
 
 import { isAxiosError } from 'axios';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useToast } from '@/hooks/useToast';
 import useSocket from '@/hooks/useSocket';
 import { useAuth } from '@/hooks/use-auth';
 import { trackRitualRespond, trackRitualUnlock } from '@/lib/cuj-events';
+import { DECK_DEPTH_QUERY_KEY, parseDeckDepthParam } from '@/lib/deck-depth-system';
+import type { DepthLevel } from '@/lib/depth-level';
 import { feedback } from '@/lib/feedback';
 import { useAppearanceStore } from '@/stores/useAppearanceStore';
 import { logClientError } from '@/lib/safe-error-log';
@@ -43,6 +45,7 @@ const WAITING_PARTNER_REFRESH_INTERVAL_MS = 4000;
 
 export function useDeckRoom(): DeckRoomViewModel {
   const params = useParams();
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -70,9 +73,13 @@ export function useDeckRoom(): DeckRoomViewModel {
       librarySortQuery && isDeckLibrarySortMode(librarySortQuery) ? librarySortQuery : null,
     [librarySortQuery],
   );
+  const libraryDepth = useMemo(
+    () => parseDeckDepthParam(searchParams.get(DECK_DEPTH_QUERY_KEY)),
+    [searchParams],
+  );
   const decksReturnUrl = useMemo(
-    () => buildDecksReturnUrl(libraryFilter, librarySort),
-    [libraryFilter, librarySort],
+    () => buildDecksReturnUrl(libraryFilter, librarySort, libraryDepth),
+    [libraryDepth, libraryFilter, librarySort],
   );
   const autoLoadKey = useMemo(
     () => (user?.id && normalizedCategory ? `${user.id}:${normalizedCategory}` : null),
@@ -80,8 +87,8 @@ export function useDeckRoom(): DeckRoomViewModel {
   );
 
   const historyHref = useMemo(
-    () => buildHistoryHref(normalizedCategory, libraryFilter, librarySort),
-    [libraryFilter, librarySort, normalizedCategory],
+    () => buildHistoryHref(normalizedCategory, libraryFilter, librarySort, libraryDepth),
+    [libraryDepth, libraryFilter, librarySort, normalizedCategory],
   );
 
   const partnerDisplayName = useMemo(
@@ -98,7 +105,7 @@ export function useDeckRoom(): DeckRoomViewModel {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [selectedDepth, setSelectedDepth] = useState<1 | 2 | 3 | null>(null);
+  const [selectedDepth, setSelectedDepth] = useState<DepthLevel | null>(libraryDepth);
 
   const sessionRef = useRef<CardSession | null>(null);
   const roomStatusRef = useRef<RoomStatus>('IDLE');
@@ -133,6 +140,10 @@ export function useDeckRoom(): DeckRoomViewModel {
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  useEffect(() => {
+    setSelectedDepth(libraryDepth);
+  }, [libraryDepth]);
 
   useEffect(() => {
     roomStatusRef.current = roomStatus;
@@ -553,9 +564,17 @@ export function useDeckRoom(): DeckRoomViewModel {
     }
   }, [upgradeLoading, showToast]);
 
-  const handleDepthChange = useCallback((depth: 1 | 2 | 3 | null) => {
+  const handleDepthChange = useCallback((depth: DepthLevel | null) => {
     setSelectedDepth(depth);
-  }, []);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (depth) {
+      nextParams.set(DECK_DEPTH_QUERY_KEY, String(depth));
+    } else {
+      nextParams.delete(DECK_DEPTH_QUERY_KEY);
+    }
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const handleAnswerChange = useCallback((value: string) => {
     const nextValue = value.slice(0, 2000);

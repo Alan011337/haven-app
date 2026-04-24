@@ -54,7 +54,7 @@ export default function DeckRoomView({
 
   const depthSelector = (
     <div className="stack-block">
-      <p className="type-micro uppercase text-muted-foreground/70">下一輪深度</p>
+      <p className="type-micro uppercase text-muted-foreground/70">下一輪想怎麼聊</p>
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="選擇下一輪話題深度">
         {DEPTH_OPTIONS.map((opt) => {
           const isSelected = selectedDepth === opt.level;
@@ -64,6 +64,7 @@ export default function DeckRoomView({
               key={opt.level}
               type="button"
               onClick={() => handleDepthChange(isSelected ? null : opt.level)}
+              data-testid={`deck-room-depth-option-${opt.level}`}
               className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-haven ease-haven
                 ${isSelected
                   ? style.badgeClass
@@ -185,7 +186,7 @@ export default function DeckRoomView({
           eyebrow="本輪題目"
           title={session.card.question}
           description={depthStyles.guidance}
-          badge={`深度 ${depthLevel} · ${depthStyles.label}`}
+          badge={`本輪節奏 · ${depthStyles.label}`}
         >
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
           <div className="stack-block">

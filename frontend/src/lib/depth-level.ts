@@ -22,17 +22,17 @@ export const resolveDepthLevel = (...candidates: Array<number | null | undefined
 };
 
 export const DEPTH_OPTIONS: readonly { level: DepthLevel; label: string; description: string }[] = [
-  { level: 1, label: '暖身話題', description: '輕鬆開場，先建立安全感' },
-  { level: 2, label: '深入交流', description: '從事件走到彼此的需求' },
-  { level: 3, label: '靈魂深潛', description: '說出真正害怕或在意的事' },
+  { level: 1, label: '輕鬆聊', description: '先用比較不費力的問題，慢慢進到今晚。' },
+  { level: 2, label: '靠近一點', description: '聊近況，也聊到彼此真正想被理解的地方。' },
+  { level: 3, label: '深入內心', description: '留給今晚願意更坦白、更靠近內在的時刻。' },
 ];
 
 export const getDepthPresentation = (level: DepthLevel): DepthPresentation => {
   if (level === 3) {
     return {
       level,
-      label: '靈魂深潛',
-      guidance: '慢一點、真一點，試著說出你真正害怕或在意的事。',
+      label: '深入內心',
+      guidance: '慢一點、真一點，留給今晚願意更坦白、更靠近內在的時刻。',
       badgeClass: 'bg-depth-3/15 text-depth-3 border border-depth-3/30',
       accentFrameClass: 'border-depth-3/30 ring-2 ring-depth-3/10 shadow-soft',
       topAccentClass: 'bg-depth-3',
@@ -42,8 +42,8 @@ export const getDepthPresentation = (level: DepthLevel): DepthPresentation => {
   if (level === 2) {
     return {
       level,
-      label: '深入交流',
-      guidance: '聊近況背後的感受，從事件走到彼此真正的需求。',
+      label: '靠近一點',
+      guidance: '聊近況背後的感受，也聊到彼此真正想被理解的地方。',
       badgeClass: 'bg-depth-2/15 text-depth-2 border border-depth-2/30',
       accentFrameClass: 'border-depth-2/30 ring-1 ring-depth-2/10 shadow-soft',
       topAccentClass: 'bg-depth-2',
@@ -52,8 +52,8 @@ export const getDepthPresentation = (level: DepthLevel): DepthPresentation => {
   }
   return {
     level,
-    label: '暖身話題',
-    guidance: '用輕鬆的方式開場，先建立安全感，再慢慢往深處走。',
+    label: '輕鬆聊',
+    guidance: '用比較不費力的問題開場，先建立安全感，再慢慢進到今晚。',
     badgeClass: 'bg-depth-1/15 text-depth-1 border border-depth-1/30',
     accentFrameClass: 'border-depth-1/30 shadow-soft',
     topAccentClass: 'bg-depth-1',

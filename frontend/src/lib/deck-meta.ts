@@ -25,7 +25,7 @@ export type DeckMeta = {
   Icon: LucideIcon;
   /** Card back (face-down) gradient and accent for flip/reveal. */
   cardBack: DeckCardBackStyle;
-  /** Primary conversation depth: 1=暖身, 2=深入, 3=靈魂深潛. */
+  /** Primary conversation depth: 1=輕鬆聊, 2=靠近一點, 3=深入內心. */
   depthIdentity: DepthLevel;
   /** P2-A DoD: primary/secondary for design sync (RN, tokens). */
   primaryColor?: string;

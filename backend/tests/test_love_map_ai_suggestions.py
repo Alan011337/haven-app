@@ -229,7 +229,7 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
 
         async def fake_generate_shared_future_suggestions(*, evidence_catalog, existing_titles):
             calls["count"] += 1
-            self.assertGreaterEqual(len(evidence_catalog), 3)
+            self.assertGreaterEqual(len(evidence_catalog), 2)
             self.assertEqual(existing_titles, [])
             return [
                 {
@@ -238,16 +238,16 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
                     "dedupe_key": "每一百天留一個小慶祝",
                     "evidence": [
                         {
-                            "source_kind": "journal",
-                            "source_id": str(self.journal_id),
-                            "label": "你的日記 · today",
-                            "excerpt": "我們約好以後每個一百天都要慶祝一下。",
-                        },
-                        {
                             "source_kind": "card",
                             "source_id": str(self.card_session_id),
                             "label": "共同卡片 · 未來節奏",
                             "excerpt": "我想一起把每個一百天都變成小小慶祝。",
+                        },
+                        {
+                            "source_kind": "appreciation",
+                            "source_id": str(self.appreciation_id),
+                            "label": "感恩 · today",
+                            "excerpt": "謝謝你每天早上幫我準備咖啡。",
                         },
                     ],
                 },
@@ -333,10 +333,10 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
                     "dedupe_key": "每一百天留一個小慶祝",
                     "evidence": [
                         {
-                            "source_kind": "journal",
-                            "source_id": str(self.journal_id),
-                            "label": "你的日記 · today",
-                            "excerpt": "我們約好以後每個一百天都要慶祝一下。",
+                            "source_kind": "card",
+                            "source_id": str(self.card_session_id),
+                            "label": "共同卡片 · 未來節奏",
+                            "excerpt": "我想一起把每個一百天都變成小小慶祝。",
                         }
                     ],
                 },
@@ -399,10 +399,10 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
                     "dedupe_key": "每百天慶祝一次",
                     "evidence": [
                         {
-                            "source_kind": "journal",
-                            "source_id": str(self.journal_id),
-                            "label": "你的日記 · today",
-                            "excerpt": "我們約好以後每個一百天都要慶祝一下。",
+                            "source_kind": "appreciation",
+                            "source_id": str(self.appreciation_id),
+                            "label": "感恩 · today",
+                            "excerpt": "謝謝你每天早上幫我準備咖啡。",
                         }
                     ],
                 },

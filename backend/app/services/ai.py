@@ -719,6 +719,13 @@ class SharedFutureRefinementNextStepDraft(BaseModel):
     proposed_notes: str = Field(default="", max_length=240)
 
 
+class RelationshipCompassSuggestionDraft(BaseModel):
+    identity_statement: str | None = Field(default=None, max_length=500)
+    story_anchor: str | None = Field(default=None, max_length=500)
+    future_direction: str | None = Field(default=None, max_length=500)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=3)
+
+
 def normalize_shared_future_suggestion_key(title: str) -> str:
     return " ".join((title or "").strip().lower().split())
 
@@ -967,6 +974,114 @@ async def generate_shared_future_suggestions(
             break
 
     return suggestions
+
+
+async def generate_relationship_compass_suggestion(
+    *,
+    evidence_catalog: list[dict[str, str]],
+    current_compass: dict[str, str | None],
+) -> dict[str, object] | None:
+    if len(evidence_catalog) < 2:
+        return None
+
+    client = _get_openai_client()
+    if client is None or not (settings.OPENAI_API_KEY or "").strip():
+        raise HavenAIProviderError(
+            reason="relationship_compass_suggestion_provider_unavailable",
+            retryable=True,
+            provider="openai",
+        )
+
+    catalog_models = [SharedFutureSuggestionEvidenceInput.model_validate(item) for item in evidence_catalog]
+    system_prompt = (
+        "You propose at most one bounded Relationship Compass update for a personal review queue. "
+        "Only use the supplied evidence catalog and current compass. Never invent facts, diagnoses, or hidden intent. "
+        "The compass has three short fields: who the relationship is now, which story to carry forward, and what future direction to move toward. "
+        "Return empty/null fields when evidence is not clear enough for that field. "
+        "Do not rewrite the saved compass just to sound nicer; propose only materially useful updates. "
+        "Each non-empty field must be calm, human, specific, and no longer than 500 characters. "
+        "Include 1 to 3 evidence_ids from the catalog when any field is proposed."
+    )
+    user_prompt = json.dumps(
+        {
+            "task": "relationship_compass_suggestion_v1",
+            "current_compass": current_compass,
+            "evidence_catalog": [item.model_dump() for item in catalog_models],
+        },
+        ensure_ascii=False,
+    )
+
+    try:
+        with trace_span("ai.generate_relationship_compass_suggestion"):
+            completion = await client.beta.chat.completions.parse(
+                model=ANALYSIS_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=RelationshipCompassSuggestionDraft,
+                temperature=0.2,
+                max_tokens=900,
+            )
+    except Exception as exc:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)) or _is_openai_connection_error(exc):
+            raise HavenAITimeoutError(
+                reason="relationship_compass_suggestion_timeout",
+                retryable=True,
+                provider="openai",
+            ) from exc
+        if _is_openai_status_error(exc):
+            raise HavenAIProviderError(
+                reason="relationship_compass_suggestion_provider_error",
+                retryable=_get_openai_status_code(exc) != 400,
+                provider="openai",
+            ) from exc
+        raise HavenAIProviderError(
+            reason="relationship_compass_suggestion_failed",
+            retryable=True,
+            provider="openai",
+        ) from exc
+
+    parsed = completion.choices[0].message.parsed
+    if not parsed:
+        raise HavenAISchemaError(
+            reason="relationship_compass_suggestion_empty",
+            retryable=True,
+            provider="openai",
+        )
+
+    candidate = {
+        "identity_statement": _truncate_text(parsed.identity_statement or "", 500) or None,
+        "story_anchor": _truncate_text(parsed.story_anchor or "", 500) or None,
+        "future_direction": _truncate_text(parsed.future_direction or "", 500) or None,
+    }
+    if not any(value for value in candidate.values()):
+        return None
+
+    evidence_index = {item.evidence_id: item for item in catalog_models}
+    evidence_rows: list[dict[str, str]] = []
+    for evidence_id in _ordered_unique(parsed.evidence_ids)[:3]:
+        source = evidence_index.get(evidence_id)
+        if not source:
+            continue
+        evidence_rows.append(
+            {
+                "source_kind": source.source_kind,
+                "source_id": source.source_id,
+                "label": _truncate_text(source.label, 120),
+                "excerpt": _truncate_text(source.excerpt, 280),
+            }
+        )
+    if not evidence_rows:
+        return None
+
+    return {
+        "candidate": candidate,
+        "evidence": evidence_rows,
+        "dedupe_key": normalize_shared_future_suggestion_key(
+            " ".join(value for value in candidate.values() if value)
+        ),
+    }
 
 
 async def generate_shared_future_story_adjacent_ritual(

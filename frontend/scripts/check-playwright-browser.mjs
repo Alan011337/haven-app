@@ -3,6 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -18,6 +19,27 @@ if (!Object.prototype.hasOwnProperty.call(process.env, BROWSERS_PATH_ENV_KEY)) {
 }
 
 fs.mkdirSync(process.env[BROWSERS_PATH_ENV_KEY], { recursive: true });
+
+// Playwright derives macOS "slots" from the Darwin kernel major, then decides arm64 vs x64
+// based on CPU model strings containing "Apple". Some sandboxes/hypervisors omit that signal,
+// which makes Playwright think it's mac-x64 even on Apple Silicon Node builds — causing huge
+// redundant Chromium downloads and "missing executable" false negatives.
+if (
+  process.platform === 'darwin' &&
+  process.arch === 'arm64' &&
+  !Object.prototype.hasOwnProperty.call(process.env, 'PLAYWRIGHT_HOST_PLATFORM_OVERRIDE')
+) {
+  const ver = os.release().split('.').map((a) => parseInt(a, 10));
+  const darwinMajor = Number.isFinite(ver[0]) ? ver[0] : 0;
+  const LAST_STABLE_MACOS_MAJOR_VERSION = 15;
+  const macSlot = Math.min(darwinMajor - 9, LAST_STABLE_MACOS_MAJOR_VERSION);
+  const hasAppleCpu = os.cpus().some((cpu) => String(cpu.model).includes('Apple'));
+  // If CPU model strings are sanitized (common in sandboxes), Playwright can't infer Apple Silicon.
+  // On a real arm64 Node build, defaulting to mac*-arm64 matches Chrome-for-testing arm64 bundles.
+  if (hasAppleCpu || process.arch === 'arm64') {
+    process.env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = `mac${macSlot}-arm64`;
+  }
+}
 
 function parseBool(rawValue) {
   if (!rawValue) return false;

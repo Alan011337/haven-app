@@ -13,6 +13,9 @@
 # AUTHZ_MATRIX: PUT /api/love-map/essentials/repair-agreements
 # AUTHZ_MATRIX: POST /api/love-map/essentials/repair-outcome-captures/{capture_id}/dismiss
 # AUTHZ_MATRIX: POST /api/love-map/notes
+# AUTHZ_MATRIX: POST /api/love-map/suggestions/relationship-compass/generate
+# AUTHZ_MATRIX: POST /api/love-map/suggestions/relationship-compass/{suggestion_id}/accept
+# AUTHZ_MATRIX: POST /api/love-map/suggestions/relationship-compass/{suggestion_id}/dismiss
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/generate-story-ritual
 # AUTHZ_MATRIX: POST /api/love-map/suggestions/shared-future/refinements/{wishlist_item_id}/generate
@@ -145,6 +148,9 @@ class PlatformMutatingAuthRequirementTests(unittest.TestCase):
             ),
             ("POST", f"/api/love-map/essentials/repair-outcome-captures/{uuid.uuid4()}/dismiss", None),
             ("POST", "/api/love-map/notes", {"layer": "safe", "content": "note"}),
+            ("POST", "/api/love-map/suggestions/relationship-compass/generate", None),
+            ("POST", f"/api/love-map/suggestions/relationship-compass/{uuid.uuid4()}/accept", None),
+            ("POST", f"/api/love-map/suggestions/relationship-compass/{uuid.uuid4()}/dismiss", None),
             ("POST", "/api/love-map/suggestions/shared-future/generate", None),
             ("POST", "/api/love-map/suggestions/shared-future/generate-story-ritual", None),
             ("POST", f"/api/love-map/suggestions/shared-future/refinements/{uuid.uuid4()}/generate", None),

@@ -7,8 +7,19 @@ import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
+import {
+  buildCompassSuggestionEvidenceArtifactHref,
+  compassFieldValuesEqual,
+  normalizeCompassFieldValue,
+} from '@/lib/compass-suggestion-utils';
 import { parseSharedFutureNotes } from '@/lib/shared-future-read-model';
+import {
+  buildSavedSharedFuturePreviewTitles,
+  filterSharedFutureEvidence,
+  sharedFutureEvidenceKindLabel,
+} from '@/lib/shared-future-suggestion-utils';
 import { cn } from '@/lib/utils';
+import type { LoveMapRelationshipCompassPublic, RelationshipKnowledgeSuggestionEvidencePublic } from '@/services/api-client';
 
 type StateTone = 'default' | 'quiet' | 'error';
 
@@ -751,6 +762,8 @@ export function LoveMapSharedFutureNotesPanel({ notes }: { notes?: string | null
 }
 
 interface LoveMapSuggestedUpdateCardProps {
+  savedItems?: Array<{ title: string; notes?: string | null }> | null;
+  createdAtLabel?: string | null;
   title: string;
   notes: string;
   variant?: 'default' | 'story_ritual';
@@ -766,6 +779,8 @@ interface LoveMapSuggestedUpdateCardProps {
 }
 
 export function LoveMapSuggestedUpdateCard({
+  savedItems,
+  createdAtLabel,
   title,
   notes,
   variant = 'default',
@@ -775,13 +790,18 @@ export function LoveMapSuggestedUpdateCard({
   accepting = false,
   dismissing = false,
 }: LoveMapSuggestedUpdateCardProps) {
-  const badgeLabel = variant === 'story_ritual' ? 'Story-adjacent ritual suggestion' : 'AI suggestion';
+  const badgeLabel = 'Haven 建議';
   const trustCopy =
     variant === 'story_ritual'
-      ? '這是 Haven 根據你們已經被留下的 Story memory 提出的 ritual 建議。只有你看得到，按下接受前不會變成 shared truth。'
-      : '這是 Haven 根據已留下的活動提出的建議。只有你看得到，按下接受前不會變成 shared truth。';
-  const evidenceHeading =
-    variant === 'story_ritual' ? 'What in your story this builds on' : 'Why Haven suggested this';
+      ? '這是 Haven 根據你們已被留下的 Story 回聲提出的 ritual 提案。這是建議，不是已保存的共同未來；只有接受後，才會寫入你們的 Future。'
+      : '這是 Haven 根據可共同看見的片段提出的提案。這是建議，不是已保存的共同未來；只有接受後，才會寫入你們的 Future。';
+  const evidenceHeading = '根據可共同看見的片段';
+
+  const filteredEvidence = filterSharedFutureEvidence(evidence);
+
+  const savedPreview = buildSavedSharedFuturePreviewTitles(savedItems ?? null, 3);
+  const savedPreviewTitles = savedPreview.titles;
+  const savedMoreCount = savedPreview.moreCount;
 
   return (
     <GlassCard className="overflow-hidden rounded-[2.2rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(249,243,234,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6">
@@ -797,9 +817,13 @@ export function LoveMapSuggestedUpdateCard({
           </div>
 
           <Badge variant="metadata" size="sm">
-            Personal review only
+            僅你可見（待審核）
           </Badge>
         </div>
+
+        {createdAtLabel ? (
+          <p className="type-caption text-muted-foreground">生成時間：{createdAtLabel}</p>
+        ) : null}
 
         <div className="rounded-[1.55rem] border border-white/58 bg-white/76 px-4 py-4 shadow-soft">
           <p className="type-caption text-muted-foreground">
@@ -807,25 +831,68 @@ export function LoveMapSuggestedUpdateCard({
           </p>
         </div>
 
-        <div className="space-y-3">
-          <p className="type-caption text-card-foreground/82">{evidenceHeading}</p>
-          <div className="grid gap-3">
-            {evidence.map((item, index) => (
-              <div
-                key={`${item.source_kind}-${item.label}-${index}`}
-                className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="status" size="sm">
-                    {item.source_kind}
-                  </Badge>
-                  <span className="type-caption text-card-foreground">{item.label}</span>
-                </div>
-                <p className="mt-2 type-body-muted text-muted-foreground">{item.excerpt}</p>
+        {variant !== 'story_ritual' ? (
+          <div className="space-y-3" data-testid="shared-future-suggestion-compare">
+            <p className="type-caption text-card-foreground/88">
+              接受後，這則提案會新增成一個 Shared Future 片段；略過則不會改動目前保存的共同未來。
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
+                <p className="type-micro uppercase text-primary/80">目前保存</p>
+                {savedPreviewTitles.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {savedPreviewTitles.map((t) => (
+                      <p key={t} className="type-body text-card-foreground">
+                        {t}
+                      </p>
+                    ))}
+                    {savedMoreCount > 0 ? (
+                      <p className="type-caption text-muted-foreground">以及其他 {savedMoreCount} 個片段…</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-3 type-body text-muted-foreground">（你們的 Shared Future 目前還沒有片段）</p>
+                )}
               </div>
-            ))}
+              <div className="rounded-[1.45rem] border border-primary/14 bg-primary/8 px-4 py-4 shadow-soft">
+                <p className="type-micro uppercase text-primary/80">建議新增</p>
+                <div className="mt-3 space-y-2">
+                  <Badge variant="status" size="sm">
+                    新片段
+                  </Badge>
+                  <p className="type-body text-card-foreground">{title}</p>
+                  {notes ? <p className="type-body-muted text-muted-foreground">{notes}</p> : null}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {filteredEvidence.length > 0 ? (
+          <div className="space-y-3" data-testid="shared-future-suggestion-evidence">
+            <p className="type-caption text-card-foreground/82">{evidenceHeading}</p>
+            <div className="grid gap-3">
+              {filteredEvidence.map((item, index) => (
+                <div
+                  key={`${item.source_kind}-${item.label}-${index}`}
+                  className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="status" size="sm">
+                      {sharedFutureEvidenceKindLabel(item.source_kind)}
+                    </Badge>
+                    <span className="type-caption text-card-foreground">{item.label}</span>
+                  </div>
+                  <p className="mt-2 type-body-muted text-muted-foreground">{item.excerpt}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
+            <p className="type-caption text-muted-foreground">目前沒有足夠清楚的共同片段可作為支撐。</p>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="type-caption text-muted-foreground">
@@ -839,7 +906,7 @@ export function LoveMapSuggestedUpdateCard({
               leftIcon={<X className="h-4 w-4" aria-hidden />}
               onClick={onDismiss}
             >
-              略過
+              先略過
             </Button>
             <Button
               loading={accepting}
@@ -847,7 +914,204 @@ export function LoveMapSuggestedUpdateCard({
               leftIcon={<Check className="h-4 w-4" aria-hidden />}
               onClick={onAccept}
             >
-              接受
+              接受並寫入 Future
+            </Button>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+interface LoveMapCompassSuggestionCardProps {
+  savedCompass: LoveMapRelationshipCompassPublic | null;
+  candidate: {
+    identity_statement: string | null;
+    story_anchor: string | null;
+    future_direction: string | null;
+  };
+  evidence: RelationshipKnowledgeSuggestionEvidencePublic[];
+  onAccept: () => void;
+  onDismiss: () => void;
+  accepting?: boolean;
+  dismissing?: boolean;
+}
+
+const COMPASS_SUGGESTION_FIELDS = [
+  { key: 'identity_statement', label: '我們現在是什麼樣的關係' },
+  { key: 'story_anchor', label: '我們想一起記得哪段故事' },
+  { key: 'future_direction', label: '接下來一起靠近什麼' },
+] as const;
+
+export function LoveMapCompassSuggestionCard({
+  savedCompass,
+  candidate,
+  evidence,
+  onAccept,
+  onDismiss,
+  accepting = false,
+  dismissing = false,
+}: LoveMapCompassSuggestionCardProps) {
+  const proposedFields = COMPASS_SUGGESTION_FIELDS.filter((field) => candidate[field.key]?.trim());
+  const fieldChangeCount = proposedFields.filter(
+    (field) => !compassFieldValuesEqual(savedCompass ? savedCompass[field.key] : null, candidate[field.key]),
+  ).length;
+  const allProposedMatchSaved = proposedFields.length > 0 && fieldChangeCount === 0;
+
+  return (
+    <GlassCard
+      className="overflow-hidden rounded-[2.1rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(248,242,233,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6"
+      data-testid="relationship-compass-suggestion-card"
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/16 bg-primary/10 px-3 py-1.5 shadow-soft">
+              <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+              <span className="type-micro uppercase text-primary/80">建議更新</span>
+            </div>
+            <h3 className="type-h3 text-card-foreground">Relationship Compass 可以被更新一版</h3>
+            <p className="max-w-2xl type-body-muted text-muted-foreground">
+              這是 Haven 根據最近留下的片段整理出的候選 wording，不是已保存的共同真相。
+            </p>
+          </div>
+
+          <Badge variant="metadata" size="sm">
+            Personal review only
+          </Badge>
+        </div>
+
+        <div className="rounded-[1.55rem] border border-white/58 bg-white/76 px-4 py-4 shadow-soft">
+          <p className="type-caption text-muted-foreground">
+            這是建議更新，不是已保存的共同真相；只有接受後才會寫入 Compass。略過不會改動現在的 Relationship Compass。
+          </p>
+        </div>
+
+        {proposedFields.length > 0 ? (
+          <div
+            className="space-y-3"
+            data-testid="relationship-compass-suggestion-compare"
+          >
+            <p className="type-caption text-card-foreground/88">
+              接受前，先看每個欄位與目前保存的差別；接受後寫入的內容即為新的共同方向。
+            </p>
+            {allProposedMatchSaved ? (
+              <p className="type-caption text-muted-foreground">這些欄位與目前保存相同；若你仍要接受，代表再次確認同一段文字。</p>
+            ) : fieldChangeCount > 0 ? (
+              <p className="type-caption text-muted-foreground">
+                在有建議內容的 {proposedFields.length} 個欄位中，有 {fieldChangeCount} 個與目前保存不同。
+              </p>
+            ) : null}
+            <div className="grid gap-3">
+              {proposedFields.map((field) => {
+                const savedText = savedCompass ? savedCompass[field.key] : null;
+                const proposedText = candidate[field.key];
+                const same = compassFieldValuesEqual(savedText, proposedText);
+                const savedEmpty = !normalizeCompassFieldValue(savedText);
+                return (
+                  <div
+                    key={field.key}
+                    data-testid={`relationship-compass-suggestion-field-${field.key}`}
+                    className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                  >
+                    <p className="type-micro uppercase text-primary/80">{field.label}</p>
+                    {same ? (
+                      <div className="mt-3 space-y-2">
+                        <Badge variant="status" size="sm">
+                          與目前保存相同
+                        </Badge>
+                        <p className="type-body text-card-foreground">{proposedText}</p>
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <div>
+                          <p className="type-caption text-muted-foreground">目前保存</p>
+                          <p className="mt-1 type-body text-card-foreground">
+                            {savedEmpty ? '（此欄位尚未填寫）' : savedText}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="type-caption text-primary/78">建議</p>
+                          <p className="mt-1 type-body text-card-foreground">{proposedText}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
+            <p className="type-caption text-muted-foreground">
+              Haven 這次沒有整理出足夠清楚、可寫入 Compass 的文字。
+            </p>
+          </div>
+        )}
+
+        {evidence.length > 0 ? (
+          <div className="space-y-3">
+            <p className="type-caption text-muted-foreground">
+              證據只引用你們已留下、產品內可檢視的片段摘要，用來幫你對照「最近留下了什麼」；不宣稱模型內部推理或外部資訊。
+            </p>
+            <p className="type-caption text-card-foreground/82">這個建議主要根據</p>
+            <div className="grid gap-3">
+              {evidence.map((item, index) => {
+                const href = buildCompassSuggestionEvidenceArtifactHref(item);
+                return (
+                  <div
+                    key={`${item.source_kind}-${item.source_id}-${item.label}-${index}`}
+                    className="rounded-[1.35rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+                    data-testid="relationship-compass-suggestion-evidence-item"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="status" size="sm">
+                        {item.source_kind}
+                      </Badge>
+                      <span className="type-caption text-card-foreground">{item.label}</span>
+                    </div>
+                    <p className="mt-2 type-body-muted text-muted-foreground">{item.excerpt}</p>
+                    {href ? (
+                      <p className="mt-2">
+                        <Link
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="type-caption font-medium text-primary underline-offset-2 hover:underline"
+                          data-testid="relationship-compass-suggestion-evidence-link"
+                        >
+                          打開日記
+                        </Link>
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="type-caption text-muted-foreground">
+            接受後會像一般 Compass 更新一樣進入共享關係知識；不會自動改寫 Memory 或 Blueprint。
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              loading={dismissing}
+              disabled={accepting || dismissing}
+              leftIcon={<X className="h-4 w-4" aria-hidden />}
+              onClick={onDismiss}
+            >
+              先略過
+            </Button>
+            <Button
+              loading={accepting}
+              disabled={accepting || dismissing || proposedFields.length === 0}
+              leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              onClick={onAccept}
+            >
+              接受並寫入 Compass
             </Button>
           </div>
         </div>

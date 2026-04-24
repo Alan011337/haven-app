@@ -50,12 +50,15 @@ async function mockLoveMapApi(page: Page) {
   const repairAgreementPayloads: Array<Record<string, unknown>> = [];
   let weeklyTaskCompletionCount = 0;
   const generatedSuggestionCalls: Array<Record<string, unknown>> = [];
+  const generatedCompassSuggestionCalls: Array<Record<string, unknown>> = [];
   const generatedStoryRitualCalls: Array<Record<string, unknown>> = [];
   const generatedRefinementCalls: string[] = [];
   const generatedCadenceRefinementCalls: string[] = [];
   const generatedRefinementCallCounts: Record<string, number> = {};
   const acceptedSuggestionIds: string[] = [];
   const dismissedSuggestionIds: string[] = [];
+  const acceptedCompassSuggestionIds: string[] = [];
+  const dismissedCompassSuggestionIds: string[] = [];
   const acceptedRefinementIds: string[] = [];
   const dismissedRefinementIds: string[] = [];
 
@@ -312,13 +315,18 @@ async function mockLoveMapApi(page: Page) {
     ],
   };
 
-  let pendingSuggestions: Array<{
+  type MockSuggestion = {
     id: string;
     section: string;
     status: string;
     generator_version: string;
     proposed_title: string;
     proposed_notes: string;
+    relationship_compass_candidate?: {
+      identity_statement: string | null;
+      story_anchor: string | null;
+      future_direction: string | null;
+    } | null;
     evidence: Array<{
       source_kind: string;
       source_id: string;
@@ -329,26 +337,11 @@ async function mockLoveMapApi(page: Page) {
     reviewed_at: string | null;
     target_wishlist_item_id: string | null;
     accepted_wishlist_item_id: string | null;
-  }> = [];
+  };
 
-  let pendingRefinements: Array<{
-    id: string;
-    section: string;
-    status: string;
-    generator_version: string;
-    proposed_title: string;
-    proposed_notes: string;
-    evidence: Array<{
-      source_kind: string;
-      source_id: string;
-      label: string;
-      excerpt: string;
-    }>;
-    created_at: string;
-    reviewed_at: string | null;
-    target_wishlist_item_id: string | null;
-    accepted_wishlist_item_id: string | null;
-  }> = [];
+  let pendingSuggestions: MockSuggestion[] = [];
+  let pendingCompassSuggestions: MockSuggestion[] = [];
+  let pendingRefinements: MockSuggestion[] = [];
 
   const apiHandler = async (route: Route) => {
     const url = new URL(route.request().url());
@@ -572,6 +565,11 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (path.endsWith('/love-map/suggestions/relationship-compass') && method === 'GET') {
+      await fulfillJson(route, pendingCompassSuggestions);
+      return;
+    }
+
     if (path.endsWith('/love-map/suggestions/shared-future') && method === 'GET') {
       await fulfillJson(route, pendingSuggestions);
       return;
@@ -660,6 +658,48 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (path.endsWith('/love-map/suggestions/relationship-compass/generate') && method === 'POST') {
+      generatedCompassSuggestionCalls.push({});
+      const suffix = generatedCompassSuggestionCalls.length === 1 ? 'dismiss' : 'accept';
+      const nextSuggestion: MockSuggestion = {
+        id: `compass-suggestion-${suffix}`,
+        section: 'relationship_compass',
+        status: 'pending',
+        generator_version: 'relationship_compass_v1',
+        proposed_title: 'Relationship Compass 建議更新',
+        proposed_notes: 'Haven 根據最近留下的片段整理出一版可審核的 Compass 更新。',
+        relationship_compass_candidate: {
+          identity_statement:
+            suffix === 'accept'
+              ? '我們是在忙裡仍願意慢慢回來對話的伴侶。'
+              : '我們是在忙裡仍願意先把語氣慢下來的伴侶。',
+          story_anchor: '想一起記得晚餐後散步，讓我們又回到彼此身邊。',
+          future_direction: '接下來一起把週末留給散步和真正對話。',
+        },
+        evidence: [
+          {
+            source_kind: 'journal',
+            source_id: 'a0000000-0000-4000-8000-0000000000a1',
+            label: '你的日記 · 2026-03-29',
+            excerpt: '散步時把壓力慢慢說完。',
+          },
+          {
+            source_kind: 'appreciation',
+            source_id: 'appreciation-compass-source-1',
+            label: '感謝片段',
+            excerpt: '謝謝你晚餐後陪我散步。',
+          },
+        ],
+        created_at: new Date().toISOString(),
+        reviewed_at: null,
+        target_wishlist_item_id: null,
+        accepted_wishlist_item_id: null,
+      };
+      pendingCompassSuggestions = [nextSuggestion];
+      await fulfillJson(route, pendingCompassSuggestions);
+      return;
+    }
+
     if (path.endsWith('/love-map/suggestions/shared-future/generate') && method === 'POST') {
       generatedSuggestionCalls.push({});
       if (generatedSuggestionCalls.length === 1) {
@@ -673,16 +713,16 @@ async function mockLoveMapApi(page: Page) {
             proposed_notes: '把重要的關係節點變成固定會一起回來看的儀式。',
             evidence: [
               {
-                source_kind: 'journal',
-                source_id: 'journal-source-1',
-                label: '你的日記 · 2026-03-29',
-                excerpt: '我們約好以後每個一百天都要慶祝一下。',
-              },
-              {
                 source_kind: 'card',
                 source_id: 'session-source-1',
                 label: '共同卡片 · 今天能量',
                 excerpt: '我想一起把每個一百天都變成小小慶祝。',
+              },
+              {
+                source_kind: 'appreciation',
+                source_id: 'appreciation-source-2',
+                label: '感恩 · 2026-03-30',
+                excerpt: '謝謝你每天早上幫我準備咖啡。',
               },
             ],
             created_at: new Date().toISOString(),
@@ -905,6 +945,84 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (path.includes('/love-map/suggestions/relationship-compass/') && path.endsWith('/dismiss') && method === 'POST') {
+      const suggestionId = path.split('/').at(-2) ?? '';
+      const suggestion = pendingCompassSuggestions.find((item) => item.id === suggestionId);
+      dismissedCompassSuggestionIds.push(suggestionId);
+      pendingCompassSuggestions = pendingCompassSuggestions.filter((item) => item.id !== suggestionId);
+      await fulfillJson(route, {
+        ...(suggestion ?? {
+          id: suggestionId,
+          section: 'relationship_compass',
+          status: 'dismissed',
+          generator_version: 'relationship_compass_v1',
+          proposed_title: 'Relationship Compass 建議更新',
+          proposed_notes: '',
+          relationship_compass_candidate: null,
+          evidence: [],
+          target_wishlist_item_id: null,
+          accepted_wishlist_item_id: null,
+        }),
+        status: 'dismissed',
+        reviewed_at: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (path.includes('/love-map/suggestions/relationship-compass/') && path.endsWith('/accept') && method === 'POST') {
+      const suggestionId = path.split('/').at(-2) ?? '';
+      const suggestion = pendingCompassSuggestions.find((item) => item.id === suggestionId);
+      acceptedCompassSuggestionIds.push(suggestionId);
+      pendingCompassSuggestions = pendingCompassSuggestions.filter((item) => item.id !== suggestionId);
+      const candidate = suggestion?.relationship_compass_candidate;
+      const previous = system.relationship_compass;
+      const savedAtIso = new Date().toISOString();
+      if (candidate && previous) {
+        system.relationship_compass = {
+          identity_statement: candidate.identity_statement ?? previous.identity_statement,
+          story_anchor: candidate.story_anchor ?? previous.story_anchor,
+          future_direction: candidate.future_direction ?? previous.future_direction,
+          updated_by_name: system.me.full_name,
+          updated_at: savedAtIso,
+        };
+        system.relationship_compass_history = [
+          {
+            id: `compass-suggestion-change-${acceptedCompassSuggestionIds.length}`,
+            changed_at: savedAtIso,
+            changed_by_name: system.me.full_name,
+            fields: [
+              {
+                key: 'identity_statement',
+                label: '身份',
+                change_kind: 'updated',
+                before_text: previous.identity_statement,
+                after_text: system.relationship_compass.identity_statement,
+              },
+              {
+                key: 'story_anchor',
+                label: '故事',
+                change_kind: 'updated',
+                before_text: previous.story_anchor,
+                after_text: system.relationship_compass.story_anchor,
+              },
+              {
+                key: 'future_direction',
+                label: '未來',
+                change_kind: 'updated',
+                before_text: previous.future_direction,
+                after_text: system.relationship_compass.future_direction,
+              },
+            ],
+            revision_note: null,
+          },
+          ...system.relationship_compass_history,
+        ];
+        system.stats.last_activity_at = savedAtIso;
+      }
+      await fulfillJson(route, system.relationship_compass);
+      return;
+    }
+
     if (path.includes('/love-map/suggestions/') && path.endsWith('/dismiss') && method === 'POST') {
       const suggestionId = path.split('/').at(-2) ?? '';
       const suggestion = pendingSuggestions.find((item) => item.id === suggestionId);
@@ -999,9 +1117,12 @@ async function mockLoveMapApi(page: Page) {
     get weeklyTaskCompletionCount() {
       return weeklyTaskCompletionCount;
     },
+    generatedCompassSuggestionCalls,
     generatedSuggestionCalls,
     goalPayloads,
     notePayloads,
+    acceptedCompassSuggestionIds,
+    dismissedCompassSuggestionIds,
     acceptedSuggestionIds,
     dismissedSuggestionIds,
     generatedStoryRitualCalls,
@@ -1217,20 +1338,20 @@ test.describe('Relationship System naming and IA polish', () => {
 
     await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
     await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(1);
-    await expect(page.getByText('Story-adjacent ritual suggestion')).toBeVisible();
+    await expect(page.getByText('Haven 建議')).toBeVisible();
     await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).toBeVisible();
-    await expect(page.getByText('What in your story this builds on')).toBeVisible();
+    await expect(page.getByText('根據可共同看見的片段')).toBeVisible();
     await expect(page.getByText('Story Time Capsule')).toBeVisible();
     await expect(page.getByText('Time Capsule · 日記')).toBeVisible();
 
-    await page.getByRole('button', { name: '略過' }).first().click();
+    await page.getByRole('button', { name: '先略過' }).first().click();
     await expect.poll(() => apiState.dismissedSuggestionIds.length).toBe(1);
-    await expect(page.getByText('每逢紀念日一起重看一則回憶')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).not.toBeVisible();
 
     await page.getByRole('button', { name: '讓 Haven 從這段故事提出 ritual' }).click();
     await expect.poll(() => apiState.generatedStoryRitualCalls.length).toBe(2);
     await expect(page.getByRole('heading', { name: '每逢紀念日一起重看一則回憶' })).toBeVisible();
-    await page.getByRole('button', { name: '接受' }).first().click();
+    await page.getByRole('button', { name: '接受並寫入 Future' }).first().click();
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(1);
     // Accepted ritual lands as a new Shared Future wishlist item. Scope the
     // assertion to the Future section card — the compass's Nearby Future
@@ -1244,14 +1365,14 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
     await expect(page.getByRole('heading', { name: '每一百天留一個小慶祝' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '一起存旅行基金' })).toBeVisible();
-    await expect(page.getByText('只有你看得到，按下接受前不會變成 shared truth。')).toHaveCount(2);
+    await expect(page.getByText('這是建議，不是已保存的共同未來')).toHaveCount(2);
     await expect(page.getByText('AI 提案審核只對你可見；伴侶只會看到你接受之後真正進入 Shared Future 的內容。')).toBeVisible();
 
-    await page.getByRole('button', { name: '略過' }).first().click();
+    await page.getByRole('button', { name: '先略過' }).first().click();
     await expect.poll(() => apiState.dismissedSuggestionIds.length).toBe(2);
-    await expect(page.getByText('每一百天留一個小慶祝')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: '每一百天留一個小慶祝' })).not.toBeVisible();
 
-    await page.getByRole('button', { name: '接受' }).first().click();
+    await page.getByRole('button', { name: '接受並寫入 Future' }).first().click();
     await expect.poll(() => apiState.acceptedSuggestionIds.length).toBe(2);
     await expect(
       page.locator('[data-shared-future-item-id]').filter({ hasText: '一起存旅行基金' }).first(),
@@ -1260,7 +1381,7 @@ test.describe('Relationship System naming and IA polish', () => {
     await page.getByRole('button', { name: '讓 Haven 提出 Shared Future 提案' }).click();
     await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(2);
     await expect(page.getByText('目前沒有待你審核的 Shared Future 提案。')).toBeVisible();
-    await expect(page.getByText('每一百天留一個小慶祝')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: '每一百天留一個小慶祝' })).not.toBeVisible();
 
     const kyotoCard = page.locator('[data-shared-future-item-id="wish-2"]');
     await expect(kyotoCard.getByRole('button', { name: '讓 Haven 幫這個片段補節奏' })).toHaveCount(0);
@@ -1315,6 +1436,52 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByText('完整 Shared Future', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: '進入 Blueprint（完整 Shared Future）' })).toBeVisible();
 
+  });
+
+  test('relationship compass suggestions stay separate until accepted or dismissed', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.goto('/love-map#identity');
+
+    await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('Relationship Compass');
+    await expect(page.getByText('目前沒有待你審核的 Compass 建議。')).toBeVisible();
+    await page.getByRole('button', { name: '讓 Haven 根據最近片段提一版' }).click();
+    await expect.poll(() => apiState.generatedCompassSuggestionCalls.length).toBe(1);
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText('建議更新');
+    await expect(page.getByTestId('relationship-compass-suggestion-compare')).toBeVisible();
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText('目前保存');
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText('建議');
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText(
+      '這是建議更新，不是已保存的共同真相',
+    );
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText('散步時把壓力慢慢說完');
+    await expect(page.getByTestId('relationship-compass-suggestion-evidence-link')).toHaveAttribute(
+      'href',
+      '/journal/a0000000-0000-4000-8000-0000000000a1',
+    );
+    await page.getByRole('button', { name: '先略過' }).click();
+    await expect.poll(() => apiState.dismissedCompassSuggestionIds).toEqual(['compass-suggestion-dismiss']);
+    await expect(page.getByLabel('我們現在是什麼樣的關係')).toHaveValue('我們是在忙裡仍願意回來對話的伴侶。');
+
+    await page.getByRole('button', { name: '讓 Haven 根據最近片段提一版' }).click();
+    await expect.poll(() => apiState.generatedCompassSuggestionCalls.length).toBe(2);
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toContainText(
+      '我們是在忙裡仍願意慢慢回來對話的伴侶。',
+    );
+    await page.getByRole('button', { name: '接受並寫入 Compass' }).click();
+    await expect.poll(() => apiState.acceptedCompassSuggestionIds).toEqual(['compass-suggestion-accept']);
+    await expect(page.getByLabel('我們現在是什麼樣的關係')).toHaveValue(
+      '我們是在忙裡仍願意慢慢回來對話的伴侶。',
+    );
+    await expect(page.getByTestId('relationship-story-compass-echo-card')).toContainText(
+      '想一起記得晚餐後散步',
+    );
+    await expect(page.getByText('這是建議更新，不是已保存的共同真相')).not.toBeVisible();
   });
 
   test('compass save with revision note renders italic quote in timeline', async ({ page }) => {
@@ -1450,6 +1617,13 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page).toHaveURL(/\/love-map#identity$/);
     await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('Relationship Compass');
     await expect(page.getByTestId('relationship-identity-compass-card')).toContainText('我們是在忙裡仍願意回來對話');
+    await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
+    await expect(page.getByTestId('relationship-compass-suggestion-card').first()).toBeVisible();
+    await expect(page.getByText('這是建議更新，不是已保存的共同真相').first()).toBeVisible();
+    await page.getByRole('button', { name: '先略過' }).first().click();
+    await expect(page.getByTestId('relationship-compass-suggestion-card').first()).toBeVisible();
+    await page.getByRole('button', { name: '接受並寫入 Compass' }).first().click();
+    await expect(page.getByTestId('relationship-compass-suggestion-card')).toHaveCount(0);
     await page.getByLabel('我們現在是什麼樣的關係').fill('Live compass identity proof：我們願意把重要事情留下來。');
     await page.getByLabel('我們想一起記得哪段故事').fill('Live compass story proof：咖啡、散步和感謝把我們帶回來。');
     await page.getByLabel('接下來一起靠近什麼').fill('Live compass future proof：每個月至少留一晚給彼此。');

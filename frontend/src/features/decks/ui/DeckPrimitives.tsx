@@ -373,7 +373,7 @@ export function DeckArchiveCard({ entry, className = '' }: DeckArchiveCardProps)
                 {deckTitle}
               </Badge>
               <Badge variant="status" size="sm" className={depth.badgeClass}>
-                深度 {depthLevel} · {depth.label}
+                對話節奏 · {depth.label}
               </Badge>
             </div>
             <h3 className="max-w-3xl type-h3 text-card-foreground">

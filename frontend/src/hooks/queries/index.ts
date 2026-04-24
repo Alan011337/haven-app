@@ -24,9 +24,11 @@ export { useDrawDeckCard, useRespondToDeckCard } from './useDeckMutations';
 export {
   useLoveMapCards,
   useLoveMapNotes,
+  useLoveMapRelationshipCompassSuggestions,
   useLoveMapSharedFutureRefinements,
   useLoveMapSharedFutureSuggestions,
   useLoveMapSystem,
+  loveMapRelationshipCompassSuggestionsQueryKey,
 } from './useLoveMapQueries';
 export { useMediationStatus } from './useMediationStatus';
 export { useBlueprint } from './useBlueprint';

@@ -77,6 +77,7 @@ from app.models.relationship_compass import RelationshipCompass
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
 from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
+from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from app.models.couple_goal import CoupleGoal
 from app.models.love_map_note import LoveMapNote
 from app.models.wishlist_item import WishlistItem
@@ -424,6 +425,11 @@ def seed_relationship_system(session: Session) -> None:
     repair_agreement_exists = session.exec(select(RelationshipRepairAgreement).limit(1)).first()
     repair_outcome_capture_exists = session.exec(select(RelationshipRepairOutcomeCapture).limit(1)).first()
     repair_agreement_change_exists = session.exec(select(RelationshipRepairAgreementChange).limit(1)).first()
+    compass_suggestion_exists = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.section == "relationship_compass",
+        )
+    ).first()
 
     if (
         baseline_exists
@@ -436,6 +442,7 @@ def seed_relationship_system(session: Session) -> None:
         and repair_agreement_exists
         and repair_outcome_capture_exists
         and repair_agreement_change_exists
+        and compass_suggestion_exists
     ):
         print("[seed] relationship_system: already exist — skipping")
         return
@@ -575,6 +582,44 @@ def seed_relationship_system(session: Session) -> None:
         )
         session.commit()
         print("[seed] relationship_system: seeded Relationship Compass")
+
+    if not compass_suggestion_exists:
+        # V1 suggestion layer: keep this bounded to **one pending** Compass suggestion
+        # so the Relationship System stays calm and reviewable.
+        session.add(
+            RelationshipKnowledgeSuggestion(
+                user_id=ALICE_ID,
+                partner_id=BOB_ID,
+                section="relationship_compass",
+                status="pending",
+                generator_version="relationship_compass_v1",
+                proposed_title="Relationship Compass 建議更新",
+                proposed_notes="Haven 根據最近留下的片段整理出一版可審核的 Compass 更新。",
+                candidate_json={
+                    "identity_statement": "我們是在忙碌裡仍願意慢慢回來對話，也願意把重要片段放進同一張圖上的伴侶。",
+                    "story_anchor": "想一起記得：咖啡、散步和被說出口的感謝，正在成為我們回到彼此身邊的方式。",
+                    "future_direction": "接下來一起把每月至少一晚留給晚餐、散步和真正對話，讓週末節奏更穩定。",
+                },
+                evidence_json=[
+                    {
+                        "source_kind": "journal",
+                        "source_id": "seeded-journal-compass-signal",
+                        "label": "你的日記",
+                        "excerpt": "最近忙起來時，我們還是用咖啡和散步把彼此帶回來。",
+                    },
+                    {
+                        "source_kind": "appreciation",
+                        "source_id": "seeded-appreciation-compass-signal",
+                        "label": "感謝片段",
+                        "excerpt": "謝謝你每天早上幫我準備咖啡，這個小習慣讓我每天都很期待起床。",
+                    },
+                ],
+                dedupe_key="seeded-relationship-compass-suggestion-a",
+                created_at=_days_ago(0),
+            )
+        )
+        session.commit()
+        print("[seed] relationship_system: seeded 1 Relationship Compass suggestion")
 
     if not repair_agreement_exists:
         session.add(

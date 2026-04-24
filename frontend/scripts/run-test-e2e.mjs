@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -10,6 +11,20 @@ if (!Object.prototype.hasOwnProperty.call(env, 'PLAYWRIGHT_AUTO_INSTALL')) {
 }
 if (!Object.prototype.hasOwnProperty.call(env, 'PLAYWRIGHT_BROWSERS_PATH')) {
   env.PLAYWRIGHT_BROWSERS_PATH = path.join(process.cwd(), '.playwright-browsers');
+}
+if (
+  process.platform === 'darwin' &&
+  process.arch === 'arm64' &&
+  !Object.prototype.hasOwnProperty.call(env, 'PLAYWRIGHT_HOST_PLATFORM_OVERRIDE')
+) {
+  const ver = os.release().split('.').map((a) => parseInt(a, 10));
+  const darwinMajor = Number.isFinite(ver[0]) ? ver[0] : 0;
+  const LAST_STABLE_MACOS_MAJOR_VERSION = 15;
+  const macSlot = Math.min(darwinMajor - 9, LAST_STABLE_MACOS_MAJOR_VERSION);
+  const hasAppleCpu = os.cpus().some((cpu) => String(cpu.model).includes('Apple'));
+  if (hasAppleCpu || process.arch === 'arm64') {
+    env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = `mac${macSlot}-arm64`;
+  }
 }
 if (!Object.prototype.hasOwnProperty.call(env, 'E2E_TIMEOUT_SECONDS')) {
   env.E2E_TIMEOUT_SECONDS = '420';

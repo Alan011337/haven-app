@@ -7,7 +7,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DECK_META_LIST } from '@/lib/deck-meta';
 import { useDeckCardCounts } from '@/hooks/queries';
 import Badge from '@/components/ui/Badge';
+import {
+  DECK_DEPTH_QUERY_KEY,
+  filterDecksByDepth,
+  getDeckDepthFilterCopy,
+  parseDeckDepthParam,
+  type DeckDepthFilter,
+} from '@/lib/deck-depth-system';
 import { getDeckEditorialCopy } from '@/features/decks/deck-copy';
+import { DEPTH_OPTIONS } from '@/lib/depth-level';
 import {
   getSelectionChipStateClass,
   selectionChipBaseClass,
@@ -211,12 +219,18 @@ export default function DecksPageContent() {
 
   const rawFilterMode = searchParams.get('filter');
   const rawSortMode = searchParams.get('sort');
+  const rawDepthMode = searchParams.get(DECK_DEPTH_QUERY_KEY);
   const filterMode: FilterMode =
     rawFilterMode && isFilterMode(rawFilterMode) ? rawFilterMode : 'all';
   const sortMode: SortMode =
     rawSortMode && isSortMode(rawSortMode) ? rawSortMode : 'recommended';
+  const depthFilter = parseDeckDepthParam(rawDepthMode);
 
-  const syncQueryParams = (nextFilter: FilterMode, nextSort: SortMode) => {
+  const syncQueryParams = (
+    nextFilter: FilterMode,
+    nextSort: SortMode,
+    nextDepth: DeckDepthFilter = depthFilter,
+  ) => {
     const params = new URLSearchParams(searchParams.toString());
     if (nextFilter === 'all') {
       params.delete('filter');
@@ -227,6 +241,11 @@ export default function DecksPageContent() {
       params.delete('sort');
     } else {
       params.set('sort', nextSort);
+    }
+    if (nextDepth) {
+      params.set(DECK_DEPTH_QUERY_KEY, String(nextDepth));
+    } else {
+      params.delete(DECK_DEPTH_QUERY_KEY);
     }
 
     const nextQuery = params.toString();
@@ -250,13 +269,17 @@ export default function DecksPageContent() {
       params.delete('sort');
       shouldReplace = true;
     }
+    if (rawDepthMode && !depthFilter) {
+      params.delete(DECK_DEPTH_QUERY_KEY);
+      shouldReplace = true;
+    }
 
     if (!shouldReplace) return;
     const nextQuery = params.toString();
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
       scroll: false,
     });
-  }, [pathname, rawFilterMode, rawSortMode, router, searchParams]);
+  }, [depthFilter, pathname, rawDepthMode, rawFilterMode, rawSortMode, router, searchParams]);
 
   const totals = DECK_META_LIST.reduce(
     (acc, deck) => {
@@ -294,12 +317,13 @@ export default function DecksPageContent() {
       };
     });
 
-    const filtered = mapped.filter((item) => {
+    const statusFiltered = mapped.filter((item) => {
       if (filterMode === 'all') return true;
       if (filterMode === 'in_progress') return item.isStarted && !item.isCompleted;
       if (filterMode === 'not_started') return !item.isStarted;
       return item.isCompleted;
     });
+    const filtered = filterDecksByDepth(statusFiltered, depthFilter);
 
     filtered.sort((a, b) => {
       if (sortMode === 'progress_desc') return b.completionRate - a.completionRate;
@@ -310,14 +334,15 @@ export default function DecksPageContent() {
     });
 
     return filtered;
-  }, [deckStats, filterMode, sortMode]);
+  }, [deckStats, depthFilter, filterMode, sortMode]);
 
   const deckRoomQueryString = useMemo(() => {
     const params = new URLSearchParams();
     if (filterMode !== 'all') params.set('filter', filterMode);
     if (sortMode !== 'recommended') params.set('sort', sortMode);
+    if (depthFilter) params.set(DECK_DEPTH_QUERY_KEY, String(depthFilter));
     return params.toString();
-  }, [filterMode, sortMode]);
+  }, [depthFilter, filterMode, sortMode]);
 
   const buildDeckRoomHref = (deckId: string) =>
     deckRoomQueryString ? `/decks/${deckId}?${deckRoomQueryString}` : `/decks/${deckId}`;
@@ -326,6 +351,7 @@ export default function DecksPageContent() {
   const companionDecks = deckCards.slice(1, 3);
   const shelfDecks = deckCards.slice(3);
   const browseBandCopy = getBrowseBandCopy(filterMode);
+  const depthCopy = getDeckDepthFilterCopy(depthFilter);
   const companionSectionCopy = getCompanionSectionCopy(filterMode);
   const shelfSectionCopy = getShelfSectionCopy(filterMode);
   const railCopy = getRailCopy(filterMode, countsLoading, heroDeck?.deck.title);
@@ -375,11 +401,19 @@ export default function DecksPageContent() {
             value: countsLoading ? '...' : `${overallCompletionRate}%`,
             note: '所有館藏累積完成的比例',
           },
-          {
-            label: '完整收藏',
-            value: countsLoading ? '...' : `${completedDecks}/${DECK_META_LIST.length}`,
-            note: '已完整走過一輪的牌組數量',
-          },
+          depthFilter
+            ? {
+                label: '今晚深度',
+                value: DEPTH_OPTIONS.find((option) => option.level === depthFilter)?.label ?? '已選擇',
+                note: '進入牌組後會優先用這個節奏抽題',
+              }
+            : {
+                label: '可選深度',
+                value: '3 種',
+                note: countsLoading
+                  ? '正在整理今晚可選的互動節奏'
+                  : `${completedDecks}/${DECK_META_LIST.length} 套已完整走過`,
+              },
         ]}
         featured={
           heroDeck ? (
@@ -436,33 +470,64 @@ export default function DecksPageContent() {
 
       <DeckLibraryBrowseBand
         eyebrow="Browse the Collection"
-        title={browseBandCopy.title}
-        description={browseBandCopy.description}
+        title={depthCopy?.title ?? browseBandCopy.title}
+        description={depthCopy?.description ?? browseBandCopy.description}
         resultCount={deckCards.length}
         totalCount={DECK_META_LIST.length}
         controls={
-          <>
-            {FILTER_MODES.map((mode) => {
-              const active = filterMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => syncQueryParams(mode, sortMode)}
-                  className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
-                  aria-pressed={active}
-                >
-                  {mode === 'all'
-                    ? '全部牌組'
-                    : mode === 'in_progress'
-                      ? '正在探索'
-                      : mode === 'not_started'
-                        ? '尚未開始'
-                        : '已完整走過'}
-                </button>
-              );
-            })}
-          </>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2" aria-label="依互動深度篩選牌組">
+              <span className="mr-1 type-micro uppercase text-primary/64">今晚想要的深度</span>
+              <button
+                type="button"
+                onClick={() => syncQueryParams(filterMode, sortMode, null)}
+                className={`${selectionChipBaseClass} ${getSelectionChipStateClass(!depthFilter)}`}
+                aria-pressed={!depthFilter}
+                data-testid="deck-depth-filter-all"
+              >
+                全部深度
+              </button>
+              {DEPTH_OPTIONS.map((option) => {
+                const active = depthFilter === option.level;
+                return (
+                  <button
+                    key={option.level}
+                    type="button"
+                    onClick={() => syncQueryParams(filterMode, sortMode, option.level)}
+                    className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
+                    aria-pressed={active}
+                    data-testid={`deck-depth-filter-${option.level}`}
+                    aria-label={`${option.label} — ${option.description}`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2" aria-label="依牌組進度篩選">
+              <span className="mr-1 type-micro uppercase text-primary/64">館藏狀態</span>
+              {FILTER_MODES.map((mode) => {
+                const active = filterMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => syncQueryParams(mode, sortMode)}
+                    className={`${selectionChipBaseClass} ${getSelectionChipStateClass(active)}`}
+                    aria-pressed={active}
+                  >
+                    {mode === 'all'
+                      ? '全部牌組'
+                      : mode === 'in_progress'
+                        ? '正在探索'
+                        : mode === 'not_started'
+                          ? '尚未開始'
+                          : '已完整走過'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         }
         sortControl={sortControl}
       />
@@ -470,10 +535,13 @@ export default function DecksPageContent() {
       {deckCards.length === 0 && !countsLoading ? (
         <DeckStatePanel
           eyebrow="暫無結果"
-          title="目前沒有符合條件的牌組"
-          description="這不是沒有館藏，只是目前的篩選條件把它們暫時收起來了。換個條件再看一次，圖書館就會重新打開。"
+          title={depthCopy?.emptyTitle ?? '目前沒有符合條件的牌組'}
+          description={
+            depthCopy?.emptyDescription ??
+            '這不是沒有館藏，只是目前的篩選條件把它們暫時收起來了。換個條件再看一次，圖書館就會重新打開。'
+          }
           actionLabel="清除篩選"
-          onAction={() => syncQueryParams('all', 'recommended')}
+          onAction={() => syncQueryParams('all', 'recommended', null)}
         />
       ) : null}
 

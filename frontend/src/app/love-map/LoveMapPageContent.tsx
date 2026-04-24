@@ -9,7 +9,9 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Input, { Textarea } from '@/components/ui/Input';
 import {
+  loveMapRelationshipCompassSuggestionsQueryKey,
   useLoveMapCards,
+  useLoveMapRelationshipCompassSuggestions,
   useLoveMapSharedFutureRefinements,
   useLoveMapSharedFutureSuggestions,
   useLoveMapSystem,
@@ -29,11 +31,14 @@ import { logClientError } from '@/lib/safe-error-log';
 import { cn } from '@/lib/utils';
 import {
   acceptLoveMapSharedFutureSuggestion,
+  acceptLoveMapRelationshipCompassSuggestion,
   addBlueprintItem,
   completeWeeklyTask,
   createOrUpdateLoveMapNote,
+  dismissLoveMapRelationshipCompassSuggestion,
   dismissLoveMapRepairOutcomeCapture,
   dismissLoveMapSharedFutureSuggestion,
+  generateLoveMapRelationshipCompassSuggestion,
   generateLoveMapSharedFutureCadenceRefinement,
   generateLoveMapSharedFutureRefinement,
   generateLoveMapSharedFutureSuggestions,
@@ -66,6 +71,7 @@ import {
 import LoveMapSkeleton from './LoveMapSkeleton';
 import {
   LoveMapEssentialField,
+  LoveMapCompassSuggestionCard,
   LoveMapFutureComposer,
   LoveMapKnowledgeBlock,
   LoveMapPromptCard,
@@ -437,6 +443,9 @@ export default function LoveMapPageContent() {
   const { showToast } = useToast();
   const systemQuery = useLoveMapSystem();
   const cardsQuery = useLoveMapCards();
+  const compassSuggestionQuery = useLoveMapRelationshipCompassSuggestions({
+    enabled: Boolean(systemQuery.data?.has_partner),
+  });
   const suggestionQuery = useLoveMapSharedFutureSuggestions({
     enabled: Boolean(systemQuery.data?.has_partner),
   });
@@ -455,6 +464,7 @@ export default function LoveMapPageContent() {
   const [dismissingRepairOutcomeCapture, setDismissingRepairOutcomeCapture] = useState(false);
   const [completingWeeklyTask, setCompletingWeeklyTask] = useState(false);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [generatingCompassSuggestion, setGeneratingCompassSuggestion] = useState(false);
   const [generatingStoryRitual, setGeneratingStoryRitual] = useState(false);
   const [generatingRefinement, setGeneratingRefinement] = useState<{
     itemId: string;
@@ -601,6 +611,7 @@ export default function LoveMapPageContent() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSystem() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapNotes() }),
+      queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() }),
       queryClient.invalidateQueries({ queryKey: queryKeys.blueprint() }),
@@ -807,6 +818,56 @@ export default function LoveMapPageContent() {
     }
   };
 
+  const handleGenerateCompassSuggestion = async () => {
+    setGeneratingCompassSuggestion(true);
+    try {
+      const suggestions = await generateLoveMapRelationshipCompassSuggestion();
+      await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
+      if (suggestions.length === 0) {
+        showToast('目前還沒有足夠清楚的 Compass 建議。', 'info');
+        return;
+      }
+      showToast('Haven 已整理出一版可審核的 Relationship Compass 建議。', 'success');
+    } catch (error) {
+      logClientError('love-map-relationship-compass-suggestion-generate-failed', error);
+      showToast('Haven 暫時還整理不出 Compass 建議，稍後再試一次。', 'error');
+    } finally {
+      setGeneratingCompassSuggestion(false);
+    }
+  };
+
+  const handleAcceptCompassSuggestion = async (suggestion: RelationshipKnowledgeSuggestionPublic) => {
+    setReviewingSuggestionId(suggestion.id);
+    setReviewingAction('accept');
+    try {
+      await acceptLoveMapRelationshipCompassSuggestion(suggestion.id);
+      await invalidateRelationshipViews();
+      showToast('這版 Compass 建議已寫入 Relationship Compass。', 'success');
+    } catch (error) {
+      logClientError('love-map-relationship-compass-suggestion-accept-failed', error);
+      showToast('這次沒有順利收下 Compass 建議，稍後再試一次。', 'error');
+    } finally {
+      setReviewingSuggestionId(null);
+      setReviewingAction(null);
+    }
+  };
+
+  const handleDismissCompassSuggestion = async (suggestion: RelationshipKnowledgeSuggestionPublic) => {
+    setReviewingSuggestionId(suggestion.id);
+    setReviewingAction('dismiss');
+    try {
+      await dismissLoveMapRelationshipCompassSuggestion(suggestion.id);
+      await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
+      showToast('這版 Compass 建議先略過了。', 'success');
+    } catch (error) {
+      logClientError('love-map-relationship-compass-suggestion-dismiss-failed', error);
+      showToast('這次沒有順利略過 Compass 建議，稍後再試一次。', 'error');
+    } finally {
+      setReviewingSuggestionId(null);
+      setReviewingAction(null);
+    }
+  };
+
   const handleGenerateSuggestions = async () => {
     setGeneratingSuggestions(true);
     try {
@@ -945,6 +1006,9 @@ export default function LoveMapPageContent() {
   const topStoryMoment = system.story?.moments[0] ?? null;
   const topFutureItem = system.wishlist_items[0] ?? null;
   const storyHasCapsule = Boolean(system.story?.time_capsule);
+  const pendingCompassSuggestions = Array.isArray(compassSuggestionQuery.data)
+    ? compassSuggestionQuery.data
+    : [];
   const pendingSuggestions = Array.isArray(suggestionQuery.data) ? suggestionQuery.data : [];
   const pendingRefinements = Array.isArray(refinementQuery.data) ? refinementQuery.data : [];
   const refinementByItemId = new Map(
@@ -952,6 +1016,7 @@ export default function LoveMapPageContent() {
       .filter((suggestion) => suggestion.target_wishlist_item_id)
       .map((suggestion) => [suggestion.target_wishlist_item_id as string, suggestion]),
   );
+  const compassPendingCount = system.has_partner ? pendingCompassSuggestions.length : 0;
   const aiPendingCount = system.has_partner ? pendingSuggestions.length + pendingRefinements.length : 0;
   const storyRitualActionDisabled =
     generatingStoryRitual || suggestionQuery.isLoading || refinementQuery.isLoading || aiPendingCount > 0;
@@ -990,7 +1055,9 @@ export default function LoveMapPageContent() {
     ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'} · Compass ${compassCueCount}/3`
     : '等待雙向配對';
   const identityMetricFootnote = system.has_partner
-    ? `目前方向：${activeGoalLabel} · ${formatCompassCountLabel(compassCueCount)} · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
+    ? `目前方向：${activeGoalLabel} · ${formatCompassCountLabel(compassCueCount)}${
+        compassPendingCount > 0 ? ` · ${compassPendingCount} 則 Compass 建議待審核` : ''
+      } · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
     : '先完成雙向伴侶連結，這裡才會變成真正的共享 Relationship System。';
   const heartMetricValue = !system.has_partner
     ? '等待雙向配對'
@@ -1443,8 +1510,9 @@ export default function LoveMapPageContent() {
                   onAction={goToSettings}
                 />
               ) : (
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                  <div className="space-y-4">
+                <div className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                    <div className="space-y-4">
                     <Textarea
                       id="love-map-compass-identity-statement"
                       label="我們現在是什麼樣的關係"
@@ -1507,35 +1575,104 @@ export default function LoveMapPageContent() {
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <div
-                      className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
-                      data-testid="relationship-identity-compass-updated-by"
-                    >
-                      <p className="type-micro uppercase text-primary/80">Last updated by</p>
-                      <p className="mt-2 type-section-title text-card-foreground">
-                        {relationshipCompass?.updated_by_name ?? '尚未建立'}
-                      </p>
-                      <p className="mt-1 type-caption text-muted-foreground">
-                        {relationshipCompassUpdatedAt ?? '先一起留下第一版。'}
+                    <div className="space-y-3">
+                      <div
+                        className="rounded-[1.35rem] border border-primary/10 bg-primary/8 px-4 py-4 shadow-soft"
+                        data-testid="relationship-identity-compass-updated-by"
+                      >
+                        <p className="type-micro uppercase text-primary/80">Last updated by</p>
+                        <p className="mt-2 type-section-title text-card-foreground">
+                          {relationshipCompass?.updated_by_name ?? '尚未建立'}
+                        </p>
+                        <p className="mt-1 type-caption text-muted-foreground">
+                          {relationshipCompassUpdatedAt ?? '先一起留下第一版。'}
+                        </p>
+                      </div>
+
+                      <LoveMapEssentialField
+                        label="Nearby Story"
+                        value={topStoryMoment?.title}
+                        emptyLabel="Story 還沒有足夠的 memory anchor。"
+                        dataTestId="relationship-identity-compass-story-context"
+                      />
+                      <LoveMapEssentialField
+                        label="Nearby Future"
+                        value={topFutureItem?.title}
+                        emptyLabel="Shared Future 還沒有片段。"
+                        dataTestId="relationship-identity-compass-future-context"
+                      />
+                      <p className="type-caption text-muted-foreground">
+                        旁邊的 Story/Future 只是附近脈絡，不會自動帶入欄位，也不會變成 Haven 推論出的 shared truth。
                       </p>
                     </div>
+                  </div>
 
-                    <LoveMapEssentialField
-                      label="Nearby Story"
-                      value={topStoryMoment?.title}
-                      emptyLabel="Story 還沒有足夠的 memory anchor。"
-                      dataTestId="relationship-identity-compass-story-context"
+                  {compassSuggestionQuery.isError ? (
+                    <LoveMapStatePanel
+                      eyebrow="Compass 建議更新"
+                      title="Compass 建議暫時沒有順利載入。"
+                      description="目前保存的 Relationship Compass 仍然可用；建議層只是 personal review queue，不會影響已保存的共同真相。"
+                      tone="quiet"
+                      actionLabel="重新讀取 Compass 建議"
+                      onAction={() => {
+                        void compassSuggestionQuery.refetch();
+                      }}
                     />
-                    <LoveMapEssentialField
-                      label="Nearby Future"
-                      value={topFutureItem?.title}
-                      emptyLabel="Shared Future 還沒有片段。"
-                      dataTestId="relationship-identity-compass-future-context"
+                  ) : compassSuggestionQuery.isLoading ? (
+                    <LoveMapStatePanel
+                      eyebrow="Compass 建議更新"
+                      title="Haven 正在讀取 Compass 建議。"
+                      description="如果有待你審核的更新，它會出現在這裡；沒有接受前不會改動保存內容。"
+                      tone="quiet"
                     />
+                  ) : pendingCompassSuggestions.length === 0 ? (
+                    <LoveMapStatePanel
+                      eyebrow="Compass 建議更新"
+                      title="目前沒有待你審核的 Compass 建議。"
+                      description="當最近的 Journal、共同卡片、感謝或修復片段足夠清楚時，你可以讓 Haven 整理一版候選文字。"
+                      tone="quiet"
+                      actionLabel="讓 Haven 根據最近片段提一版"
+                      onAction={() => {
+                        void handleGenerateCompassSuggestion();
+                      }}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingCompassSuggestions.map((suggestion) =>
+                        suggestion.relationship_compass_candidate ? (
+                          <LoveMapCompassSuggestionCard
+                            key={suggestion.id}
+                            savedCompass={relationshipCompass}
+                            candidate={suggestion.relationship_compass_candidate}
+                            evidence={suggestion.evidence}
+                            accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
+                            dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
+                            onAccept={() => {
+                              void handleAcceptCompassSuggestion(suggestion);
+                            }}
+                            onDismiss={() => {
+                              void handleDismissCompassSuggestion(suggestion);
+                            }}
+                          />
+                        ) : null,
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                     <p className="type-caption text-muted-foreground">
-                      旁邊的 Story/Future 只是附近脈絡，不會自動帶入欄位，也不會變成 Haven 推論出的 shared truth。
+                      Haven 只會提出候選 wording；只有你按下接受，才會寫入 Relationship Compass。
                     </p>
+                    <Button
+                      variant="secondary"
+                      loading={generatingCompassSuggestion}
+                      disabled={generatingCompassSuggestion || compassSuggestionQuery.isLoading}
+                      onClick={() => {
+                        void handleGenerateCompassSuggestion();
+                      }}
+                    >
+                      {pendingCompassSuggestions.length > 0 ? '重新整理 Compass 建議' : '讓 Haven 提一版'}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -2763,6 +2900,8 @@ export default function LoveMapPageContent() {
                         notes={suggestion.proposed_notes}
                         variant={getSharedFutureSuggestionVariant(suggestion.generator_version)}
                         evidence={suggestion.evidence}
+                        savedItems={system.wishlist_items}
+                        createdAtLabel={formatShortDateTime(suggestion.created_at) ?? null}
                         accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
                         dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
                         onAccept={() => {

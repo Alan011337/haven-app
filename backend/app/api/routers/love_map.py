@@ -58,10 +58,12 @@ from app.schemas.love_map import (
     LoveMapSystemStatsPublic,
     LoveMapWeeklyTaskPublic,
     LoveMapNoteUpdate,
+    RelationshipCompassSuggestionCandidatePublic,
     RelationshipKnowledgeSuggestionEvidencePublic,
     RelationshipKnowledgeSuggestionPublic,
 )
 from app.services.ai import (
+    generate_relationship_compass_suggestion,
     generate_shared_future_story_adjacent_ritual,
     generate_shared_future_refinement_cadence,
     generate_shared_future_refinement_next_step,
@@ -92,6 +94,7 @@ router = APIRouter(tags=["love-map"])
 
 SUGGESTION_SECTION_SHARED_FUTURE = "shared_future"
 SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT = "shared_future_refinement"
+SUGGESTION_SECTION_RELATIONSHIP_COMPASS = "relationship_compass"
 SUGGESTION_STATUS_PENDING = "pending"
 SUGGESTION_STATUS_ACCEPTED = "accepted"
 SUGGESTION_STATUS_DISMISSED = "dismissed"
@@ -99,6 +102,7 @@ SUGGESTION_GENERATOR_SHARED_FUTURE_V1 = "shared_future_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_STORY_RITUAL_V1 = "shared_future_story_ritual_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_NEXT_STEP_V1 = "shared_future_refinement_next_step_v1"
 SUGGESTION_GENERATOR_SHARED_FUTURE_REFINEMENT_CADENCE_V1 = "shared_future_refinement_cadence_v1"
+SUGGESTION_GENERATOR_RELATIONSHIP_COMPASS_V1 = "relationship_compass_v1"
 REFINEMENT_DISMISS_COOLDOWN = timedelta(hours=24)
 REPAIR_AGREEMENT_ORIGIN_MANUAL_EDIT = "manual_edit"
 REPAIR_AGREEMENT_ORIGIN_POST_MEDIATION = "post_mediation_carry_forward"
@@ -537,6 +541,11 @@ def _pair_appreciation_rows(*, session, user_id: UUID, partner_id: UUID) -> list
 
 def _to_suggestion_public(row: RelationshipKnowledgeSuggestion) -> RelationshipKnowledgeSuggestionPublic:
     evidence_rows = row.evidence_json if isinstance(row.evidence_json, list) else []
+    candidate = (
+        _relationship_compass_candidate_public(row.candidate_json)
+        if row.section == SUGGESTION_SECTION_RELATIONSHIP_COMPASS
+        else None
+    )
     return RelationshipKnowledgeSuggestionPublic(
         id=str(row.id),
         section=row.section,
@@ -544,6 +553,7 @@ def _to_suggestion_public(row: RelationshipKnowledgeSuggestion) -> RelationshipK
         generator_version=row.generator_version,
         proposed_title=row.proposed_title,
         proposed_notes=row.proposed_notes,
+        relationship_compass_candidate=candidate,
         evidence=[
             RelationshipKnowledgeSuggestionEvidencePublic(
                 source_kind=str(item.get("source_kind", "")),
@@ -559,6 +569,20 @@ def _to_suggestion_public(row: RelationshipKnowledgeSuggestion) -> RelationshipK
         target_wishlist_item_id=str(row.target_wishlist_item_id) if row.target_wishlist_item_id else None,
         accepted_wishlist_item_id=str(row.accepted_wishlist_item_id) if row.accepted_wishlist_item_id else None,
     )
+
+
+def _relationship_compass_candidate_public(
+    raw: object,
+) -> RelationshipCompassSuggestionCandidatePublic | None:
+    if not isinstance(raw, dict):
+        return None
+    candidate = {
+        key: _normalize_short_text(str(raw.get(key) or ""))
+        for key in COMPASS_FIELD_LABELS
+    }
+    if not any(candidate.values()):
+        return None
+    return RelationshipCompassSuggestionCandidatePublic(**candidate)
 
 
 def _get_owned_suggestion_or_404(
@@ -600,6 +624,22 @@ def _load_shared_future_pending_refinements(
             RelationshipKnowledgeSuggestion.user_id == current_user.id,
             RelationshipKnowledgeSuggestion.partner_id == partner_id,
             RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
+            RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
+        ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
+    ).all()
+
+
+def _load_relationship_compass_pending_suggestions(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+) -> list[RelationshipKnowledgeSuggestion]:
+    return session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_RELATIONSHIP_COMPASS,
             RelationshipKnowledgeSuggestion.status == SUGGESTION_STATUS_PENDING,
         ).order_by(RelationshipKnowledgeSuggestion.created_at.desc())
     ).all()
@@ -707,26 +747,28 @@ def _build_shared_future_generation_sources(
     session,
     current_user: CurrentUser,
     partner_id: UUID,
+    include_personal_journals: bool = False,
 ) -> tuple[list[dict[str, str]], list[str], set[str], list[str]]:
     evidence_catalog: list[dict[str, str]] = []
 
-    journal_rows = session.exec(
-        select(Journal).where(
-            Journal.user_id == current_user.id,
-            Journal.deleted_at.is_(None),
-            Journal.is_draft.is_(False),
-        ).order_by(Journal.created_at.desc())
-    ).all()
-    for row in journal_rows[:6]:
-        evidence_catalog.append(
-            {
-                "evidence_id": f"journal:{row.id}",
-                "source_kind": "journal",
-                "source_id": str(row.id),
-                "label": f"你的日記 · {row.created_at.date().isoformat()}",
-                "excerpt": _truncate_preview(row.content, 280),
-            }
-        )
+    if include_personal_journals:
+        journal_rows = session.exec(
+            select(Journal).where(
+                Journal.user_id == current_user.id,
+                Journal.deleted_at.is_(None),
+                Journal.is_draft.is_(False),
+            ).order_by(Journal.created_at.desc())
+        ).all()
+        for row in journal_rows[:6]:
+            evidence_catalog.append(
+                {
+                    "evidence_id": f"journal:{row.id}",
+                    "source_kind": "journal",
+                    "source_id": str(row.id),
+                    "label": f"你的日記 · {row.created_at.date().isoformat()}",
+                    "excerpt": _truncate_preview(row.content, 280),
+                }
+            )
 
     session_rows = session.exec(
         select(CardSession).where(
@@ -805,6 +847,64 @@ def _build_shared_future_generation_sources(
         if row.proposed_title.strip()
     ]
     return evidence_catalog, existing_wishlist_titles, blocked_dedupe_keys, handled_titles
+
+
+def _relationship_compass_candidate_dict(raw: object) -> dict[str, str | None]:
+    if not isinstance(raw, dict):
+        return {key: None for key in COMPASS_FIELD_LABELS}
+    return {
+        key: _normalize_short_text(str(raw.get(key) or ""))
+        for key in COMPASS_FIELD_LABELS
+    }
+
+
+def _relationship_compass_candidate_text(candidate: dict[str, str | None]) -> str:
+    return " ".join(
+        value.strip()
+        for key in COMPASS_FIELD_LABELS
+        if (value := candidate.get(key)) and value.strip()
+    )
+
+
+def _build_relationship_compass_suggestion_sources(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+) -> tuple[list[dict[str, str]], dict[str, str | None], set[str]]:
+    evidence_catalog, _, _, _ = _build_shared_future_generation_sources(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+        include_personal_journals=True,
+    )
+    compass = _load_relationship_compass(
+        session=session,
+        user_id=current_user.id,
+        partner_id=partner_id,
+    )
+    current_compass = {
+        key: getattr(compass, key) if compass else None
+        for key in COMPASS_FIELD_LABELS
+    }
+    handled_rows = session.exec(
+        select(RelationshipKnowledgeSuggestion).where(
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+            RelationshipKnowledgeSuggestion.partner_id == partner_id,
+            RelationshipKnowledgeSuggestion.section == SUGGESTION_SECTION_RELATIONSHIP_COMPASS,
+        )
+    ).all()
+    blocked_dedupe_keys = {
+        row.dedupe_key
+        for row in handled_rows
+        if row.dedupe_key.strip()
+    }
+    current_dedupe = normalize_shared_future_suggestion_key(
+        _relationship_compass_candidate_text(current_compass)
+    )
+    if current_dedupe:
+        blocked_dedupe_keys.add(current_dedupe)
+    return evidence_catalog[:12], current_compass, blocked_dedupe_keys
 
 
 def _story_time_capsule_item_label(source_kind: str) -> str:
@@ -1189,6 +1289,37 @@ def upsert_relationship_compass(
     if not partner_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
 
+    compass = _save_relationship_compass_values(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+        values={
+            key: getattr(body, key)
+            for key in COMPASS_FIELD_LABELS
+        },
+        revision_note=body.revision_note,
+        action="Upsert love map relationship compass",
+        conflict_detail="儲存 Relationship Compass 時發生衝突。",
+        failure_detail="儲存 Relationship Compass 失敗。",
+    )
+
+    return _to_relationship_compass_public(
+        compass,
+        updated_by_name=_resolve_user_name(current_user),
+    ) or LoveMapRelationshipCompassPublic()
+
+
+def _save_relationship_compass_values(
+    *,
+    session,
+    current_user: CurrentUser,
+    partner_id: UUID,
+    values: dict[str, str | None],
+    revision_note: str | None,
+    action: str,
+    conflict_detail: str,
+    failure_detail: str,
+) -> RelationshipCompass | None:
     uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
     compass = _load_relationship_compass(
         session=session,
@@ -1200,7 +1331,7 @@ def upsert_relationship_compass(
         for key in COMPASS_FIELD_LABELS
     }
     next_values = {
-        key: _normalize_short_text(getattr(body, key))
+        key: _normalize_short_text(values.get(key))
         for key in COMPASS_FIELD_LABELS
     }
     has_changes = any(
@@ -1208,7 +1339,7 @@ def upsert_relationship_compass(
     )
     # Whitespace-only note → None so empty chips never leak into the timeline.
     # Over-length rejected earlier by Pydantic `max_length=300`.
-    normalized_revision_note = (body.revision_note or "").strip() or None
+    normalized_revision_note = (revision_note or "").strip() or None
     saved_at = utcnow()
 
     if has_changes:
@@ -1240,16 +1371,13 @@ def upsert_relationship_compass(
         commit_with_error_handling(
             session,
             logger=logger,
-            action="Upsert love map relationship compass",
-            conflict_detail="儲存 Relationship Compass 時發生衝突。",
-            failure_detail="儲存 Relationship Compass 失敗。",
+            action=action,
+            conflict_detail=conflict_detail,
+            failure_detail=failure_detail,
         )
         session.refresh(compass)
 
-    return _to_relationship_compass_public(
-        compass,
-        updated_by_name=_resolve_user_name(current_user),
-    ) or LoveMapRelationshipCompassPublic()
+    return compass
 
 
 @router.put("/essentials/heart-profile", response_model=LoveMapHeartProfileSavePublic)
@@ -1493,6 +1621,203 @@ def dismiss_repair_outcome_capture(
 
 
 @router.get(
+    "/suggestions/relationship-compass",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+def list_relationship_compass_suggestions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        return []
+    rows = _load_relationship_compass_pending_suggestions(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    return [_to_suggestion_public(row) for row in rows]
+
+
+@router.post(
+    "/suggestions/relationship-compass/generate",
+    response_model=list[RelationshipKnowledgeSuggestionPublic],
+)
+async def generate_relationship_compass_review_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> list[RelationshipKnowledgeSuggestionPublic]:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    pending_rows = _load_relationship_compass_pending_suggestions(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    if pending_rows:
+        return [_to_suggestion_public(row) for row in pending_rows]
+
+    evidence_catalog, current_compass, blocked_dedupe_keys = _build_relationship_compass_suggestion_sources(
+        session=session,
+        current_user=current_user,
+        partner_id=partner_id,
+    )
+    try:
+        generated = await generate_relationship_compass_suggestion(
+            evidence_catalog=evidence_catalog,
+            current_compass=current_compass,
+        )
+    except (HavenAIProviderError, HavenAISchemaError, HavenAITimeoutError) as exc:
+        logger.warning(
+            "relationship_compass_suggestion_generate_failed: reason=%s",
+            getattr(exc, "reason", type(exc).__name__),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI 建議暫時無法使用，請稍後再試。",
+        ) from exc
+
+    if not generated:
+        logger.info("relationship_compass_suggestion_skipped: reason=%s", "ai_returned_empty")
+        return []
+
+    candidate = _relationship_compass_candidate_dict(generated.get("candidate"))
+    candidate_text = _relationship_compass_candidate_text(candidate)
+    dedupe_key = normalize_shared_future_suggestion_key(
+        str(generated.get("dedupe_key") or candidate_text)
+    )
+    if not candidate_text or not dedupe_key or dedupe_key in blocked_dedupe_keys:
+        logger.info("relationship_compass_suggestion_skipped: reason=%s", "dedupe_key_blocked")
+        return []
+
+    evidence_rows = [
+        item
+        for item in generated.get("evidence", [])
+        if isinstance(item, dict)
+    ]
+    if not evidence_rows:
+        logger.info("relationship_compass_suggestion_skipped: reason=%s", "missing_evidence")
+        return []
+
+    row = RelationshipKnowledgeSuggestion(
+        user_id=current_user.id,
+        partner_id=partner_id,
+        section=SUGGESTION_SECTION_RELATIONSHIP_COMPASS,
+        status=SUGGESTION_STATUS_PENDING,
+        generator_version=SUGGESTION_GENERATOR_RELATIONSHIP_COMPASS_V1,
+        proposed_title="Relationship Compass 建議更新",
+        proposed_notes="Haven 根據最近留下的片段整理出一版可審核的 Compass 更新。",
+        candidate_json=candidate,
+        evidence_json=evidence_rows[:3],
+        dedupe_key=dedupe_key,
+    )
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Generate relationship compass suggestion",
+        conflict_detail="儲存 Compass 建議時發生衝突，請稍後再試。",
+        failure_detail="儲存 Compass 建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return [_to_suggestion_public(row)]
+
+
+@router.post(
+    "/suggestions/relationship-compass/{suggestion_id}/accept",
+    response_model=LoveMapRelationshipCompassPublic,
+)
+def accept_relationship_compass_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    suggestion_id: UUID,
+) -> LoveMapRelationshipCompassPublic:
+    row = _get_owned_suggestion_or_404(
+        session=session,
+        current_user=current_user,
+        suggestion_id=suggestion_id,
+    )
+    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+
+    active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not active_partner_id or active_partner_id != row.partner_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    candidate = _relationship_compass_candidate_dict(row.candidate_json)
+    if not any(candidate.values()):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議沒有可寫入的 Compass 欄位")
+
+    compass = _save_relationship_compass_values(
+        session=session,
+        current_user=current_user,
+        partner_id=active_partner_id,
+        values=candidate,
+        revision_note=None,
+        action="Accept relationship compass suggestion",
+        conflict_detail="接受 Compass 建議時發生衝突，請稍後再試。",
+        failure_detail="接受 Compass 建議失敗，請稍後再試。",
+    )
+    row.status = SUGGESTION_STATUS_ACCEPTED
+    row.reviewed_at = utcnow()
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Mark relationship compass suggestion accepted",
+        conflict_detail="更新 Compass 建議狀態時發生衝突，請稍後再試。",
+        failure_detail="更新 Compass 建議狀態失敗，請稍後再試。",
+    )
+    session.refresh(row)
+
+    return _to_relationship_compass_public(
+        compass,
+        updated_by_name=_resolve_user_name(current_user),
+    ) or LoveMapRelationshipCompassPublic()
+
+
+@router.post(
+    "/suggestions/relationship-compass/{suggestion_id}/dismiss",
+    response_model=RelationshipKnowledgeSuggestionPublic,
+)
+def dismiss_relationship_compass_suggestion(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    suggestion_id: UUID,
+) -> RelationshipKnowledgeSuggestionPublic:
+    row = _get_owned_suggestion_or_404(
+        session=session,
+        current_user=current_user,
+        suggestion_id=suggestion_id,
+    )
+    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+
+    active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not active_partner_id or active_partner_id != row.partner_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    row.status = SUGGESTION_STATUS_DISMISSED
+    row.reviewed_at = utcnow()
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Dismiss relationship compass suggestion",
+        conflict_detail="略過 Compass 建議時發生衝突，請稍後再試。",
+        failure_detail="略過 Compass 建議失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return _to_suggestion_public(row)
+
+
+@router.get(
     "/suggestions/shared-future",
     response_model=list[RelationshipKnowledgeSuggestionPublic],
 )
@@ -1537,6 +1862,7 @@ async def generate_shared_future_review_suggestions(
         session=session,
         current_user=current_user,
         partner_id=partner_id,
+        include_personal_journals=False,
     )
     try:
         generated_rows = await generate_shared_future_suggestions(
@@ -1558,6 +1884,7 @@ async def generate_shared_future_review_suggestions(
         *((title, "wishlist_title") for title in existing_titles if title.strip()),
         *((title, "handled_suggestion") for title in handled_titles if title.strip()),
     ]
+    allowed_evidence_kinds = {"card", "appreciation"}
     for generated in generated_rows:
         title = _truncate_preview(str(generated.get("proposed_title") or ""), 500)
         dedupe_key = normalize_shared_future_suggestion_key(
@@ -1589,8 +1916,11 @@ async def generate_shared_future_review_suggestions(
             evidence_json=[
                 item
                 for item in generated.get("evidence", [])
-                if isinstance(item, dict)
-            ],
+                if (
+                    isinstance(item, dict)
+                    and str(item.get("source_kind") or "").strip().lower() in allowed_evidence_kinds
+                )
+            ][:3],
             dedupe_key=dedupe_key,
         )
         session.add(row)
@@ -1667,6 +1997,7 @@ async def generate_story_adjacent_ritual_suggestion(
         session=session,
         current_user=current_user,
         partner_id=partner_id,
+        include_personal_journals=False,
     )
 
     try:

@@ -321,6 +321,33 @@
       "idempotency_policy": "required",
       "method": "POST",
       "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/generate",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/dismiss",
+      "subject_scope": "current_user",
+      "test_ref": "backend/tests/test_endpoint_authorization_matrix_policy.py"
+    },
+    {
+      "auth_mode": "authenticated",
+      "idempotency_policy": "required",
+      "method": "POST",
+      "owner_team": "backend-platform",
       "path": "/api/love-map/suggestions/shared-future/generate",
       "subject_scope": "current_user",
       "test_ref": "backend/tests/test_love_map_ai_suggestions.py"

@@ -10,8 +10,8 @@
     "/api/v2/auth/refresh",
     "/api/v2/auth/token"
   ],
-  "route_count": 122,
-  "route_digest": "e00151a113ab35ec9f4bcf4253b148fcbc97f54062ad18a9163ffa46efd21419",
+  "route_count": 126,
+  "route_digest": "6f9c27ca9be21fd82a2866bb51b2e50f76754992b893e19df00abee73a4222c8",
   "routes": [
     {
       "idempotency_policy": "n/a",
@@ -347,6 +347,26 @@
       "idempotency_policy": "required",
       "method": "PUT",
       "path": "/api/love-map/notes/{note_id}"
+    },
+    {
+      "idempotency_policy": "n/a",
+      "method": "GET",
+      "path": "/api/love-map/suggestions/relationship-compass"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/relationship-compass/generate"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept"
+    },
+    {
+      "idempotency_policy": "required",
+      "method": "POST",
+      "path": "/api/love-map/suggestions/relationship-compass/{suggestion_id}/dismiss"
     },
     {
       "idempotency_policy": "n/a",

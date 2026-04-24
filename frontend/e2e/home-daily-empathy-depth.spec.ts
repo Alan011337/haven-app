@@ -1,4 +1,11 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from '@playwright/test';
 
 const MOCK_API_HEADERS = {
   'access-control-allow-origin': 'http://127.0.0.1:3000',
@@ -265,6 +272,53 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/\?tab=card$/, { timeout: 20_000 });
 }
 
+async function authenticateLive(
+  context: BrowserContext,
+  request: APIRequestContext,
+) {
+  const authResponse = await request.post('http://127.0.0.1:8000/api/auth/token', {
+    form: {
+      username: 'alice@example.com',
+      password: 'havendev1',
+    },
+  });
+  expect(authResponse.ok()).toBeTruthy();
+  const authPayload = (await authResponse.json()) as {
+    access_token: string;
+    refresh_token?: string;
+  };
+
+  await context.addCookies(
+    [
+      {
+        name: 'access_token',
+        value: authPayload.access_token,
+        domain: '127.0.0.1',
+        path: '/',
+        httpOnly: true,
+        sameSite: 'Lax' as const,
+      },
+      authPayload.refresh_token
+        ? {
+            name: 'refresh_token',
+            value: authPayload.refresh_token,
+            domain: '127.0.0.1',
+            path: '/',
+            httpOnly: true,
+            sameSite: 'Lax' as const,
+          }
+        : null,
+    ].filter(Boolean) as Array<{
+      name: string;
+      value: string;
+      domain: string;
+      path: string;
+      httpOnly: boolean;
+      sameSite: 'Lax';
+    }>,
+  );
+}
+
 test.describe('Home daily empathy depth chooser', () => {
   test.use({ bypassCSP: true });
   test.setTimeout(60_000);
@@ -291,15 +345,21 @@ test.describe('Home daily empathy depth chooser', () => {
 
     await page.getByTestId('home-daily-depth-option-1').click();
     await expect(drawCta).toHaveText('抽一張適合「輕鬆聊」的題目');
-    await expect(page.getByText('先用比較不費力的問題，慢慢進到今晚。')).toBeVisible();
+    await expect(
+      chooser.locator('p').filter({ hasText: '先用比較不費力的問題，慢慢進到今晚。' }),
+    ).toBeVisible();
 
     await page.getByTestId('home-daily-depth-option-2').click();
     await expect(drawCta).toHaveText('抽一張適合「靠近一點」的題目');
-    await expect(page.getByText('聊近況，也聊到彼此真正想被理解的地方。')).toBeVisible();
+    await expect(
+      chooser.locator('p').filter({ hasText: '聊近況，也聊到彼此真正想被理解的地方。' }),
+    ).toBeVisible();
 
     await page.getByTestId('home-daily-depth-option-3').click();
     await expect(drawCta).toHaveText('抽一張適合「深入內心」的題目');
-    await expect(page.getByText('留給今晚願意更坦白、更靠近內在的時刻。')).toBeVisible();
+    await expect(
+      chooser.locator('p').filter({ hasText: '留給今晚願意更坦白、更靠近內在的時刻。' }),
+    ).toBeVisible();
   });
 
   test('sends preferred_depth from Home and keeps post-draw language humane', async ({ page }) => {
@@ -315,5 +375,44 @@ test.describe('Home daily empathy depth chooser', () => {
     await expect(page.getByText(/daily vibe/i)).toHaveCount(0);
     await expect(page.getByText(/深度 2/)).toHaveCount(0);
     await expect(page.getByText('靠近一點')).toBeVisible();
+  });
+});
+
+test.describe('Home daily empathy depth chooser live flow', () => {
+  test.setTimeout(90_000);
+  test.skip(
+    process.env.HOME_DAILY_DEPTH_LIVE_E2E !== '1',
+    'Set HOME_DAILY_DEPTH_LIVE_E2E=1 to run against the seeded local Postgres stack.',
+  );
+
+  test('lets Alice pick a live Daily Empathy depth before drawing', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    await authenticateLive(context, request);
+    await page.setViewportSize({ width: 1440, height: 1100 });
+
+    const requestedDepths: number[] = [];
+    page.on('request', (apiRequest) => {
+      const url = new URL(apiRequest.url());
+      if (url.pathname.includes('/api/cards/draw')) {
+        requestedDepths.push(Number(url.searchParams.get('preferred_depth')));
+      }
+    });
+
+    const appBaseUrl = baseURL ?? 'http://127.0.0.1:3000';
+    await page.goto(`${appBaseUrl}/?tab=card`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('home-daily-depth-chooser')).toBeVisible();
+    await page.getByTestId('home-daily-depth-option-3').click();
+    await expect(page.getByTestId('home-daily-depth-draw-cta')).toHaveText(
+      '抽一張適合「深入內心」的題目',
+    );
+    await page.getByTestId('home-daily-depth-draw-cta').click();
+
+    await expect.poll(() => requestedDepths).toContain(3);
+    await expect(page.getByText('深入內心')).toBeVisible();
+    await expect(page.getByText(/difficulty_level|depth_level|深度 3/i)).toHaveCount(0);
   });
 });

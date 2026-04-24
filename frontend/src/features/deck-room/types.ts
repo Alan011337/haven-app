@@ -1,4 +1,5 @@
 import type { CardSession, DeckHistoryEntry } from '@/services/deckService';
+import type { DepthLevel } from '@/lib/depth-level';
 
 export type RoomStatus = 'IDLE' | 'WAITING_PARTNER' | 'COMPLETED';
 
@@ -13,8 +14,8 @@ export interface DeckRoomViewModel {
   partnerTyping: boolean;
   roomStatus: RoomStatus;
   resultData: DeckHistoryEntry | null;
-  selectedDepth: 1 | 2 | 3 | null;
-  handleDepthChange: (depth: 1 | 2 | 3 | null) => void;
+  selectedDepth: DepthLevel | null;
+  handleDepthChange: (depth: DepthLevel | null) => void;
   handleAnswerChange: (value: string) => void;
   handleSubmit: () => Promise<void>;
   handleNextCard: () => void;

@@ -120,6 +120,12 @@ class RelationshipKnowledgeSuggestionEvidencePublic(BaseModel):
     excerpt: str
 
 
+class RelationshipCompassSuggestionCandidatePublic(BaseModel):
+    identity_statement: str | None = Field(default=None, max_length=500)
+    story_anchor: str | None = Field(default=None, max_length=500)
+    future_direction: str | None = Field(default=None, max_length=500)
+
+
 class RelationshipKnowledgeSuggestionPublic(BaseModel):
     id: str
     section: str
@@ -127,6 +133,7 @@ class RelationshipKnowledgeSuggestionPublic(BaseModel):
     generator_version: str
     proposed_title: str
     proposed_notes: str
+    relationship_compass_candidate: RelationshipCompassSuggestionCandidatePublic | None = None
     evidence: list[RelationshipKnowledgeSuggestionEvidencePublic] = Field(default_factory=list)
     created_at: str
     reviewed_at: str | None = None

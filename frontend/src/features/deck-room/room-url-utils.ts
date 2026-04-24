@@ -1,4 +1,5 @@
 import { normalizeDeckCategory } from '@/lib/deck-category';
+import type { DeckDepthFilter } from '@/lib/deck-depth-system';
 
 const DECK_LIBRARY_FILTER_MODES = ['all', 'in_progress', 'not_started', 'completed'] as const;
 const DECK_LIBRARY_SORT_MODES = ['recommended', 'progress_desc', 'progress_asc', 'title'] as const;
@@ -16,6 +17,7 @@ export const resolveDeckCategory = (category: string): string | null => normaliz
 export const buildDecksReturnUrl = (
   libraryFilter: string | null,
   librarySort: string | null,
+  libraryDepth: DeckDepthFilter = null,
 ): string => {
   const nextParams = new URLSearchParams();
   if (libraryFilter && libraryFilter !== 'all') {
@@ -23,6 +25,9 @@ export const buildDecksReturnUrl = (
   }
   if (librarySort && librarySort !== 'recommended') {
     nextParams.set('sort', librarySort);
+  }
+  if (libraryDepth) {
+    nextParams.set('depth', String(libraryDepth));
   }
   const nextQuery = nextParams.toString();
   return nextQuery ? `/decks?${nextQuery}` : '/decks';
@@ -32,6 +37,7 @@ export const buildHistoryHref = (
   category: string | null,
   libraryFilter: string | null,
   librarySort: string | null,
+  libraryDepth: DeckDepthFilter = null,
 ): string => {
   const nextParams = new URLSearchParams();
   if (category) {
@@ -42,6 +48,9 @@ export const buildHistoryHref = (
   }
   if (librarySort && librarySort !== 'recommended') {
     nextParams.set('library_sort', librarySort);
+  }
+  if (libraryDepth) {
+    nextParams.set('library_depth', String(libraryDepth));
   }
   const nextQuery = nextParams.toString();
   return nextQuery ? `/decks/history?${nextQuery}` : '/decks/history';

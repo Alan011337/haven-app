@@ -483,6 +483,12 @@ export interface RelationshipKnowledgeSuggestionEvidencePublic {
   excerpt: string;
 }
 
+export interface RelationshipCompassSuggestionCandidatePublic {
+  identity_statement: string | null;
+  story_anchor: string | null;
+  future_direction: string | null;
+}
+
 export interface RelationshipKnowledgeSuggestionPublic {
   id: string;
   section: string;
@@ -490,6 +496,7 @@ export interface RelationshipKnowledgeSuggestionPublic {
   generator_version: string;
   proposed_title: string;
   proposed_notes: string;
+  relationship_compass_candidate: RelationshipCompassSuggestionCandidatePublic | null;
   evidence: RelationshipKnowledgeSuggestionEvidencePublic[];
   created_at: string;
   reviewed_at: string | null;
@@ -615,12 +622,20 @@ export const fetchLoveMapSharedFutureSuggestions = async (): Promise<Relationshi
   return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future');
 };
 
+export const fetchLoveMapRelationshipCompassSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/relationship-compass');
+};
+
 export const fetchLoveMapSharedFutureRefinements = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
   return apiGet<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/refinements');
 };
 
 export const generateLoveMapSharedFutureSuggestions = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
   return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/shared-future/generate');
+};
+
+export const generateLoveMapRelationshipCompassSuggestion = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic[]>('/love-map/suggestions/relationship-compass/generate');
 };
 
 export const generateLoveMapStoryAdjacentRitualSuggestion = async (): Promise<RelationshipKnowledgeSuggestionPublic[]> => {
@@ -649,10 +664,26 @@ export const acceptLoveMapSharedFutureSuggestion = async (
   return apiPost<WishlistItemPublic>(`/love-map/suggestions/${suggestionId}/accept`);
 };
 
+export const acceptLoveMapRelationshipCompassSuggestion = async (
+  suggestionId: string,
+): Promise<LoveMapRelationshipCompassPublic> => {
+  return apiPost<LoveMapRelationshipCompassPublic>(
+    `/love-map/suggestions/relationship-compass/${suggestionId}/accept`,
+  );
+};
+
 export const dismissLoveMapSharedFutureSuggestion = async (
   suggestionId: string,
 ): Promise<RelationshipKnowledgeSuggestionPublic> => {
   return apiPost<RelationshipKnowledgeSuggestionPublic>(`/love-map/suggestions/${suggestionId}/dismiss`);
+};
+
+export const dismissLoveMapRelationshipCompassSuggestion = async (
+  suggestionId: string,
+): Promise<RelationshipKnowledgeSuggestionPublic> => {
+  return apiPost<RelationshipKnowledgeSuggestionPublic>(
+    `/love-map/suggestions/relationship-compass/${suggestionId}/dismiss`,
+  );
 };
 
 export const createOrUpdateLoveMapNote = async (
