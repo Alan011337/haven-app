@@ -108,6 +108,7 @@ class LoveMapRelationshipCompassChangePublic(BaseModel):
     id: str
     changed_at: str | None = None
     changed_by_name: str | None = None
+    origin_kind: Literal["manual_edit", "accepted_suggestion"] = "manual_edit"
     fields: list[LoveMapRelationshipCompassFieldChangePublic] = Field(default_factory=list)
     # Optional short human-authored note left at save-time; null when absent.
     revision_note: str | None = None

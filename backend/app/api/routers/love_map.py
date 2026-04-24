@@ -492,6 +492,7 @@ def _to_relationship_compass_change_public(
         id=str(row.id),
         changed_at=row.changed_at.isoformat() + "Z" if row.changed_at else None,
         changed_by_name=changed_by_name,
+        origin_kind=getattr(row, "origin_kind", "manual_edit") or "manual_edit",
         fields=_build_relationship_compass_field_changes(row),
         revision_note=row.revision_note,
     )
@@ -1298,6 +1299,8 @@ def upsert_relationship_compass(
             for key in COMPASS_FIELD_LABELS
         },
         revision_note=body.revision_note,
+        origin_kind="manual_edit",
+        source_suggestion_id=None,
         action="Upsert love map relationship compass",
         conflict_detail="儲存 Relationship Compass 時發生衝突。",
         failure_detail="儲存 Relationship Compass 失敗。",
@@ -1316,6 +1319,8 @@ def _save_relationship_compass_values(
     partner_id: UUID,
     values: dict[str, str | None],
     revision_note: str | None,
+    origin_kind: str = "manual_edit",
+    source_suggestion_id: UUID | None = None,
     action: str,
     conflict_detail: str,
     failure_detail: str,
@@ -1364,6 +1369,8 @@ def _save_relationship_compass_values(
                 story_anchor_after=next_values["story_anchor"],
                 future_direction_before=current_values["future_direction"],
                 future_direction_after=next_values["future_direction"],
+                origin_kind=origin_kind,
+                source_suggestion_id=source_suggestion_id,
                 revision_note=normalized_revision_note,
             )
         )
@@ -1737,17 +1744,39 @@ def accept_relationship_compass_suggestion(
     current_user: CurrentUser,
     suggestion_id: UUID,
 ) -> LoveMapRelationshipCompassPublic:
-    row = _get_owned_suggestion_or_404(
-        session=session,
-        current_user=current_user,
-        suggestion_id=suggestion_id,
-    )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
+    row = session.exec(
+        select(RelationshipKnowledgeSuggestion)
+        .where(
+            RelationshipKnowledgeSuggestion.id == suggestion_id,
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+        )
+        .with_for_update()
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+    if row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not active_partner_id or active_partner_id != row.partner_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    if row.status == SUGGESTION_STATUS_ACCEPTED:
+        compass = _load_relationship_compass(
+            session=session,
+            user_id=current_user.id,
+            partner_id=active_partner_id,
+        )
+        updated_by_user = (
+            session.get(User, compass.updated_by_user_id) if compass and compass.updated_by_user_id else None
+        )
+        return _to_relationship_compass_public(
+            compass,
+            updated_by_name=_resolve_user_name(updated_by_user),
+        ) or LoveMapRelationshipCompassPublic()
+
+    if row.status != SUGGESTION_STATUS_PENDING:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     candidate = _relationship_compass_candidate_dict(row.candidate_json)
     if not any(candidate.values()):
@@ -1759,6 +1788,8 @@ def accept_relationship_compass_suggestion(
         partner_id=active_partner_id,
         values=candidate,
         revision_note=None,
+        origin_kind="accepted_suggestion",
+        source_suggestion_id=suggestion_id,
         action="Accept relationship compass suggestion",
         conflict_detail="接受 Compass 建議時發生衝突，請稍後再試。",
         failure_detail="接受 Compass 建議失敗，請稍後再試。",
@@ -1791,17 +1822,29 @@ def dismiss_relationship_compass_suggestion(
     current_user: CurrentUser,
     suggestion_id: UUID,
 ) -> RelationshipKnowledgeSuggestionPublic:
-    row = _get_owned_suggestion_or_404(
-        session=session,
-        current_user=current_user,
-        suggestion_id=suggestion_id,
-    )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
+    row = session.exec(
+        select(RelationshipKnowledgeSuggestion)
+        .where(
+            RelationshipKnowledgeSuggestion.id == suggestion_id,
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+        )
+        .with_for_update()
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+    if row.section != SUGGESTION_SECTION_RELATIONSHIP_COMPASS:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not active_partner_id or active_partner_id != row.partner_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    if row.status == SUGGESTION_STATUS_DISMISSED:
+        return _to_suggestion_public(row)
+    if row.status == SUGGESTION_STATUS_ACCEPTED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+    if row.status != SUGGESTION_STATUS_PENDING:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     row.status = SUGGESTION_STATUS_DISMISSED
     row.reviewed_at = utcnow()
@@ -2400,20 +2443,34 @@ def accept_relationship_knowledge_suggestion(
     current_user: CurrentUser,
     suggestion_id: UUID,
 ) -> WishlistItemPublic:
-    row = _get_owned_suggestion_or_404(
-        session=session,
-        current_user=current_user,
-        suggestion_id=suggestion_id,
-    )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section not in {
-        SUGGESTION_SECTION_SHARED_FUTURE,
-        SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
-    }:
+    row = session.exec(
+        select(RelationshipKnowledgeSuggestion)
+        .where(
+            RelationshipKnowledgeSuggestion.id == suggestion_id,
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+        )
+        .with_for_update()
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+    if row.section not in {SUGGESTION_SECTION_SHARED_FUTURE, SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT}:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     active_partner_id = verify_active_partner_id(session=session, current_user=current_user)
     if not active_partner_id or active_partner_id != row.partner_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+
+    if row.status == SUGGESTION_STATUS_ACCEPTED and row.accepted_wishlist_item_id:
+        wishlist_row = _load_couple_wishlist_item_or_404(
+            session=session,
+            current_user=current_user,
+            partner_id=active_partner_id,
+            wishlist_item_id=row.accepted_wishlist_item_id,
+        )
+        return _to_wishlist_public(row=wishlist_row, current_user=current_user)
+
+    if row.status != SUGGESTION_STATUS_PENDING:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     if row.section == SUGGESTION_SECTION_SHARED_FUTURE:
         wishlist_row = WishlistItem(
@@ -2479,15 +2536,24 @@ def dismiss_relationship_knowledge_suggestion(
     current_user: CurrentUser,
     suggestion_id: UUID,
 ) -> RelationshipKnowledgeSuggestionPublic:
-    row = _get_owned_suggestion_or_404(
-        session=session,
-        current_user=current_user,
-        suggestion_id=suggestion_id,
-    )
-    if row.status != SUGGESTION_STATUS_PENDING or row.section not in {
-        SUGGESTION_SECTION_SHARED_FUTURE,
-        SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT,
-    }:
+    row = session.exec(
+        select(RelationshipKnowledgeSuggestion)
+        .where(
+            RelationshipKnowledgeSuggestion.id == suggestion_id,
+            RelationshipKnowledgeSuggestion.user_id == current_user.id,
+        )
+        .with_for_update()
+    ).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="找不到該建議")
+    if row.section not in {SUGGESTION_SECTION_SHARED_FUTURE, SUGGESTION_SECTION_SHARED_FUTURE_REFINEMENT}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+
+    if row.status == SUGGESTION_STATUS_DISMISSED:
+        return _to_suggestion_public(row)
+    if row.status == SUGGESTION_STATUS_ACCEPTED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
+    if row.status != SUGGESTION_STATUS_PENDING:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="這個建議已經被處理")
 
     row.status = SUGGESTION_STATUS_DISMISSED

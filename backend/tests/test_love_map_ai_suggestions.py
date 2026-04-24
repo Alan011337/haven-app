@@ -627,10 +627,21 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
         accept_response = self.client.post(f"/api/love-map/suggestions/{accept_id}/accept")
         self.assertEqual(accept_response.status_code, 200)
         self.assertEqual(accept_response.json()["title"], "一起存旅行基金")
+        accepted_payload = accept_response.json()
 
         dismiss_response = self.client.post(f"/api/love-map/suggestions/{dismiss_id}/dismiss")
         self.assertEqual(dismiss_response.status_code, 200)
         self.assertEqual(dismiss_response.json()["status"], "dismissed")
+
+        duplicate_accept = self.client.post(f"/api/love-map/suggestions/{accept_id}/accept")
+        self.assertEqual(duplicate_accept.status_code, 200)
+        self.assertEqual(duplicate_accept.json()["id"], accepted_payload["id"])
+
+        dismiss_after_accept = self.client.post(f"/api/love-map/suggestions/{accept_id}/dismiss")
+        self.assertEqual(dismiss_after_accept.status_code, 409)
+
+        accept_after_dismiss = self.client.post(f"/api/love-map/suggestions/{dismiss_id}/accept")
+        self.assertEqual(accept_after_dismiss.status_code, 409)
 
         with Session(self.engine) as session:
             accepted_row = session.get(RelationshipKnowledgeSuggestion, accept_id)
@@ -646,6 +657,14 @@ class LoveMapAISuggestionFlowTests(unittest.TestCase):
             self.assertIsNotNone(accepted_item)
             assert accepted_item is not None
             self.assertEqual(accepted_item.title, "一起存旅行基金")
+
+            created_items = session.exec(
+                select(WishlistItem).where(
+                    WishlistItem.user_id == self.alice_id,
+                    WishlistItem.partner_id == self.bob_id,
+                )
+            ).all()
+            self.assertEqual(len(created_items), 1)
 
         self.current_user_id = self.bob_id
         pending_for_bob = self.client.get("/api/love-map/suggestions/shared-future")

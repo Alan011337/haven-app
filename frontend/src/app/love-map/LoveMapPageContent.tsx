@@ -17,6 +17,17 @@ import {
   useLoveMapSystem,
 } from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
+import {
+  buildAcceptedSuggestionNotice,
+  buildCompassEmptyStatePresentation,
+  buildCompassInsufficientSignalPresentation,
+  buildDismissedSuggestionNotice,
+  buildHandledSuggestionNotice,
+  buildMutationCopy,
+  buildSharedFutureEmptyStatePresentation,
+  buildSharedFutureInsufficientSignalPresentation,
+  isSharedFutureDuplicateTitle,
+} from '@/lib/suggestion-lifecycle-presentation';
 import { queryKeys } from '@/lib/query-keys';
 import {
   buildLatestCurrentRevisionByField,
@@ -472,6 +483,14 @@ export default function LoveMapPageContent() {
   } | null>(null);
   const [reviewingSuggestionId, setReviewingSuggestionId] = useState<string | null>(null);
   const [reviewingAction, setReviewingAction] = useState<'accept' | 'dismiss' | null>(null);
+  const [compassSuggestionNotice, setCompassSuggestionNotice] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
+  const [sharedFutureSuggestionNotice, setSharedFutureSuggestionNotice] = useState<{
+    title: string;
+    description: string;
+  } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<LoveMapLayer, string>>({
     safe: '',
     medium: '',
@@ -824,6 +843,8 @@ export default function LoveMapPageContent() {
       const suggestions = await generateLoveMapRelationshipCompassSuggestion();
       await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
       if (suggestions.length === 0) {
+        const notice = buildCompassInsufficientSignalPresentation();
+        setCompassSuggestionNotice(notice);
         showToast('目前還沒有足夠清楚的 Compass 建議。', 'info');
         return;
       }
@@ -842,9 +863,11 @@ export default function LoveMapPageContent() {
     try {
       await acceptLoveMapRelationshipCompassSuggestion(suggestion.id);
       await invalidateRelationshipViews();
+      setCompassSuggestionNotice(buildAcceptedSuggestionNotice('compass'));
       showToast('這版 Compass 建議已寫入 Relationship Compass。', 'success');
     } catch (error) {
       logClientError('love-map-relationship-compass-suggestion-accept-failed', error);
+      setCompassSuggestionNotice(buildHandledSuggestionNotice());
       showToast('這次沒有順利收下 Compass 建議，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -858,9 +881,11 @@ export default function LoveMapPageContent() {
     try {
       await dismissLoveMapRelationshipCompassSuggestion(suggestion.id);
       await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
+      setCompassSuggestionNotice(buildDismissedSuggestionNotice());
       showToast('這版 Compass 建議先略過了。', 'success');
     } catch (error) {
       logClientError('love-map-relationship-compass-suggestion-dismiss-failed', error);
+      setCompassSuggestionNotice(buildHandledSuggestionNotice());
       showToast('這次沒有順利略過 Compass 建議，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -874,6 +899,8 @@ export default function LoveMapPageContent() {
       const suggestions = await generateLoveMapSharedFutureSuggestions();
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
       if (suggestions.length === 0) {
+        const notice = buildSharedFutureInsufficientSignalPresentation();
+        setSharedFutureSuggestionNotice(notice);
         showToast('目前還沒有足夠清楚的 Shared Future 建議。', 'info');
         return;
       }
@@ -942,6 +969,7 @@ export default function LoveMapPageContent() {
     try {
       await acceptLoveMapSharedFutureSuggestion(suggestion.id);
       await invalidateRelationshipViews();
+      setSharedFutureSuggestionNotice(buildAcceptedSuggestionNotice('future'));
       showToast(
         suggestion.section === 'shared_future_refinement'
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
@@ -952,6 +980,7 @@ export default function LoveMapPageContent() {
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-accept-failed', error);
+      setSharedFutureSuggestionNotice(buildHandledSuggestionNotice());
       showToast('這次沒有順利收下這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -966,6 +995,7 @@ export default function LoveMapPageContent() {
       await dismissLoveMapSharedFutureSuggestion(suggestion.id);
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() });
+      setSharedFutureSuggestionNotice(buildDismissedSuggestionNotice());
       showToast(
         suggestion.section === 'shared_future_refinement'
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
@@ -976,6 +1006,7 @@ export default function LoveMapPageContent() {
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-dismiss-failed', error);
+      setSharedFutureSuggestionNotice(buildHandledSuggestionNotice());
       showToast('這次沒有順利略過這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -1056,7 +1087,7 @@ export default function LoveMapPageContent() {
     : '等待雙向配對';
   const identityMetricFootnote = system.has_partner
     ? `目前方向：${activeGoalLabel} · ${formatCompassCountLabel(compassCueCount)}${
-        compassPendingCount > 0 ? ` · ${compassPendingCount} 則 Compass 建議待審核` : ''
+        compassPendingCount > 0 ? ` · ${compassPendingCount} 則 Haven 建議待審核` : ''
       } · 最近活動 ${lastActivityLabel ?? '尚未建立'}`
     : '先完成雙向伴侶連結，這裡才會變成真正的共享 Relationship System。';
   const heartMetricValue = !system.has_partner
@@ -1075,8 +1106,8 @@ export default function LoveMapPageContent() {
     ? 'Time Capsule 已浮現，這段故事已經有可回來看的回聲。'
     : '目前已留下故事錨點，但還沒有形成 Time Capsule 回聲。';
   const sharedFutureMetricFootnote = aiPendingCount > 0
-    ? `目前有 ${aiPendingCount} 則待你審核的提案。`
-    : '目前沒有待審核提案，已接受的片段仍會留在這裡。';
+    ? `目前有 ${aiPendingCount} 則待審核的 Haven 建議。`
+    : '目前沒有待審核建議，已接受的片段仍會留在這裡。';
   const displayNameChanged = displayNameDraft.trim() !== (system.me.full_name?.trim() ?? '');
   const relationshipCompassChanged =
     JSON.stringify(relationshipCompassDraft) !== JSON.stringify(currentRelationshipCompass);
@@ -1357,7 +1388,7 @@ export default function LoveMapPageContent() {
           metricLabel="共同未來片段"
           metricValue={`${system.stats.wishlist_count} 個片段`}
           metricFootnote={sharedFutureMetricFootnote}
-          belongsHere="真正被接受的共同未來片段，以及那些還在你的 personal review queue 裡等待決定的提案。"
+          belongsHere="真正被接受的共同未來片段，以及那些還在等待你決定的 Haven 建議。"
           primaryHref="#future"
           primaryLabel="查看 Future"
           secondaryHref="/blueprint"
@@ -1611,9 +1642,10 @@ export default function LoveMapPageContent() {
                     <LoveMapStatePanel
                       eyebrow="Compass 建議更新"
                       title="Compass 建議暫時沒有順利載入。"
-                      description="目前保存的 Relationship Compass 仍然可用；建議層只是 personal review queue，不會影響已保存的共同真相。"
+                      description="目前保存的 Relationship Compass 仍然可用；Haven 建議是待審核區，不會影響已保存的共同真相。"
                       tone="quiet"
                       actionLabel="重新讀取 Compass 建議"
+                      dataTestId="relationship-compass-suggestion-error"
                       onAction={() => {
                         void compassSuggestionQuery.refetch();
                       }}
@@ -1624,18 +1656,36 @@ export default function LoveMapPageContent() {
                       title="Haven 正在讀取 Compass 建議。"
                       description="如果有待你審核的更新，它會出現在這裡；沒有接受前不會改動保存內容。"
                       tone="quiet"
+                      dataTestId="relationship-compass-suggestion-loading"
                     />
                   ) : pendingCompassSuggestions.length === 0 ? (
-                    <LoveMapStatePanel
-                      eyebrow="Compass 建議更新"
-                      title="目前沒有待你審核的 Compass 建議。"
-                      description="當最近的 Journal、共同卡片、感謝或修復片段足夠清楚時，你可以讓 Haven 整理一版候選文字。"
-                      tone="quiet"
-                      actionLabel="讓 Haven 根據最近片段提一版"
-                      onAction={() => {
-                        void handleGenerateCompassSuggestion();
-                      }}
-                    />
+                    <div className="space-y-4">
+                      {compassSuggestionNotice ? (
+                        <LoveMapStatePanel
+                          eyebrow="Compass 建議更新"
+                          title={compassSuggestionNotice.title}
+                          description={compassSuggestionNotice.description}
+                          tone="quiet"
+                          actionLabel="重新讀取"
+                          dataTestId="relationship-compass-suggestion-notice"
+                          onAction={() => {
+                            setCompassSuggestionNotice(null);
+                            void compassSuggestionQuery.refetch();
+                          }}
+                        />
+                      ) : null}
+                      <LoveMapStatePanel
+                        eyebrow={buildCompassEmptyStatePresentation().eyebrow}
+                        title={buildCompassEmptyStatePresentation().title}
+                        description={buildCompassEmptyStatePresentation().description}
+                        tone="quiet"
+                        actionLabel={buildCompassEmptyStatePresentation().ctaLabel}
+                        dataTestId="relationship-compass-suggestion-empty"
+                        onAction={() => {
+                          void handleGenerateCompassSuggestion();
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div className="space-y-4">
                       {pendingCompassSuggestions.map((suggestion) =>
@@ -1645,6 +1695,7 @@ export default function LoveMapPageContent() {
                             savedCompass={relationshipCompass}
                             candidate={suggestion.relationship_compass_candidate}
                             evidence={suggestion.evidence}
+                            mutationCopy={buildMutationCopy('compass')}
                             accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
                             dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
                             onAccept={() => {
@@ -1700,6 +1751,11 @@ export default function LoveMapPageContent() {
                         <span className="text-card-foreground">
                           {change.changed_by_name ?? '—'}
                         </span>
+                        {change.origin_kind === 'accepted_suggestion' ? (
+                          <span className="ml-2 inline-flex items-center rounded-full border border-primary/12 bg-primary/8 px-2.5 py-1 type-micro uppercase text-primary/80 shadow-soft">
+                            Haven 建議 · 已接受
+                          </span>
+                        ) : null}
                         <span className="ml-2 text-muted-foreground">
                           {summarizeCompassChange(change)}
                         </span>
@@ -2793,7 +2849,7 @@ export default function LoveMapPageContent() {
         id="future"
         eyebrow="Future"
         title="把你們想一起靠近的生活，留在能持續維護的共享藍圖裡。"
-        description="Future 是 Relationship System 裡最面向前方的一層：它保留 Shared Future 的摘要、AI 提案審核與新增入口，但完整片段、備註與工作台仍然留在 Blueprint。"
+        description="Future 是 Relationship System 裡最面向前方的一層：它保留 Shared Future 的摘要、Haven 建議待審核區與新增入口，但完整片段、備註與工作台仍然留在 Blueprint。"
         aside={
           <div className="space-y-3">
             <div className="rounded-[1.55rem] border border-white/56 bg-white/72 p-4 shadow-soft">
@@ -2851,13 +2907,13 @@ export default function LoveMapPageContent() {
               </LoveMapKnowledgeBlock>
 
               <LoveMapFutureComposer
-                eyebrow="AI 提案審核"
-                title="先由 Haven 提案，再由你決定什麼能進入 Shared Future。"
-                description="這一層是你的 personal review queue，不是 shared truth。只有接受後，提案才會寫進 Shared Future。"
+                eyebrow="Future 建議更新"
+                title="先由 Haven 提一版，再由你決定什麼能進入 Shared Future。"
+                description="這是待審核的 Haven 建議，不是已保存的共同未來；只有接受後，才會寫入 Shared Future。"
                 footer={
                   <div className="rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-4 shadow-soft">
                     <p className="type-caption text-muted-foreground">
-                      AI 提案審核只對你可見；伴侶只會看到你接受之後真正進入 Shared Future 的內容。
+                      僅你可見（待審核）；伴侶只會看到你接受之後真正進入 Shared Future 的內容。
                     </p>
                   </div>
                 }
@@ -2865,35 +2921,60 @@ export default function LoveMapPageContent() {
                 <div className="space-y-4">
                   {suggestionQuery.isError ? (
                     <LoveMapStatePanel
-                      eyebrow="AI 提案審核"
+                      eyebrow="Future 建議更新"
                       title="提案審核佇列暫時沒有順利載入。"
-                      description="目前的 Shared Future 仍然可用，但這一層 personal review queue 需要重新讀取。"
+                      description="目前的 Shared Future 仍然可用；Haven 建議是待審核區，重新讀取後會回來。"
                       tone="quiet"
-                      actionLabel="重新讀取提案"
+                      actionLabel="重新讀取"
+                      dataTestId="shared-future-suggestion-error"
                       onAction={() => {
                         void suggestionQuery.refetch();
                       }}
                     />
                   ) : suggestionQuery.isLoading ? (
                     <LoveMapStatePanel
-                      eyebrow="AI 提案審核"
+                      eyebrow="Future 建議更新"
                       title="Haven 正在讀取你的提案審核佇列。"
-                      description="如果這裡有待審核的 Shared Future 提案，它們會在幾秒內出現。"
+                      description="如果這裡有待審核的 Shared Future 建議，它們會在幾秒內出現。"
                       tone="quiet"
+                      dataTestId="shared-future-suggestion-loading"
                     />
                   ) : pendingSuggestions.length === 0 ? (
-                    <LoveMapStatePanel
-                      eyebrow="AI 提案審核"
-                      title="目前沒有待你審核的 Shared Future 提案。"
-                      description="當 Haven 能從你留下的 journals、共同卡片與 appreciation 裡看到足夠清楚的方向時，它才會提出提案。"
-                      tone="quiet"
-                      actionLabel="讓 Haven 提出 Shared Future 提案"
-                      onAction={() => {
-                        void handleGenerateSuggestions();
-                      }}
-                    />
+                    <div className="space-y-4">
+                      {sharedFutureSuggestionNotice ? (
+                        <LoveMapStatePanel
+                          eyebrow="Future 建議更新"
+                          title={sharedFutureSuggestionNotice.title}
+                          description={sharedFutureSuggestionNotice.description}
+                          tone="quiet"
+                          actionLabel="重新讀取"
+                          dataTestId="shared-future-suggestion-notice"
+                          onAction={() => {
+                            setSharedFutureSuggestionNotice(null);
+                            void suggestionQuery.refetch();
+                          }}
+                        />
+                      ) : null}
+                      <LoveMapStatePanel
+                        eyebrow={buildSharedFutureEmptyStatePresentation().eyebrow}
+                        title={buildSharedFutureEmptyStatePresentation().title}
+                        description={buildSharedFutureEmptyStatePresentation().description}
+                        tone="quiet"
+                        actionLabel={buildSharedFutureEmptyStatePresentation().ctaLabel}
+                        dataTestId="shared-future-suggestion-empty"
+                        onAction={() => {
+                          void handleGenerateSuggestions();
+                        }}
+                      />
+                    </div>
                   ) : (
                     pendingSuggestions.map((suggestion) => (
+                      (() => {
+                        const isDuplicate = isSharedFutureDuplicateTitle(
+                          suggestion.proposed_title,
+                          system.wishlist_items.map((item) => item.title),
+                        );
+                        return (
                       <LoveMapSuggestedUpdateCard
                         key={suggestion.id}
                         title={suggestion.proposed_title}
@@ -2902,6 +2983,9 @@ export default function LoveMapPageContent() {
                         evidence={suggestion.evidence}
                         savedItems={system.wishlist_items}
                         createdAtLabel={formatShortDateTime(suggestion.created_at) ?? null}
+                        acceptDisabled={isDuplicate}
+                        noopReason={isDuplicate ? '這個提案已經存在於目前保存的 Shared Future。' : null}
+                        mutationCopy={buildMutationCopy('future')}
                         accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
                         dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
                         onAccept={() => {
@@ -2911,6 +2995,8 @@ export default function LoveMapPageContent() {
                           void handleDismissSuggestion(suggestion);
                         }}
                       />
+                        );
+                      })()
                     ))
                   )}
 

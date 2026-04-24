@@ -31,6 +31,10 @@ class RelationshipCompassChange(SQLModel, table=True):
     story_anchor_after: str | None = Field(default=None, max_length=500)
     future_direction_before: str | None = Field(default=None, max_length=500)
     future_direction_after: str | None = Field(default=None, max_length=500)
+    # Minimal provenance marker for the lightweight Compass evolution surface.
+    # This is not a general audit log and never includes model reasoning.
+    origin_kind: str = Field(default="manual_edit", max_length=32)
+    source_suggestion_id: uuid.UUID | None = Field(default=None, foreign_key="relationship_knowledge_suggestions.id")
     # Optional short human-authored note attached to this change event.
     # Never mandatory, never AI-generated. Rendered as a quiet italic excerpt
     # in the Compass timeline when present.

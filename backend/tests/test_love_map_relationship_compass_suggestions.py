@@ -257,6 +257,62 @@ class LoveMapRelationshipCompassSuggestionTests(unittest.TestCase):
             self.assertEqual(len(changes), 1)
             self.assertEqual(changes[0].changed_by_user_id, self.alice_id)
             self.assertIsNone(changes[0].revision_note)
+            self.assertEqual(changes[0].origin_kind, "accepted_suggestion")
+            self.assertEqual(changes[0].source_suggestion_id, suggestion_id)
+
+    def test_duplicate_accept_is_idempotent_and_does_not_duplicate_history(self) -> None:
+        suggestion_id = self._seed_pending_suggestion()
+        self.current_user_id = self.alice_id
+
+        first = self.client.post(f"/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept")
+        self.assertEqual(first.status_code, 200)
+
+        second = self.client.post(f"/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept")
+        self.assertEqual(second.status_code, 200)
+
+        with Session(self.engine) as session:
+            changes = session.exec(
+                select(RelationshipCompassChange).where(
+                    RelationshipCompassChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipCompassChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(changes), 1)
+
+    def test_dismiss_after_accept_is_rejected(self) -> None:
+        suggestion_id = self._seed_pending_suggestion()
+        self.current_user_id = self.alice_id
+
+        accept = self.client.post(f"/api/love-map/suggestions/relationship-compass/{suggestion_id}/accept")
+        self.assertEqual(accept.status_code, 200)
+
+        dismiss = self.client.post(f"/api/love-map/suggestions/relationship-compass/{suggestion_id}/dismiss")
+        self.assertEqual(dismiss.status_code, 409)
+
+    def test_manual_compass_save_keeps_history_manual(self) -> None:
+        self.current_user_id = self.alice_id
+
+        response = self.client.put(
+            "/api/love-map/identity/compass",
+            json={
+                "identity_statement": "我們是會慢慢回來對話的伴侶。",
+                "story_anchor": "想一起記得咖啡和散步把我們帶回來。",
+                "future_direction": "接下來一起靠近更穩定的週末節奏。",
+                "revision_note": "這次是手動微調一下。",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with Session(self.engine) as session:
+            changes = session.exec(
+                select(RelationshipCompassChange).where(
+                    RelationshipCompassChange.user_id == min(self.alice_id, self.bob_id),
+                    RelationshipCompassChange.partner_id == max(self.alice_id, self.bob_id),
+                )
+            ).all()
+            self.assertEqual(len(changes), 1)
+            self.assertEqual(changes[0].origin_kind, "manual_edit")
+            self.assertIsNone(changes[0].source_suggestion_id)
 
     def test_dismiss_marks_suggestion_without_changing_compass(self) -> None:
         suggestion_id = self._seed_pending_suggestion()

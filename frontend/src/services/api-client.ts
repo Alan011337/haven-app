@@ -438,6 +438,7 @@ export interface LoveMapRelationshipCompassChangePublic {
   id: string;
   changed_at: string | null;
   changed_by_name: string | null;
+  origin_kind: 'manual_edit' | 'accepted_suggestion';
   fields: LoveMapRelationshipCompassFieldChangePublic[];
   revision_note: string | null;
 }

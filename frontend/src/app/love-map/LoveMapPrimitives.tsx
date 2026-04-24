@@ -411,6 +411,7 @@ interface LoveMapStatePanelProps {
   tone?: StateTone;
   actionLabel?: string;
   onAction?: () => void;
+  dataTestId?: string;
 }
 
 export function LoveMapStatePanel({
@@ -420,10 +421,12 @@ export function LoveMapStatePanel({
   tone = 'default',
   actionLabel,
   onAction,
+  dataTestId,
 }: LoveMapStatePanelProps) {
   return (
     <GlassCard
       className={cn('overflow-hidden rounded-[2.2rem] p-6 shadow-soft backdrop-blur-md md:p-7', stateToneClasses[tone])}
+      data-testid={dataTestId}
     >
       <div className="space-y-4">
         {eyebrow ? <p className="type-micro uppercase text-primary/80">{eyebrow}</p> : null}
@@ -432,7 +435,7 @@ export function LoveMapStatePanel({
           <p className="type-body-muted text-muted-foreground">{description}</p>
         </div>
         {actionLabel && onAction ? (
-          <Button variant="secondary" onClick={onAction}>
+          <Button variant="secondary" onClick={onAction} data-testid={dataTestId ? `${dataTestId}-action` : undefined}>
             {actionLabel}
           </Button>
         ) : null}
@@ -772,6 +775,9 @@ interface LoveMapSuggestedUpdateCardProps {
     label: string;
     excerpt: string;
   }>;
+  acceptDisabled?: boolean;
+  noopReason?: string | null;
+  mutationCopy?: { acceptingLabel: string; dismissingLabel: string };
   onAccept: () => void;
   onDismiss: () => void;
   accepting?: boolean;
@@ -785,6 +791,9 @@ export function LoveMapSuggestedUpdateCard({
   notes,
   variant = 'default',
   evidence,
+  acceptDisabled = false,
+  noopReason,
+  mutationCopy,
   onAccept,
   onDismiss,
   accepting = false,
@@ -802,9 +811,14 @@ export function LoveMapSuggestedUpdateCard({
   const savedPreview = buildSavedSharedFuturePreviewTitles(savedItems ?? null, 3);
   const savedPreviewTitles = savedPreview.titles;
   const savedMoreCount = savedPreview.moreCount;
+  const acceptingLabel = mutationCopy?.acceptingLabel ?? '正在寫入 Future…';
+  const dismissingLabel = mutationCopy?.dismissingLabel ?? '正在略過建議…';
 
   return (
-    <GlassCard className="overflow-hidden rounded-[2.2rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(249,243,234,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6">
+    <GlassCard
+      className="overflow-hidden rounded-[2.2rem] border-primary/14 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(249,243,234,0.92))] p-5 shadow-lift backdrop-blur-md md:p-6"
+      data-testid="shared-future-suggestion-card"
+    >
       <div className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
@@ -836,6 +850,11 @@ export function LoveMapSuggestedUpdateCard({
             <p className="type-caption text-card-foreground/88">
               接受後，這則提案會新增成一個 Shared Future 片段；略過則不會改動目前保存的共同未來。
             </p>
+            {noopReason ? (
+              <p className="type-caption text-muted-foreground" data-testid="shared-future-suggestion-noop">
+                {noopReason}
+              </p>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-[1.45rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft">
                 <p className="type-micro uppercase text-primary/80">目前保存</p>
@@ -904,17 +923,19 @@ export function LoveMapSuggestedUpdateCard({
               loading={dismissing}
               disabled={accepting || dismissing}
               leftIcon={<X className="h-4 w-4" aria-hidden />}
+              data-testid="shared-future-suggestion-dismiss"
               onClick={onDismiss}
             >
-              先略過
+              {dismissing ? dismissingLabel : '先略過'}
             </Button>
             <Button
               loading={accepting}
-              disabled={accepting || dismissing}
+              disabled={accepting || dismissing || acceptDisabled}
               leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              data-testid="shared-future-suggestion-accept"
               onClick={onAccept}
             >
-              接受並寫入 Future
+              {accepting ? acceptingLabel : acceptDisabled ? '已存在於 Shared Future' : '接受並寫入 Future'}
             </Button>
           </div>
         </div>
@@ -931,6 +952,7 @@ interface LoveMapCompassSuggestionCardProps {
     future_direction: string | null;
   };
   evidence: RelationshipKnowledgeSuggestionEvidencePublic[];
+  mutationCopy?: { acceptingLabel: string; dismissingLabel: string };
   onAccept: () => void;
   onDismiss: () => void;
   accepting?: boolean;
@@ -947,6 +969,7 @@ export function LoveMapCompassSuggestionCard({
   savedCompass,
   candidate,
   evidence,
+  mutationCopy,
   onAccept,
   onDismiss,
   accepting = false,
@@ -957,6 +980,8 @@ export function LoveMapCompassSuggestionCard({
     (field) => !compassFieldValuesEqual(savedCompass ? savedCompass[field.key] : null, candidate[field.key]),
   ).length;
   const allProposedMatchSaved = proposedFields.length > 0 && fieldChangeCount === 0;
+  const acceptingLabel = mutationCopy?.acceptingLabel ?? '正在寫入 Compass…';
+  const dismissingLabel = mutationCopy?.dismissingLabel ?? '正在略過建議…';
 
   return (
     <GlassCard
@@ -977,7 +1002,7 @@ export function LoveMapCompassSuggestionCard({
           </div>
 
           <Badge variant="metadata" size="sm">
-            Personal review only
+            僅你可見（待審核）
           </Badge>
         </div>
 
@@ -1101,17 +1126,19 @@ export function LoveMapCompassSuggestionCard({
               loading={dismissing}
               disabled={accepting || dismissing}
               leftIcon={<X className="h-4 w-4" aria-hidden />}
+              data-testid="relationship-compass-suggestion-dismiss"
               onClick={onDismiss}
             >
-              先略過
+              {dismissing ? dismissingLabel : '先略過'}
             </Button>
             <Button
               loading={accepting}
-              disabled={accepting || dismissing || proposedFields.length === 0}
+              disabled={accepting || dismissing || proposedFields.length === 0 || allProposedMatchSaved}
               leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              data-testid="relationship-compass-suggestion-accept"
               onClick={onAccept}
             >
-              接受並寫入 Compass
+              {accepting ? acceptingLabel : allProposedMatchSaved ? '已和目前保存一致' : '接受並寫入 Compass'}
             </Button>
           </div>
         </div>
