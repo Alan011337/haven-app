@@ -1135,6 +1135,34 @@
     },
     {
       "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.love_map.get_current_weekly_review",
+      "method": "GET",
+      "name": "get_current_weekly_review",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/weekly-review/current",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
+      "data_sensitivity": "relationship_sensitive",
+      "endpoint": "app.api.routers.love_map.upsert_current_weekly_review",
+      "method": "PUT",
+      "name": "upsert_current_weekly_review",
+      "owner_team": "backend-platform",
+      "path": "/api/love-map/weekly-review/current",
+      "protocol": "http",
+      "runbook_ref": "docs/p0-execution-protocol.md",
+      "tags": [
+        "love-map"
+      ]
+    },
+    {
+      "auth_policy": "authenticated",
       "data_sensitivity": "public",
       "endpoint": "app.api.routers.mediation.submit_mediation_answers",
       "method": "POST",

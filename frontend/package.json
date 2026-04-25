@@ -73,6 +73,9 @@
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.11"
   },
+  "imports": {
+    "#haven/relationship-compass-revision": "./src/features/love-map/relationship-compass-revision.ts"
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",

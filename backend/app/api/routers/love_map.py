@@ -25,6 +25,7 @@ from app.models.relationship_knowledge_suggestion import RelationshipKnowledgeSu
 from app.models.relationship_repair_agreement import RelationshipRepairAgreement
 from app.models.relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from app.models.relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
+from app.models.relationship_weekly_review import RelationshipWeeklyReview
 from app.models.relationship_baseline import RelationshipBaseline
 from app.models.user import User
 from app.models.wishlist_item import WishlistItem
@@ -58,6 +59,9 @@ from app.schemas.love_map import (
     LoveMapSystemStatsPublic,
     LoveMapWeeklyTaskPublic,
     LoveMapNoteUpdate,
+    LoveMapWeeklyReviewAnswersPublic,
+    LoveMapWeeklyReviewPublic,
+    LoveMapWeeklyReviewUpsert,
     RelationshipCompassSuggestionCandidatePublic,
     RelationshipKnowledgeSuggestionEvidencePublic,
     RelationshipKnowledgeSuggestionPublic,
@@ -117,6 +121,76 @@ COMPASS_FIELD_LABELS: dict[str, str] = {
     "future_direction": "未來",
 }
 COMPASS_HISTORY_LIMIT = 3
+
+
+def _current_week_start_date() -> object:
+    now = utcnow()
+    today = now.date()
+    return today - timedelta(days=today.weekday())
+
+
+def _normalize_weekly_review_text(value: str) -> str | None:
+    trimmed = (value or "").strip()
+    return trimmed[:2000] if trimmed else None
+
+
+def _to_weekly_review_public(
+    *,
+    row: RelationshipWeeklyReview | None,
+    current_user_id: UUID,
+    partner_id: UUID,
+) -> LoveMapWeeklyReviewPublic:
+    week_start = _current_week_start_date()
+    if row is None:
+        return LoveMapWeeklyReviewPublic(
+            week_start=str(week_start),
+            my_answers=LoveMapWeeklyReviewAnswersPublic(),
+            partner_answers=LoveMapWeeklyReviewAnswersPublic(),
+            my_updated_at=None,
+            partner_updated_at=None,
+        )
+
+    is_user1 = row.user1_id == current_user_id
+    my_answers = (
+        LoveMapWeeklyReviewAnswersPublic(
+            understood_this_week=row.user1_understood,
+            worth_carrying_forward=row.user1_worth,
+            needs_care=row.user1_needs_care,
+            next_week_intention=row.user1_next_week,
+        )
+        if is_user1
+        else LoveMapWeeklyReviewAnswersPublic(
+            understood_this_week=row.user2_understood,
+            worth_carrying_forward=row.user2_worth,
+            needs_care=row.user2_needs_care,
+            next_week_intention=row.user2_next_week,
+        )
+    )
+    partner_answers = (
+        LoveMapWeeklyReviewAnswersPublic(
+            understood_this_week=row.user2_understood,
+            worth_carrying_forward=row.user2_worth,
+            needs_care=row.user2_needs_care,
+            next_week_intention=row.user2_next_week,
+        )
+        if is_user1
+        else LoveMapWeeklyReviewAnswersPublic(
+            understood_this_week=row.user1_understood,
+            worth_carrying_forward=row.user1_worth,
+            needs_care=row.user1_needs_care,
+            next_week_intention=row.user1_next_week,
+        )
+    )
+
+    my_updated_at = row.user1_updated_at if is_user1 else row.user2_updated_at
+    partner_updated_at = row.user2_updated_at if is_user1 else row.user1_updated_at
+    return LoveMapWeeklyReviewPublic(
+        week_start=str(row.week_start),
+        my_answers=my_answers,
+        partner_answers=partner_answers,
+        my_updated_at=_to_iso_z(my_updated_at) if my_updated_at else None,
+        partner_updated_at=_to_iso_z(partner_updated_at) if partner_updated_at else None,
+    )
 
 
 def _depth_to_layer(d: int) -> str:
@@ -1277,6 +1351,84 @@ def get_love_map_system(
             weekly_task=_to_weekly_task_public(weekly_task),
         ),
     )
+
+
+@router.get("/weekly-review/current", response_model=LoveMapWeeklyReviewPublic)
+def get_current_weekly_review(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> LoveMapWeeklyReviewPublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+    uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
+    week_start = _current_week_start_date()
+    row = session.exec(
+        select(RelationshipWeeklyReview).where(
+            RelationshipWeeklyReview.user1_id == uid1,
+            RelationshipWeeklyReview.user2_id == uid2,
+            RelationshipWeeklyReview.week_start == week_start,
+        )
+    ).first()
+    return _to_weekly_review_public(row=row, current_user_id=current_user.id, partner_id=partner_id)
+
+
+@router.put("/weekly-review/current", response_model=LoveMapWeeklyReviewPublic)
+def upsert_current_weekly_review(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    body: LoveMapWeeklyReviewUpsert,
+) -> LoveMapWeeklyReviewPublic:
+    partner_id = verify_active_partner_id(session=session, current_user=current_user)
+    if not partner_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要先綁定伴侶")
+
+    uid1, uid2 = _pair_scope_ids(current_user.id, partner_id)
+    week_start = _current_week_start_date()
+    now = utcnow()
+
+    row = session.exec(
+        select(RelationshipWeeklyReview)
+        .where(
+            RelationshipWeeklyReview.user1_id == uid1,
+            RelationshipWeeklyReview.user2_id == uid2,
+            RelationshipWeeklyReview.week_start == week_start,
+        )
+        .with_for_update()
+    ).first()
+    if not row:
+        row = RelationshipWeeklyReview(
+            user1_id=uid1,
+            user2_id=uid2,
+            week_start=week_start,
+        )
+
+    if current_user.id == uid1:
+        row.user1_understood = _normalize_weekly_review_text(body.understood_this_week)
+        row.user1_worth = _normalize_weekly_review_text(body.worth_carrying_forward)
+        row.user1_needs_care = _normalize_weekly_review_text(body.needs_care)
+        row.user1_next_week = _normalize_weekly_review_text(body.next_week_intention)
+        row.user1_updated_at = now
+    else:
+        row.user2_understood = _normalize_weekly_review_text(body.understood_this_week)
+        row.user2_worth = _normalize_weekly_review_text(body.worth_carrying_forward)
+        row.user2_needs_care = _normalize_weekly_review_text(body.needs_care)
+        row.user2_next_week = _normalize_weekly_review_text(body.next_week_intention)
+        row.user2_updated_at = now
+
+    row.updated_at = now
+    session.add(row)
+    commit_with_error_handling(
+        session,
+        logger=logger,
+        action="Upsert weekly relationship review",
+        conflict_detail="儲存本週復盤時發生衝突，請稍後再試。",
+        failure_detail="儲存本週復盤失敗，請稍後再試。",
+    )
+    session.refresh(row)
+    return _to_weekly_review_public(row=row, current_user_id=current_user.id, partner_id=partner_id)
 
 
 @router.put("/identity/compass", response_model=LoveMapRelationshipCompassPublic)

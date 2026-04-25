@@ -10,11 +10,13 @@ import Button from '@/components/ui/Button';
 import Input, { Textarea } from '@/components/ui/Input';
 import {
   loveMapRelationshipCompassSuggestionsQueryKey,
+  useFeatureFlags,
   useLoveMapCards,
   useLoveMapRelationshipCompassSuggestions,
   useLoveMapSharedFutureRefinements,
   useLoveMapSharedFutureSuggestions,
   useLoveMapSystem,
+  useLoveMapWeeklyReviewCurrent,
 } from '@/hooks/queries';
 import { useToast } from '@/hooks/useToast';
 import {
@@ -59,6 +61,8 @@ import {
   upsertLoveMapHeartProfile,
   upsertLoveMapRelationshipCompass,
   upsertLoveMapRepairAgreements,
+  upsertLoveMapWeeklyReviewCurrent,
+  type LoveMapWeeklyReviewPublic,
   type LoveMapHeartProfileUpsertPayload,
   type LoveMapRelationshipCompassChangePublic,
   type LoveMapRelationshipCompassUpsertPayload,
@@ -79,7 +83,16 @@ import {
   formatCompassChangedAt,
   summarizeCompassChange,
 } from '@/features/love-map/relationship-compass-revision';
+import { buildRelationshipEvolutionTimeline } from '@/features/love-map/relationship-system-evolution';
 import { buildRelationshipSystemHomeModel } from '@/features/love-map/relationship-system-home';
+import { buildRelationshipWeeklyReviewRitualModel } from '@/features/love-map/relationship-weekly-review';
+import {
+  buildRelationshipSystemReviewFlow,
+  buildReviewFlowAllDoneCopy,
+  buildReviewFlowCompleteCopy,
+  buildReviewFlowContinueCopy,
+  buildReviewFlowPendingCopy,
+} from '@/features/love-map/relationship-system-review-flow';
 import LoveMapSkeleton from './LoveMapSkeleton';
 import {
   LoveMapEssentialField,
@@ -89,6 +102,9 @@ import {
   LoveMapPromptCard,
   LoveMapRefinementSuggestionCard,
   LoveMapReflectionStudio,
+  LoveMapRelationshipEvolutionPanel,
+  LoveMapWeeklyReviewRitualPanel,
+  LoveMapReviewFlowPanel,
   LoveMapSection,
   LoveMapSharedFutureNotesPanel,
   LoveMapSnapshotCard,
@@ -466,6 +482,14 @@ export default function LoveMapPageContent() {
   const refinementQuery = useLoveMapSharedFutureRefinements({
     enabled: Boolean(systemQuery.data?.has_partner),
   });
+  const featureFlagsQuery = useFeatureFlags();
+  const weeklyReviewEnabled =
+    Boolean(systemQuery.data?.has_partner) &&
+    Boolean(featureFlagsQuery.data?.flags?.weekly_review_v1) &&
+    !Boolean(featureFlagsQuery.data?.kill_switches?.disable_weekly_review_v1);
+  const weeklyReviewQuery = useLoveMapWeeklyReviewCurrent({
+    enabled: weeklyReviewEnabled,
+  });
 
   const [savingLayer, setSavingLayer] = useState<LoveMapLayer | null>(null);
   const [savingBaseline, setSavingBaseline] = useState(false);
@@ -477,6 +501,8 @@ export default function LoveMapPageContent() {
   const [savingRepairAgreements, setSavingRepairAgreements] = useState(false);
   const [dismissingRepairOutcomeCapture, setDismissingRepairOutcomeCapture] = useState(false);
   const [completingWeeklyTask, setCompletingWeeklyTask] = useState(false);
+  const [savingWeeklyReview, setSavingWeeklyReview] = useState(false);
+  const [weeklyReviewError, setWeeklyReviewError] = useState<string | null>(null);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [generatingCompassSuggestion, setGeneratingCompassSuggestion] = useState(false);
   const [generatingStoryRitual, setGeneratingStoryRitual] = useState(false);
@@ -486,13 +512,20 @@ export default function LoveMapPageContent() {
   } | null>(null);
   const [reviewingSuggestionId, setReviewingSuggestionId] = useState<string | null>(null);
   const [reviewingAction, setReviewingAction] = useState<'accept' | 'dismiss' | null>(null);
+  // `kind` distinguishes post-accept/post-dismiss notices (="handled") from
+  // insufficient-signal / error notices (="notice"). Only the handled kind
+  // triggers the review-flow "continue next / all done" inline panel, so a
+  // user who simply regenerated and got no new suggestion is not told to
+  // "continue reviewing" when there is nothing to review.
   const [compassSuggestionNotice, setCompassSuggestionNotice] = useState<{
     title: string;
     description: string;
+    kind: 'handled' | 'notice';
   } | null>(null);
   const [sharedFutureSuggestionNotice, setSharedFutureSuggestionNotice] = useState<{
     title: string;
     description: string;
+    kind: 'handled' | 'notice';
   } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<LoveMapLayer, string>>({
     safe: '',
@@ -512,6 +545,13 @@ export default function LoveMapPageContent() {
     useState<LoveMapRepairAgreementsUpsertPayload>(EMPTY_REPAIR_AGREEMENTS_DRAFT);
   const [selectedOutcomeCaptureId, setSelectedOutcomeCaptureId] = useState<string | null>(null);
   const [expandedHistoryEntries, setExpandedHistoryEntries] = useState<Record<string, boolean>>({});
+  const [weeklyReviewDraftHydratedWeekStart, setWeeklyReviewDraftHydratedWeekStart] = useState<string | null>(null);
+  const [weeklyReviewDraft, setWeeklyReviewDraft] = useState({
+    understood_this_week: '',
+    worth_carrying_forward: '',
+    needs_care: '',
+    next_week_intention: '',
+  });
   const focusedRepairHistoryId = searchParams.get('repairHistory');
   // Optional short human-authored note, saved alongside a meaningful Repair
   // Agreements change. Kept separate from `repairAgreementsDraft` so note
@@ -580,6 +620,26 @@ export default function LoveMapPageContent() {
   }, [systemQuery.data]);
 
   useEffect(() => {
+    if (!weeklyReviewEnabled) {
+      return;
+    }
+    const data = weeklyReviewQuery.data;
+    if (!data) {
+      return;
+    }
+    if (weeklyReviewDraftHydratedWeekStart === data.week_start) {
+      return;
+    }
+    setWeeklyReviewDraft({
+      understood_this_week: data.my_answers.understood_this_week ?? '',
+      worth_carrying_forward: data.my_answers.worth_carrying_forward ?? '',
+      needs_care: data.my_answers.needs_care ?? '',
+      next_week_intention: data.my_answers.next_week_intention ?? '',
+    });
+    setWeeklyReviewDraftHydratedWeekStart(data.week_start);
+  }, [weeklyReviewDraftHydratedWeekStart, weeklyReviewEnabled, weeklyReviewQuery.data]);
+
+  useEffect(() => {
     const pendingCaptureId = systemQuery.data?.essentials?.pending_repair_outcome_capture?.id ?? null;
     if (!pendingCaptureId) {
       setSelectedOutcomeCaptureId(null);
@@ -619,6 +679,15 @@ export default function LoveMapPageContent() {
     [repairAgreementHistory],
   );
 
+  const relationshipEvolutionEvents = useMemo(() => {
+    const data = systemQuery.data;
+    if (!data) return [];
+    return buildRelationshipEvolutionTimeline({
+      compassHistory: data.relationship_compass_history ?? [],
+      repairHistory: data.essentials?.repair_agreement_history ?? [],
+    });
+  }, [systemQuery.data]);
+
   const goToSettings = () => {
     if (typeof window !== 'undefined') {
       window.location.href = '/settings#settings-relationship';
@@ -640,6 +709,27 @@ export default function LoveMapPageContent() {
       queryClient.invalidateQueries({ queryKey: ['settings', 'relationship'] }),
       queryClient.invalidateQueries({ queryKey: ['settings', 'me'] }),
     ]);
+  };
+
+  const handleSaveWeeklyReview = async () => {
+    setWeeklyReviewError(null);
+    setSavingWeeklyReview(true);
+    try {
+      await upsertLoveMapWeeklyReviewCurrent({
+        understood_this_week: weeklyReviewDraft.understood_this_week,
+        worth_carrying_forward: weeklyReviewDraft.worth_carrying_forward,
+        needs_care: weeklyReviewDraft.needs_care,
+        next_week_intention: weeklyReviewDraft.next_week_intention,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['loveMapWeeklyReviewCurrent'] });
+      showToast('本週復盤已保存。', 'success');
+    } catch (error) {
+      logClientError('love-map-weekly-review-save-failed', error);
+      setWeeklyReviewError('這次沒有順利保存本週復盤，稍後再試一次。');
+      showToast('這次沒有順利保存本週復盤，稍後再試一次。', 'error');
+    } finally {
+      setSavingWeeklyReview(false);
+    }
   };
 
   const handleSaveIdentity = async () => {
@@ -847,7 +937,7 @@ export default function LoveMapPageContent() {
       await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
       if (suggestions.length === 0) {
         const notice = buildCompassInsufficientSignalPresentation();
-        setCompassSuggestionNotice(notice);
+        setCompassSuggestionNotice({ ...notice, kind: 'notice' });
         showToast('目前還沒有足夠清楚的 Compass 建議。', 'info');
         return;
       }
@@ -866,11 +956,11 @@ export default function LoveMapPageContent() {
     try {
       await acceptLoveMapRelationshipCompassSuggestion(suggestion.id);
       await invalidateRelationshipViews();
-      setCompassSuggestionNotice(buildAcceptedSuggestionNotice('compass'));
+      setCompassSuggestionNotice({ ...buildAcceptedSuggestionNotice('compass'), kind: 'handled' });
       showToast('這版 Compass 建議已寫入 Relationship Compass。', 'success');
     } catch (error) {
       logClientError('love-map-relationship-compass-suggestion-accept-failed', error);
-      setCompassSuggestionNotice(buildHandledSuggestionNotice());
+      setCompassSuggestionNotice({ ...buildHandledSuggestionNotice(), kind: 'handled' });
       showToast('這次沒有順利收下 Compass 建議，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -884,11 +974,11 @@ export default function LoveMapPageContent() {
     try {
       await dismissLoveMapRelationshipCompassSuggestion(suggestion.id);
       await queryClient.invalidateQueries({ queryKey: loveMapRelationshipCompassSuggestionsQueryKey });
-      setCompassSuggestionNotice(buildDismissedSuggestionNotice());
+      setCompassSuggestionNotice({ ...buildDismissedSuggestionNotice(), kind: 'handled' });
       showToast('這版 Compass 建議先略過了。', 'success');
     } catch (error) {
       logClientError('love-map-relationship-compass-suggestion-dismiss-failed', error);
-      setCompassSuggestionNotice(buildHandledSuggestionNotice());
+      setCompassSuggestionNotice({ ...buildHandledSuggestionNotice(), kind: 'handled' });
       showToast('這次沒有順利略過 Compass 建議，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -903,7 +993,7 @@ export default function LoveMapPageContent() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
       if (suggestions.length === 0) {
         const notice = buildSharedFutureInsufficientSignalPresentation();
-        setSharedFutureSuggestionNotice(notice);
+        setSharedFutureSuggestionNotice({ ...notice, kind: 'notice' });
         showToast('目前還沒有足夠清楚的 Shared Future 建議。', 'info');
         return;
       }
@@ -972,7 +1062,7 @@ export default function LoveMapPageContent() {
     try {
       await acceptLoveMapSharedFutureSuggestion(suggestion.id);
       await invalidateRelationshipViews();
-      setSharedFutureSuggestionNotice(buildAcceptedSuggestionNotice('future'));
+      setSharedFutureSuggestionNotice({ ...buildAcceptedSuggestionNotice('future'), kind: 'handled' });
       showToast(
         suggestion.section === 'shared_future_refinement'
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
@@ -983,7 +1073,7 @@ export default function LoveMapPageContent() {
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-accept-failed', error);
-      setSharedFutureSuggestionNotice(buildHandledSuggestionNotice());
+      setSharedFutureSuggestionNotice({ ...buildHandledSuggestionNotice(), kind: 'handled' });
       showToast('這次沒有順利收下這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -998,7 +1088,7 @@ export default function LoveMapPageContent() {
       await dismissLoveMapSharedFutureSuggestion(suggestion.id);
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureSuggestions() });
       await queryClient.invalidateQueries({ queryKey: queryKeys.loveMapSharedFutureRefinements() });
-      setSharedFutureSuggestionNotice(buildDismissedSuggestionNotice());
+      setSharedFutureSuggestionNotice({ ...buildDismissedSuggestionNotice(), kind: 'handled' });
       showToast(
         suggestion.section === 'shared_future_refinement'
           ? getRefinementKind(suggestion.generator_version) === 'cadence'
@@ -1009,7 +1099,7 @@ export default function LoveMapPageContent() {
       );
     } catch (error) {
       logClientError('love-map-shared-future-suggestion-dismiss-failed', error);
-      setSharedFutureSuggestionNotice(buildHandledSuggestionNotice());
+      setSharedFutureSuggestionNotice({ ...buildHandledSuggestionNotice(), kind: 'handled' });
       showToast('這次沒有順利略過這則提案，稍後再試一次。', 'error');
     } finally {
       setReviewingSuggestionId(null);
@@ -1101,6 +1191,53 @@ export default function LoveMapPageContent() {
     repairHistoryCount: repairAgreementHistoryEntries.length,
     lastActivityLabel,
   });
+  const weeklyReviewModel = weeklyReviewEnabled
+    ? buildRelationshipWeeklyReviewRitualModel({
+        hasPartner: system.has_partner,
+        pendingReviewCount: relationshipSystemHome.pendingReviewCount,
+        evolutionCount: relationshipSystemHome.evolutionCount,
+        compassHistoryCount: relationshipCompassHistoryEntries.length,
+        repairHistoryCount: repairAgreementHistoryEntries.length,
+      })
+    : null;
+  const weeklyReviewNavItems = (() => {
+    if (!weeklyReviewEnabled) return relationshipSystemHome.navItems;
+    const base = relationshipSystemHome.navItems;
+    const head = base.slice(0, 4);
+    const rest = base.slice(4);
+    return [
+      ...head,
+      {
+        key: 'weekly-review',
+        label: '本週回看',
+        description: '一起回看這一週',
+        href: '#weekly-review',
+        statusLabel: '復盤',
+      },
+      ...rest,
+    ];
+  })();
+  const weeklyReviewData: LoveMapWeeklyReviewPublic | null = weeklyReviewQuery.data ?? null;
+  const myWeeklyReviewUpdatedAtLabel = weeklyReviewData
+    ? formatShortDateTime(weeklyReviewData.my_updated_at)
+    : null;
+  const partnerWeeklyReviewUpdatedAtLabel = weeklyReviewData
+    ? formatShortDateTime(weeklyReviewData.partner_updated_at)
+    : null;
+  // The review-flow model derives its "next target" straight from the live
+  // pending counts. After an accept/dismiss + query invalidation, the
+  // handled suggestion drops out of the count naturally and `firstTarget`
+  // advances on its own — no per-suggestion id bookkeeping required.
+  const reviewFlow = buildRelationshipSystemReviewFlow({
+    hasPartner: system.has_partner,
+    compassPendingCount,
+    sharedFuturePendingCount: pendingSuggestions.length,
+    sharedFutureRefinementPendingCount: pendingRefinements.length,
+  });
+  const reviewFlowPendingCopy = buildReviewFlowPendingCopy(reviewFlow);
+  const reviewFlowCompleteCopy = buildReviewFlowCompleteCopy();
+  const reviewFlowContinueCopy = buildReviewFlowContinueCopy(reviewFlow);
+  const reviewFlowAllDoneCopy = buildReviewFlowAllDoneCopy();
   const identityMetricValue = system.has_partner
     ? `${system.me.full_name || '你'} × ${system.partner?.partner_name ?? '伴侶'} · Compass ${compassCueCount}/3`
     : '等待雙向配對';
@@ -1265,18 +1402,39 @@ export default function LoveMapPageContent() {
         primaryHref={relationshipSystemHome.nextAction.href}
         primaryLabel={relationshipSystemHome.nextAction.label}
         highlights={
-          <div className="grid gap-3 md:grid-cols-3">
-            {relationshipSystemHome.statusCards.map((card) => (
-              <LoveMapSystemStatusCard
-                key={card.key}
-                eyebrow={card.eyebrow}
-                title={card.title}
-                value={card.value}
-                description={card.description}
-                tone={card.key}
-                dataTestId={`relationship-system-status-${card.key}`}
-              />
-            ))}
+          <div className="space-y-3">
+            {weeklyReviewEnabled ? (
+              <a
+                href="#weekly-review"
+                className="inline-flex items-center justify-between gap-3 rounded-[1.55rem] border border-white/56 bg-white/72 px-4 py-3 text-left shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-white/84 hover:shadow-lift focus-ring-premium"
+                data-testid="relationship-system-cover-weekly-review"
+              >
+                <span className="min-w-0">
+                  <span className="block type-micro uppercase text-primary/80">本週回看</span>
+                  <span className="mt-1 block type-section-title text-card-foreground">一起回看這一週</span>
+                  <span className="mt-1 block type-caption text-muted-foreground">
+                    用幾分鐘整理值得記得的理解，並帶進下週。
+                  </span>
+                </span>
+                <Badge variant="metadata" size="sm">
+                  #weekly
+                </Badge>
+              </a>
+            ) : null}
+            <div className="grid gap-3 md:grid-cols-3">
+              {relationshipSystemHome.statusCards.map((card) => (
+                <LoveMapSystemStatusCard
+                  key={card.key}
+                  eyebrow={card.eyebrow}
+                  title={card.title}
+                  value={card.value}
+                  description={card.description}
+                  tone={card.key}
+                  dataTestId={`relationship-system-status-${card.key}`}
+                  href={card.href}
+                />
+              ))}
+            </div>
           </div>
         }
         aside={
@@ -1331,9 +1489,73 @@ export default function LoveMapPageContent() {
       />
 
       <LoveMapSystemSectionNav
-        items={relationshipSystemHome.navItems}
+        items={weeklyReviewNavItems}
         nextAction={relationshipSystemHome.nextAction}
       />
+
+      {weeklyReviewEnabled && weeklyReviewModel ? (
+        <section id="weekly-review" className="scroll-mt-24">
+          <LoveMapWeeklyReviewRitualPanel
+            model={weeklyReviewModel}
+            myDraft={weeklyReviewDraft}
+            partnerAnswers={
+              weeklyReviewData?.partner_answers ?? {
+                understood_this_week: null,
+                worth_carrying_forward: null,
+                needs_care: null,
+                next_week_intention: null,
+              }
+            }
+            myUpdatedAtLabel={myWeeklyReviewUpdatedAtLabel}
+            partnerUpdatedAtLabel={partnerWeeklyReviewUpdatedAtLabel}
+            saving={savingWeeklyReview}
+            error={weeklyReviewError}
+            onChange={(key, value) =>
+              setWeeklyReviewDraft((current) => ({
+                ...current,
+                [key]: value,
+              }))
+            }
+            onSave={handleSaveWeeklyReview}
+          />
+        </section>
+      ) : null}
+
+      {system.has_partner ? (
+        <section id="evolution" className="scroll-mt-24">
+          <LoveMapRelationshipEvolutionPanel events={relationshipEvolutionEvents} />
+        </section>
+      ) : null}
+
+      {/*
+        Top-level review-flow surface. Renders only once the pair has the
+        Relationship System in front of them; un-paired visitors never see
+        a "review flow" because they have no suggestions to act on. The
+        wrapper carries the stable `#pending-review` anchor so the CTA can
+        deep-link here from the section nav pending-review chip and from
+        the cover pulse line.
+      */}
+      {system.has_partner ? (
+        <div id="pending-review" className="scroll-mt-24">
+          {reviewFlow.totalPending > 0 ? (
+            <LoveMapReviewFlowPanel
+              mode="pending"
+              title={reviewFlowPendingCopy.title}
+              description={reviewFlowPendingCopy.description}
+              ctaHref={reviewFlowPendingCopy.ctaHref}
+              ctaLabel={reviewFlowPendingCopy.ctaLabel}
+              dataTestId="relationship-system-review-flow"
+            />
+          ) : (
+            <LoveMapReviewFlowPanel
+              mode="complete"
+              title={reviewFlowCompleteCopy.title}
+              description={reviewFlowCompleteCopy.description}
+              dataTestId="relationship-system-review-complete"
+            />
+          )}
+        </div>
+      ) : null}
 
       <LoveMapSystemGuide
         eyebrow="關係系統四層"
@@ -1683,6 +1905,34 @@ export default function LoveMapPageContent() {
                           }}
                         />
                       ) : null}
+                      {/*
+                        Post-action continuity. Only appears right after the
+                        user handled a suggestion (compassSuggestionNotice
+                        kind === 'handled'); a regeneration that returned
+                        no new candidate does not pretend to be a review
+                        step. When another pending item remains (possibly
+                        in the Shared Future section), the panel points
+                        there; when this was the last item, a calm "all
+                        done" echo lands right where the user just acted.
+                      */}
+                      {compassSuggestionNotice?.kind === 'handled' && reviewFlow.totalPending > 0 ? (
+                        <LoveMapReviewFlowPanel
+                          mode="continueNext"
+                          title={reviewFlowContinueCopy.title}
+                          description={reviewFlowContinueCopy.description}
+                          ctaHref={reviewFlowContinueCopy.ctaHref}
+                          ctaLabel={reviewFlowContinueCopy.ctaLabel}
+                          dataTestId="relationship-compass-review-flow-continue"
+                        />
+                      ) : null}
+                      {compassSuggestionNotice?.kind === 'handled' && reviewFlow.isComplete ? (
+                        <LoveMapReviewFlowPanel
+                          mode="complete"
+                          title={reviewFlowAllDoneCopy.title}
+                          description={reviewFlowAllDoneCopy.description}
+                          dataTestId="relationship-compass-review-flow-all-done"
+                        />
+                      ) : null}
                       <LoveMapStatePanel
                         eyebrow={buildCompassEmptyStatePresentation().eyebrow}
                         title={buildCompassEmptyStatePresentation().title}
@@ -1697,23 +1947,45 @@ export default function LoveMapPageContent() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {pendingCompassSuggestions.map((suggestion) =>
+                      {pendingCompassSuggestions.map((suggestion, index) =>
                         suggestion.relationship_compass_candidate ? (
-                          <LoveMapCompassSuggestionCard
+                          // The first pending Compass suggestion carries the
+                          // stable `#pending-review-compass` landing anchor
+                          // + testid used by the top-level review-flow CTA
+                          // and by e2e. Subsequent ones (rare in practice)
+                          // render without the anchor to avoid duplicate
+                          // ids on the page.
+                          <div
                             key={suggestion.id}
-                            savedCompass={relationshipCompass}
-                            candidate={suggestion.relationship_compass_candidate}
-                            evidence={suggestion.evidence}
-                            mutationCopy={buildMutationCopy('compass')}
-                            accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
-                            dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
-                            onAccept={() => {
-                              void handleAcceptCompassSuggestion(suggestion);
-                            }}
-                            onDismiss={() => {
-                              void handleDismissCompassSuggestion(suggestion);
-                            }}
-                          />
+                            id={index === 0 ? 'pending-review-compass' : undefined}
+                            data-testid={
+                              index === 0
+                                ? 'relationship-compass-pending-review'
+                                : undefined
+                            }
+                            className={index === 0 ? 'scroll-mt-28' : undefined}
+                          >
+                            <LoveMapCompassSuggestionCard
+                              savedCompass={relationshipCompass}
+                              candidate={suggestion.relationship_compass_candidate}
+                              evidence={suggestion.evidence}
+                              mutationCopy={buildMutationCopy('compass')}
+                              accepting={
+                                reviewingSuggestionId === suggestion.id &&
+                                reviewingAction === 'accept'
+                              }
+                              dismissing={
+                                reviewingSuggestionId === suggestion.id &&
+                                reviewingAction === 'dismiss'
+                              }
+                              onAccept={() => {
+                                void handleAcceptCompassSuggestion(suggestion);
+                              }}
+                              onDismiss={() => {
+                                void handleDismissCompassSuggestion(suggestion);
+                              }}
+                            />
+                          </div>
                         ) : null,
                       )}
                     </div>
@@ -2962,6 +3234,32 @@ export default function LoveMapPageContent() {
                           }}
                         />
                       ) : null}
+                      {/*
+                        Mirrors the Compass section: post-action continuity
+                        for Shared Future. When another pending item still
+                        exists (possibly a Compass one the user has not
+                        seen yet), the panel points them there; when the
+                        user just cleared the last pending item, a calm
+                        "all done" echo lands right here.
+                      */}
+                      {sharedFutureSuggestionNotice?.kind === 'handled' && reviewFlow.totalPending > 0 ? (
+                        <LoveMapReviewFlowPanel
+                          mode="continueNext"
+                          title={reviewFlowContinueCopy.title}
+                          description={reviewFlowContinueCopy.description}
+                          ctaHref={reviewFlowContinueCopy.ctaHref}
+                          ctaLabel={reviewFlowContinueCopy.ctaLabel}
+                          dataTestId="shared-future-review-flow-continue"
+                        />
+                      ) : null}
+                      {sharedFutureSuggestionNotice?.kind === 'handled' && reviewFlow.isComplete ? (
+                        <LoveMapReviewFlowPanel
+                          mode="complete"
+                          title={reviewFlowAllDoneCopy.title}
+                          description={reviewFlowAllDoneCopy.description}
+                          dataTestId="shared-future-review-flow-all-done"
+                        />
+                      ) : null}
                       <LoveMapStatePanel
                         eyebrow={buildSharedFutureEmptyStatePresentation().eyebrow}
                         title={buildSharedFutureEmptyStatePresentation().title}
@@ -2975,33 +3273,47 @@ export default function LoveMapPageContent() {
                       />
                     </div>
                   ) : (
-                    pendingSuggestions.map((suggestion) => (
+                    pendingSuggestions.map((suggestion, index) => (
                       (() => {
                         const isDuplicate = isSharedFutureDuplicateTitle(
                           suggestion.proposed_title,
                           system.wishlist_items.map((item) => item.title),
                         );
                         return (
-                      <LoveMapSuggestedUpdateCard
+                      // The first pending Shared Future suggestion carries
+                      // the stable `#pending-review-future` landing anchor
+                      // + testid used by the top-level review CTA and by
+                      // e2e. Subsequent ones render without the anchor.
+                      <div
                         key={suggestion.id}
-                        title={suggestion.proposed_title}
-                        notes={suggestion.proposed_notes}
-                        variant={getSharedFutureSuggestionVariant(suggestion.generator_version)}
-                        evidence={suggestion.evidence}
-                        savedItems={system.wishlist_items}
-                        createdAtLabel={formatShortDateTime(suggestion.created_at) ?? null}
-                        acceptDisabled={isDuplicate}
-                        noopReason={isDuplicate ? '這個提案已經存在於目前保存的 Shared Future。' : null}
-                        mutationCopy={buildMutationCopy('future')}
-                        accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
-                        dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
-                        onAccept={() => {
-                          void handleAcceptSuggestion(suggestion);
-                        }}
-                        onDismiss={() => {
-                          void handleDismissSuggestion(suggestion);
-                        }}
-                      />
+                        id={index === 0 ? 'pending-review-future' : undefined}
+                        data-testid={
+                          index === 0
+                            ? 'shared-future-pending-review'
+                            : undefined
+                        }
+                        className={index === 0 ? 'scroll-mt-28' : undefined}
+                      >
+                        <LoveMapSuggestedUpdateCard
+                          title={suggestion.proposed_title}
+                          notes={suggestion.proposed_notes}
+                          variant={getSharedFutureSuggestionVariant(suggestion.generator_version)}
+                          evidence={suggestion.evidence}
+                          savedItems={system.wishlist_items}
+                          createdAtLabel={formatShortDateTime(suggestion.created_at) ?? null}
+                          acceptDisabled={isDuplicate}
+                          noopReason={isDuplicate ? '這個提案已經存在於目前保存的 Shared Future。' : null}
+                          mutationCopy={buildMutationCopy('future')}
+                          accepting={reviewingSuggestionId === suggestion.id && reviewingAction === 'accept'}
+                          dismissing={reviewingSuggestionId === suggestion.id && reviewingAction === 'dismiss'}
+                          onAccept={() => {
+                            void handleAcceptSuggestion(suggestion);
+                          }}
+                          onDismiss={() => {
+                            void handleDismissSuggestion(suggestion);
+                          }}
+                        />
+                      </div>
                         );
                       })()
                     ))

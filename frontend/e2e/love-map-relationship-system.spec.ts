@@ -62,6 +62,24 @@ async function mockLoveMapApi(page: Page) {
   const acceptedRefinementIds: string[] = [];
   const dismissedRefinementIds: string[] = [];
 
+  const weeklyReview = {
+    week_start: new Date(now).toISOString().slice(0, 10),
+    my_answers: {
+      understood_this_week: null,
+      worth_carrying_forward: null,
+      needs_care: null,
+      next_week_intention: null,
+    },
+    partner_answers: {
+      understood_this_week: null,
+      worth_carrying_forward: null,
+      needs_care: null,
+      next_week_intention: null,
+    },
+    my_updated_at: null,
+    partner_updated_at: null,
+  };
+
   const system = {
     has_partner: true,
     me: {
@@ -274,6 +292,27 @@ async function mockLoveMapApi(page: Page) {
         updated_by_name: 'Alice Chen',
         updated_at: new Date(now - 11 * 60 * 60 * 1000).toISOString(),
       },
+      repair_agreement_history: [
+        {
+          id: 'repair-seed-1',
+          changed_at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+          changed_by_name: 'Bob',
+          origin_kind: 'manual_edit',
+          source_outcome_capture_id: null,
+          source_captured_by_name: null,
+          source_captured_at: null,
+          fields: [
+            {
+              key: 'repair_reentry',
+              label: '修復重入',
+              change_kind: 'updated',
+              before_text: '舊版',
+              after_text: '先留一段空氣，再在 24 小時內回來把感受與需要說清楚。',
+            },
+          ],
+          revision_note: null,
+        },
+      ],
       weekly_task: {
         task_slug: 'task_note',
         task_label: '寫一張小紙條謝謝他/她',
@@ -395,8 +434,41 @@ async function mockLoveMapApi(page: Page) {
       return;
     }
 
+    if (path.endsWith('/users/feature-flags') && method === 'GET') {
+      await fulfillJson(route, {
+        has_partner_context: true,
+        flags: { weekly_review_v1: true },
+        kill_switches: { disable_weekly_review_v1: false },
+      });
+      return;
+    }
+
     if (path.endsWith('/love-map/system') && method === 'GET') {
       await fulfillJson(route, system);
+      return;
+    }
+
+    if (path.endsWith('/love-map/weekly-review/current') && method === 'GET') {
+      await fulfillJson(route, weeklyReview);
+      return;
+    }
+
+    if (path.endsWith('/love-map/weekly-review/current') && method === 'PUT') {
+      const payload = route.request().postDataJSON() as {
+        understood_this_week?: string;
+        worth_carrying_forward?: string;
+        needs_care?: string;
+        next_week_intention?: string;
+      };
+      const savedAtIso = new Date().toISOString();
+      weeklyReview.my_answers = {
+        understood_this_week: payload.understood_this_week?.trim() || null,
+        worth_carrying_forward: payload.worth_carrying_forward?.trim() || null,
+        needs_care: payload.needs_care?.trim() || null,
+        next_week_intention: payload.next_week_intention?.trim() || null,
+      };
+      weeklyReview.my_updated_at = savedAtIso;
+      await fulfillJson(route, weeklyReview);
       return;
     }
 
@@ -1215,14 +1287,46 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByTestId('relationship-system-cover')).toContainText('已保存的共同真相');
     await expect(page.getByTestId('relationship-system-status-saved')).toContainText('4/4');
     await expect(page.getByTestId('relationship-system-status-pending')).toContainText('0 則');
-    await expect(page.getByTestId('relationship-system-status-evolving')).toContainText('1 次');
+    await expect(page.getByTestId('relationship-system-status-evolving')).toContainText('2 次');
+    await expect(page.getByTestId('relationship-system-cover-weekly-review')).toBeVisible();
     await expect(page.getByTestId('relationship-system-section-nav')).toBeVisible();
     await expect(page.getByTestId('relationship-system-section-nav-identity')).toHaveAttribute('href', '#identity');
     await expect(page.getByTestId('relationship-system-section-nav-identity')).toContainText('最近有更新');
     await expect(page.getByTestId('relationship-system-section-nav-heart')).toHaveAttribute('href', '#heart');
     await expect(page.getByTestId('relationship-system-section-nav-future')).toHaveAttribute('href', '#future');
-    await expect(page.getByTestId('relationship-system-section-nav-recent-evolution')).toHaveAttribute('href', '#identity');
+    await expect(page.getByTestId('relationship-system-section-nav-recent-evolution')).toHaveAttribute('href', '#evolution');
+    await expect(page.getByTestId('relationship-system-section-nav-weekly-review')).toHaveAttribute('href', '#weekly-review');
     await expect(page.getByTestId('relationship-system-next-action')).toContainText('回看最近演進');
+    await expect(page.getByTestId('relationship-system-next-action')).toHaveAttribute('href', '#evolution');
+    await expect(page.getByTestId('relationship-evolution-timeline')).toBeVisible();
+    await expect(page.getByTestId('relationship-evolution-event-repair-repair-seed-1')).toContainText('Heart｜Repair Agreements 更新');
+    await expect(page.getByTestId('relationship-evolution-event-repair-repair-seed-1')).toContainText('手動微調');
+    await expect(page.getByTestId('relationship-evolution-event-compass-compass-change-seed-1')).toContainText('手動更新');
+
+    await page.getByTestId('relationship-system-cover-weekly-review').click();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#weekly-review');
+    await expect(page.getByTestId('relationship-weekly-review')).toBeVisible();
+    await expect(page.getByTestId('weekly-review-prompt-understood_this_week')).toBeVisible();
+    await expect(page.getByTestId('weekly-review-cue-evolution')).toBeVisible();
+
+    await page.getByTestId('relationship-system-status-evolving').click();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#evolution');
+    await page.goto('/love-map');
+    await page.getByTestId('relationship-system-section-nav-recent-evolution').click();
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#evolution');
+
+    await page
+      .getByTestId('relationship-evolution-event-repair-repair-seed-1')
+      .getByRole('link', { name: '查看來源' })
+      .click();
+    await expect(page.locator('#relationship-repair-agreement-history-repair-seed-1')).toBeVisible();
+
+    await page
+      .getByTestId('relationship-evolution-event-compass-compass-change-seed-1')
+      .getByRole('link', { name: '查看來源' })
+      .click();
+    await expect(page.locator('#relationship-compass-history-compass-change-seed-1')).toBeVisible();
+
     await expect(page.getByRole('heading', { level: 2, name: 'Identity / Heart / Story / Future' })).toBeVisible();
     await expect(page.getByText('Relationship System', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Blueprint 工作台' })).toBeVisible();
@@ -1548,7 +1652,12 @@ test.describe('Relationship System naming and IA polish', () => {
     await page.evaluate(async () => {
       await fetch('/api/love-map/suggestions/relationship-compass/compass-suggestion-accept/accept', { method: 'POST' });
     });
-    await expect(page.getByText('Haven 建議 · 已接受')).toHaveCount(1);
+    // Duplicate accept must not add a second Compass history row. Scope away
+    // from the Relationship Evolution panel, which also surfaces the same
+    // origin label for accepted Compass changes.
+    await expect(
+      page.getByTestId('relationship-identity-compass-history-entry').filter({ hasText: 'Haven 建議 · 已接受' }),
+    ).toHaveCount(1);
     await expect(page.getByTestId('relationship-story-compass-echo-card')).toContainText(
       '想一起記得晚餐後散步',
     );
@@ -1618,6 +1727,8 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByTestId('relationship-system-status-pending')).toBeVisible();
     await expect(page.getByTestId('relationship-system-section-nav')).toBeVisible();
     await expect(page.getByTestId('relationship-system-section-nav-future')).toContainText('Future');
+    await expect(page.getByTestId('relationship-evolution-timeline')).toBeVisible();
+    await expect(page.getByTestId('relationship-weekly-review')).toBeVisible();
 
     await page.getByTestId('relationship-system-section-nav-future').click();
     await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#future');
@@ -1629,6 +1740,133 @@ test.describe('Relationship System naming and IA polish', () => {
     await expect(page.getByTestId('shared-future-suggestion-card').first()).toContainText('僅你可見（待審核）');
     await expect(page.getByText('TRANSLATED PARTNER MARKER')).toHaveCount(0);
     await expect(page.getByTestId('shared-future-suggestion-card').first().getByText('你的日記')).toHaveCount(0);
+
+    // Review-flow top-level panel remains visible on mobile and points
+    // users at the first pending review surface.
+    await expect(page.getByTestId('relationship-system-review-flow')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-review-flow-cta'))
+      .toHaveAttribute('href', '#pending-review-future');
+    await expect(page.getByTestId('shared-future-pending-review')).toBeVisible();
+  });
+
+  test('review flow surfaces pending count and jumps to first pending card', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.goto('/love-map');
+
+    // Cold load with zero pending → top-level review-flow panel renders in
+    // "complete" mode. This is a calm affirmation, not an error state, so
+    // couples who open the Relationship System with nothing to review see
+    // the surface reinforce that intentionally.
+    await expect(page.getByTestId('relationship-system-review-complete')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-review-complete'))
+      .toContainText('目前沒有待審核的更新');
+
+    // Seed a Compass pending suggestion via the existing empty-state CTA.
+    await page.getByTestId('relationship-compass-suggestion-empty-action').click();
+    await expect.poll(() => apiState.generatedCompassSuggestionCalls.length).toBe(1);
+
+    // Top-level panel now flips to "pending" mode with a CTA pointing at
+    // the first pending Compass card.
+    const reviewPanel = page.getByTestId('relationship-system-review-flow');
+    await expect(reviewPanel).toBeVisible();
+    await expect(reviewPanel).toContainText('待審核的 Haven 建議');
+    await expect(reviewPanel).toContainText('1 則');
+    await expect(page.getByTestId('relationship-system-review-flow-cta'))
+      .toHaveAttribute('href', '#pending-review-compass');
+    // Stable landing anchor on the first pending Compass card.
+    await expect(page.getByTestId('relationship-compass-pending-review')).toBeVisible();
+
+    // Clicking the review CTA updates the URL hash so deep-links work.
+    await page.getByTestId('relationship-system-review-flow-cta').click();
+    await expect
+      .poll(() => page.evaluate(() => window.location.hash))
+      .toBe('#pending-review-compass');
+  });
+
+  test('handling one pending suggestion guides user to the next review target', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.goto('/love-map');
+
+    // Seed a Compass pending suggestion.
+    await page.getByTestId('relationship-compass-suggestion-empty-action').click();
+    await expect.poll(() => apiState.generatedCompassSuggestionCalls.length).toBe(1);
+    // Seed a Shared Future pending suggestion so, after we dismiss the
+    // Compass one, there is still another review target to point at.
+    await page.getByTestId('shared-future-suggestion-empty-action').click();
+    await expect.poll(() => apiState.generatedSuggestionCalls.length).toBe(1);
+
+    // Top-level panel reflects 1 Compass + 2 Shared Future = 3 pending.
+    await expect(page.getByTestId('relationship-system-review-flow')).toContainText('3 則');
+    // Pointed at Compass (first in canonical ordering).
+    await expect(page.getByTestId('relationship-system-review-flow-cta'))
+      .toHaveAttribute('href', '#pending-review-compass');
+
+    // Dismiss the Compass suggestion.
+    await page.getByTestId('relationship-compass-suggestion-dismiss').click();
+    await expect.poll(() => apiState.dismissedCompassSuggestionIds).toEqual([
+      'compass-suggestion-dismiss',
+    ]);
+
+    // Continue-next panel appears inside the Compass empty-state block;
+    // Shared Future still pending, so the CTA points there.
+    await expect(page.getByTestId('relationship-compass-review-flow-continue')).toBeVisible();
+    await expect(page.getByTestId('relationship-compass-review-flow-continue'))
+      .toContainText('繼續審核下一則');
+    await expect(page.getByTestId('relationship-compass-review-flow-continue-cta'))
+      .toHaveAttribute('href', '#pending-review-future');
+
+    // Top-level panel also reflects the remaining 2 Shared Future pending.
+    await expect(page.getByTestId('relationship-system-review-flow')).toContainText('2 則');
+    await expect(page.getByTestId('relationship-system-review-flow-cta'))
+      .toHaveAttribute('href', '#pending-review-future');
+  });
+
+  test('handling the last pending suggestion surfaces the all-done complete state', async ({ page }) => {
+    test.setTimeout(45_000);
+    test.skip(
+      process.env.LOVE_MAP_LIVE_E2E === '1',
+      'Live localhost mode skips the mocked Relationship System spec.',
+    );
+
+    const apiState = await mockLoveMapApi(page);
+    await page.goto('/love-map');
+
+    // Seed just one Compass pending (no Shared Future) so dismissing
+    // clears the last pending item.
+    await page.getByTestId('relationship-compass-suggestion-empty-action').click();
+    await expect.poll(() => apiState.generatedCompassSuggestionCalls.length).toBe(1);
+    await expect(page.getByTestId('relationship-system-review-flow')).toContainText('1 則');
+
+    // Dismiss the only pending item.
+    await page.getByTestId('relationship-compass-suggestion-dismiss').click();
+    await expect.poll(() => apiState.dismissedCompassSuggestionIds).toEqual([
+      'compass-suggestion-dismiss',
+    ]);
+
+    // Inline "all done" echo near the Compass block confirms the review
+    // flow completed right where the user acted.
+    await expect(page.getByTestId('relationship-compass-review-flow-all-done')).toBeVisible();
+    await expect(page.getByTestId('relationship-compass-review-flow-all-done'))
+      .toContainText('所有待審核建議都已處理完');
+
+    // Top-level panel also reverts to the calm completed state.
+    await expect(page.getByTestId('relationship-system-review-complete')).toBeVisible();
+    await expect(page.getByTestId('relationship-system-review-complete'))
+      .toContainText('目前沒有待審核的更新');
+    // Completed-state panel intentionally has no CTA — no review to start.
+    await expect(page.getByTestId('relationship-system-review-complete-cta')).toHaveCount(0);
   });
 
   test('renders the memory-backed Story slice on the live local stack', async ({ page, context, request, baseURL }) => {

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Gift, Heart, MessageCircle, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, Gift, Heart, MessageCircle, Sparkles, X } from 'lucide-react';
 import { GlassCard } from '@/components/haven/GlassCard';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -18,8 +18,18 @@ import {
   filterSharedFutureEvidence,
   sharedFutureEvidenceKindLabel,
 } from '@/lib/shared-future-suggestion-utils';
+import { formatCompassChangedAt } from '@/features/love-map/relationship-compass-revision';
+import type { RelationshipEvolutionEvent } from '@/features/love-map/relationship-system-evolution';
+import type {
+  RelationshipWeeklyReviewRitualModel,
+  WeeklyReviewPromptKey,
+} from '@/features/love-map/relationship-weekly-review';
 import { cn } from '@/lib/utils';
-import type { LoveMapRelationshipCompassPublic, RelationshipKnowledgeSuggestionEvidencePublic } from '@/services/api-client';
+import type {
+  LoveMapRelationshipCompassPublic,
+  LoveMapWeeklyReviewAnswersPublic,
+  RelationshipKnowledgeSuggestionEvidencePublic,
+} from '@/services/api-client';
 
 type StateTone = 'default' | 'quiet' | 'error';
 
@@ -158,6 +168,8 @@ interface LoveMapSystemStatusCardProps {
   description: string;
   tone: LoveMapSystemStatusTone;
   dataTestId?: string;
+  /** When set, the entire card becomes an in-page anchor (e.g. `#evolution`). */
+  href?: string;
 }
 
 export function LoveMapSystemStatusCard({
@@ -167,15 +179,17 @@ export function LoveMapSystemStatusCard({
   description,
   tone,
   dataTestId,
+  href,
 }: LoveMapSystemStatusCardProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-[1.85rem] border px-4 py-4 shadow-soft backdrop-blur-md',
-        systemStatusToneClasses[tone],
-      )}
-      data-testid={dataTestId}
-    >
+  const shellClass = cn(
+    'rounded-[1.85rem] border px-4 py-4 shadow-soft backdrop-blur-md',
+    systemStatusToneClasses[tone],
+    href &&
+      'block cursor-pointer transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:shadow-lift focus-ring-premium',
+  );
+
+  const inner = (
+    <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="type-micro uppercase text-primary/78">{eyebrow}</p>
@@ -186,6 +200,236 @@ export function LoveMapSystemStatusCard({
         </Badge>
       </div>
       <p className="mt-3 type-caption text-muted-foreground">{description}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className={shellClass} data-testid={dataTestId}>
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div className={shellClass} data-testid={dataTestId}>
+      {inner}
+    </div>
+  );
+}
+
+export function LoveMapRelationshipEvolutionPanel({ events }: { events: RelationshipEvolutionEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <div
+        className="rounded-[2rem] border border-white/54 bg-white/72 p-6 shadow-soft backdrop-blur-xl md:p-8"
+        data-testid="relationship-evolution-empty"
+      >
+        <p className="type-micro uppercase text-primary/80">關係如何演進</p>
+        <p className="mt-2 type-section-title text-card-foreground">還沒有已保存的演進紀錄</p>
+        <p className="mt-3 max-w-[40rem] type-body-muted text-muted-foreground">
+          當你們在 Identity 或 Heart 留下更新後，這裡會依時間整理成可以一起回看的脈絡——不取代各區塊的細節，只是幫你們看見最近一起發生了什麼。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="space-y-5 rounded-[2rem] border border-white/54 bg-white/72 p-6 shadow-soft backdrop-blur-xl md:p-8"
+      data-testid="relationship-evolution-timeline"
+    >
+      <div className="space-y-2">
+        <p className="type-micro uppercase text-primary/80">關係如何演進</p>
+        <h2 className="type-h2 text-card-foreground">最近一起留下的變化</h2>
+        <p className="max-w-[48rem] type-body-muted text-muted-foreground">
+          只收錄你們已保存的 Identity 與 Heart 更新；點「查看來源」可回到該則歷史列的完整脈絡。
+        </p>
+      </div>
+
+      <ul className="space-y-3">
+        {events.map((event) => (
+          <li
+            key={event.id}
+            className="scroll-mt-24 rounded-[1.35rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+            data-testid={event.testId}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="metadata" size="sm">
+                    {event.domainLabel}
+                  </Badge>
+                  <Badge variant="status" size="sm">
+                    {event.sourceLabel}
+                  </Badge>
+                </div>
+                <p className="type-section-title text-card-foreground">{event.title}</p>
+                <p className="type-caption text-muted-foreground">{event.summary}</p>
+                <p className="type-caption text-muted-foreground">
+                  {event.actorLabel}
+                  {event.occurredAt ? ` · ${formatCompassChangedAt(event.occurredAt)}` : ''}
+                </p>
+                {event.revisionNote ? (
+                  <p className="border-l-2 border-primary/20 pl-3 type-caption italic text-card-foreground/80">
+                    {event.revisionNote}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="mt-3">
+              <a
+                href={event.sourceHref}
+                className="type-caption font-medium text-primary/85 underline-offset-2 transition-colors duration-haven ease-haven hover:text-primary hover:underline focus-ring-premium"
+              >
+                查看來源
+              </a>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function LoveMapWeeklyReviewRitualPanel({
+  model,
+  myDraft,
+  partnerAnswers,
+  myUpdatedAtLabel,
+  partnerUpdatedAtLabel,
+  saving,
+  error,
+  onChange,
+  onSave,
+}: {
+  model: RelationshipWeeklyReviewRitualModel;
+  myDraft: Record<WeeklyReviewPromptKey, string>;
+  partnerAnswers: LoveMapWeeklyReviewAnswersPublic;
+  myUpdatedAtLabel: string | null;
+  partnerUpdatedAtLabel: string | null;
+  saving: boolean;
+  error: string | null;
+  onChange: (key: WeeklyReviewPromptKey, value: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <div
+      className="rounded-[2rem] border border-white/54 bg-white/72 p-6 shadow-soft backdrop-blur-xl md:p-8"
+      data-testid="relationship-weekly-review"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <p className="type-micro uppercase text-primary/80">Weekly Relationship Review</p>
+          <h2 className="type-h2 text-card-foreground">{model.title}</h2>
+          <p className="max-w-[52rem] type-body-muted text-muted-foreground">{model.subtitle}</p>
+          <p className="max-w-[52rem] type-caption text-muted-foreground">{model.trustLine}</p>
+        </div>
+        <Badge variant="metadata" size="sm" className="border-white/54 bg-white/78 text-primary/78 shadow-soft">
+          {model.weekLabel}
+        </Badge>
+      </div>
+
+      {model.cues.length > 0 ? (
+        <div className="mt-5 space-y-2">
+          <p className="type-micro uppercase text-primary/80">回看線索</p>
+          <div className="flex flex-wrap gap-2">
+            {model.cues.map((cue) => (
+              <a
+                key={cue.key}
+                href={cue.href}
+                className="inline-flex items-center gap-2 rounded-full border border-white/58 bg-white/78 px-4 py-2 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-white/88 hover:shadow-lift focus-ring-premium"
+                data-testid={cue.testId}
+              >
+                <span className="text-primary/85">{cue.label}</span>
+                <span className="text-muted-foreground/90">{cue.description}</span>
+              </a>
+            ))}
+          </div>
+          {model.emptyNudge ? (
+            <p className="type-caption text-muted-foreground" data-testid="weekly-review-empty-nudge">
+              {model.emptyNudge}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="mt-5 rounded-[1.35rem] border border-destructive/18 bg-[linear-gradient(180deg,rgba(255,251,249,0.96),rgba(248,240,236,0.94))] px-4 py-3 shadow-soft">
+          <p className="type-caption text-card-foreground/90">{error}</p>
+        </div>
+      ) : null}
+
+      <div className="mt-6 space-y-4">
+        {model.prompts.map((prompt) => {
+          const partnerValue =
+            partnerAnswers[prompt.key] && partnerAnswers[prompt.key]?.trim()
+              ? partnerAnswers[prompt.key]
+              : null;
+          return (
+            <div
+              key={prompt.key}
+              className="rounded-[1.6rem] border border-white/58 bg-white/78 px-4 py-4 shadow-soft"
+              data-testid={`weekly-review-prompt-${prompt.key}`}
+            >
+              <div className="space-y-1">
+                <p className="type-section-title text-card-foreground">{prompt.title}</p>
+                <p className="type-caption text-muted-foreground">{prompt.helperText}</p>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="rounded-[1.25rem] border border-primary/12 bg-primary/8 px-4 py-4">
+                  <p className="type-micro uppercase text-primary/80">我留下的</p>
+                  <Textarea
+                    value={myDraft[prompt.key]}
+                    onChange={(e) => onChange(prompt.key, e.target.value)}
+                    placeholder={prompt.placeholder}
+                    className="mt-3 min-h-[5.5rem] resize-y rounded-[1.1rem]"
+                  />
+                  {myUpdatedAtLabel ? (
+                    <p className="mt-2 type-micro text-muted-foreground/80">上次更新：{myUpdatedAtLabel}</p>
+                  ) : (
+                    <p className="mt-2 type-micro text-muted-foreground/80">尚未保存</p>
+                  )}
+                </div>
+
+                <div className="rounded-[1.25rem] border border-white/58 bg-white/78 px-4 py-4">
+                  <p className="type-micro uppercase text-muted-foreground">伴侶留下的</p>
+                  {partnerValue ? (
+                    <>
+                      <p className="mt-2 border-l-2 border-primary/18 pl-3 type-caption italic text-card-foreground/80">
+                        {partnerValue}
+                      </p>
+                      {partnerUpdatedAtLabel ? (
+                        <p className="mt-2 type-micro text-muted-foreground/80">
+                          上次更新：{partnerUpdatedAtLabel}
+                        </p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="mt-2 type-caption text-muted-foreground">伴侶這週還沒有留下這一題。</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="type-caption text-muted-foreground">
+          保存只會寫入你這一半的復盤文字；不會自動改寫 Compass / Heart / Future，也不會替你們做結論。
+        </p>
+        <Button
+          loading={saving}
+          disabled={saving}
+          leftIcon={<Check className="h-4 w-4" aria-hidden />}
+          onClick={onSave}
+          data-testid="weekly-review-save"
+        >
+          {saving ? '正在保存本週復盤…' : '保存本週復盤'}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -279,6 +523,99 @@ export function LoveMapSystemSectionNav({
         </LoveMapNavLink>
       </div>
     </section>
+  );
+}
+
+type LoveMapReviewFlowMode = 'pending' | 'complete' | 'continueNext';
+
+interface LoveMapReviewFlowPanelProps {
+  /**
+   * - `pending`: there are pending Haven suggestions; show a CTA that jumps
+   *   to the first pending card.
+   * - `complete`: a paired couple has nothing to review; show a calm
+   *   "you're all caught up" state with no CTA.
+   * - `continueNext`: the user just handled a suggestion and another one
+   *   remains; show a light inline CTA pointing to the next target.
+   */
+  mode: LoveMapReviewFlowMode;
+  title: string;
+  description: string;
+  /**
+   * CTA href. Typically an in-page anchor such as `#pending-review-compass`.
+   * When omitted (or when the caller does not want a CTA on a given mode),
+   * the panel renders as a calm copy-only surface.
+   */
+  ctaHref?: string;
+  ctaLabel?: string;
+  dataTestId?: string;
+  /** Optional extra content rendered under the description (rare). */
+  children?: ReactNode;
+}
+
+const reviewFlowModeClasses: Record<LoveMapReviewFlowMode, string> = {
+  // Pending: warmer tone that subtly signals "something to do" without
+  // feeling alarming. Mirrors the existing `pending` status card tone.
+  pending: 'border-accent/18 bg-accent/10',
+  // Complete: calm success tone, consistent with other "saved / done"
+  // surfaces across Haven.
+  complete: 'border-primary/12 bg-primary/8',
+  // Continue next: lighter inline tone so it reads as "there's another one"
+  // rather than dominating the recently-handled suggestion block.
+  continueNext: 'border-white/58 bg-white/74',
+};
+
+const reviewFlowIconByMode: Record<LoveMapReviewFlowMode, ReactNode> = {
+  pending: <Sparkles className="h-4 w-4 text-primary" aria-hidden />,
+  complete: <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />,
+  continueNext: <ArrowRight className="h-4 w-4 text-primary" aria-hidden />,
+};
+
+export function LoveMapReviewFlowPanel({
+  mode,
+  title,
+  description,
+  ctaHref,
+  ctaLabel,
+  dataTestId,
+  children,
+}: LoveMapReviewFlowPanelProps) {
+  const ctaClassName =
+    'inline-flex items-center gap-2 rounded-full border border-primary/18 bg-primary/10 px-4 py-2.5 text-sm font-medium text-card-foreground shadow-soft transition-all duration-haven ease-haven hover:-translate-y-0.5 hover:bg-primary/14 hover:shadow-lift focus-ring-premium';
+
+  return (
+    <div
+      className={cn(
+        'rounded-[1.85rem] border px-5 py-5 shadow-soft backdrop-blur-md md:px-6',
+        reviewFlowModeClasses[mode],
+      )}
+      data-testid={dataTestId}
+      data-review-flow-mode={mode}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/58 bg-white/72 shadow-soft">
+            {reviewFlowIconByMode[mode]}
+          </span>
+          <div className="min-w-0 space-y-2">
+            <p className="type-micro uppercase text-primary/80">Haven 建議 · 審核流</p>
+            <p className="type-section-title text-card-foreground">{title}</p>
+            <p className="type-caption text-muted-foreground">{description}</p>
+            {children}
+          </div>
+        </div>
+
+        {ctaHref && ctaLabel ? (
+          <a
+            href={ctaHref}
+            className={ctaClassName}
+            data-testid={dataTestId ? `${dataTestId}-cta` : undefined}
+          >
+            {ctaLabel}
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </a>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

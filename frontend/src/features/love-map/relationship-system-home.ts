@@ -31,6 +31,8 @@ export interface RelationshipSystemStatusCardModel {
   title: string;
   value: string;
   description: string;
+  /** When set (e.g. evolving card → `#evolution`), the whole card is a focusable in-page link. */
+  href?: string;
 }
 
 export interface RelationshipSystemNavItemModel {
@@ -81,9 +83,8 @@ function buildPendingHref(input: RelationshipSystemHomeInput) {
   return '#identity';
 }
 
-function buildHistoryHref(input: RelationshipSystemHomeInput) {
-  if (safeCount(input.compassHistoryCount) > 0) return '#identity';
-  if (safeCount(input.repairHistoryCount) > 0) return '#heart';
+function buildHistoryHref(input: RelationshipSystemHomeInput, evolutionCount: number) {
+  if (evolutionCount > 0) return '#evolution';
   return '#identity';
 }
 
@@ -118,7 +119,7 @@ export function buildRelationshipSystemHomeModel(
   const evolutionCount = input.hasPartner ? compassHistoryCount + repairHistoryCount : 0;
   const savedDomainCount = countSavedDomains(input);
   const pendingHref = buildPendingHref(input);
-  const historyHref = buildHistoryHref(input);
+  const historyHref = buildHistoryHref(input, evolutionCount);
 
   const statusCards: RelationshipSystemStatusCardModel[] = [
     {
@@ -147,6 +148,7 @@ export function buildRelationshipSystemHomeModel(
       description: input.lastActivityLabel
         ? `最近活動：${input.lastActivityLabel}。你可以回看哪些內容是手動更新、哪些來自已接受建議。`
         : '當 Compass 或 Repair Agreements 被更新，這裡會保留它們如何改變。',
+      ...(evolutionCount > 0 ? { href: '#evolution' as const } : {}),
     },
   ];
 

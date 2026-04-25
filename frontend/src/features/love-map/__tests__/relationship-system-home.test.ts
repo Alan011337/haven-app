@@ -54,6 +54,28 @@ test('buildRelationshipSystemHomeModel keeps the four base anchors stable', () =
     ],
   );
   assert.equal(model.navItems.at(-1)?.key, 'recent-evolution');
+  assert.equal(model.navItems.at(-1)?.href, '#evolution');
+});
+
+test('buildRelationshipSystemHomeModel links evolving status card and nextAction to #evolution when history exists', () => {
+  const model = buildRelationshipSystemHomeModel(baseInput);
+  assert.equal(model.statusCards[2]?.key, 'evolving');
+  assert.equal(model.statusCards[2]?.href, '#evolution');
+  assert.equal(model.nextAction.href, '#evolution');
+  assert.equal(model.nextAction.label, '回看最近演進');
+});
+
+test('buildRelationshipSystemHomeModel omits evolution deep links when there is no saved history', () => {
+  const model = buildRelationshipSystemHomeModel({
+    ...baseInput,
+    compassHistoryCount: 0,
+    repairHistoryCount: 0,
+  });
+  assert.equal(model.evolutionCount, 0);
+  assert.equal(model.statusCards[2]?.href, undefined);
+  assert.equal(model.navItems.find((i) => i.key === 'recent-evolution'), undefined);
+  assert.equal(model.nextAction.label, '回看關係地圖');
+  assert.equal(model.nextAction.href, '#identity');
 });
 
 test('buildRelationshipSystemHomeModel points pending review to the highest-priority pending area', () => {

@@ -237,6 +237,28 @@ class LoveMapWeeklyTaskPublic(BaseModel):
     completed_at: str | None = None
 
 
+class LoveMapWeeklyReviewAnswersPublic(BaseModel):
+    understood_this_week: str | None = None
+    worth_carrying_forward: str | None = None
+    needs_care: str | None = None
+    next_week_intention: str | None = None
+
+
+class LoveMapWeeklyReviewPublic(BaseModel):
+    week_start: str
+    my_answers: LoveMapWeeklyReviewAnswersPublic
+    partner_answers: LoveMapWeeklyReviewAnswersPublic
+    my_updated_at: str | None = None
+    partner_updated_at: str | None = None
+
+
+class LoveMapWeeklyReviewUpsert(BaseModel):
+    understood_this_week: str = Field(default="", max_length=2000)
+    worth_carrying_forward: str = Field(default="", max_length=2000)
+    needs_care: str = Field(default="", max_length=2000)
+    next_week_intention: str = Field(default="", max_length=2000)
+
+
 class LoveMapSystemEssentialsPublic(BaseModel):
     my_care_preferences: LoveMapCarePreferencesPublic | None = None
     partner_care_preferences: LoveMapCarePreferencesPublic | None = None

@@ -28,6 +28,7 @@ export {
   useLoveMapSharedFutureRefinements,
   useLoveMapSharedFutureSuggestions,
   useLoveMapSystem,
+  useLoveMapWeeklyReviewCurrent,
   loveMapRelationshipCompassSuggestionsQueryKey,
 } from './useLoveMapQueries';
 export { useMediationStatus } from './useMediationStatus';

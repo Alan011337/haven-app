@@ -9,6 +9,7 @@ import {
   fetchLoveMapSharedFutureRefinements,
   fetchLoveMapSharedFutureSuggestions,
   fetchLoveMapSystem,
+  fetchLoveMapWeeklyReviewCurrent,
 } from '@/services/api-client';
 
 export const loveMapRelationshipCompassSuggestionsQueryKey = ['loveMapRelationshipCompassSuggestions'] as const;
@@ -34,6 +35,15 @@ export function useLoveMapSystem() {
     queryKey: queryKeys.loveMapSystem(),
     queryFn: fetchLoveMapSystem,
     staleTime: 60_000,
+  });
+}
+
+export function useLoveMapWeeklyReviewCurrent(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['loveMapWeeklyReviewCurrent'] as const,
+    queryFn: fetchLoveMapWeeklyReviewCurrent,
+    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

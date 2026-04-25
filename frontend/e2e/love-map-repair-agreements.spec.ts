@@ -373,6 +373,7 @@ test.describe('Repair Agreements deepening', () => {
     await expect(page.getByTestId('relationship-heart-repair-agreements-card')).toBeVisible();
     await expect(page.getByTestId('relationship-heart-repair-agreements-updated-by')).toContainText('Alice Chen');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history')).toBeVisible();
+    await expect(page.locator('#relationship-repair-agreement-history-repair-history-manual-1')).toBeAttached();
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-0')).toContainText('手動微調');
     await expect(page.getByTestId('relationship-heart-repair-agreements-history-entry-1')).toContainText('修復帶回');
     // Timeline entries collapse their before/after detail by default: each entry renders a

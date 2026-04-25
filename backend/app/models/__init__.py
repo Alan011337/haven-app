@@ -53,6 +53,7 @@ from .relationship_compass_change import RelationshipCompassChange
 from .relationship_repair_agreement import RelationshipRepairAgreement
 from .relationship_repair_agreement_change import RelationshipRepairAgreementChange
 from .relationship_repair_outcome_capture import RelationshipRepairOutcomeCapture
+from .relationship_weekly_review import RelationshipWeeklyReview
 from .relationship_knowledge_suggestion import RelationshipKnowledgeSuggestion
 from .wishlist_item import WishlistItem
 
@@ -115,6 +116,7 @@ __all__ = [
     "RelationshipRepairAgreementChange",
     "RelationshipRepairOutcomeCapture",
     "RelationshipKnowledgeSuggestion",
+    "RelationshipWeeklyReview",
     "RelationshipBaseline",
     "User",
     "UserCreate",

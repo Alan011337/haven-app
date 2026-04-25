@@ -477,6 +477,28 @@ export interface LoveMapSystemResponse {
   essentials: LoveMapSystemEssentialsPublic;
 }
 
+export interface LoveMapWeeklyReviewAnswersPublic {
+  understood_this_week: string | null;
+  worth_carrying_forward: string | null;
+  needs_care: string | null;
+  next_week_intention: string | null;
+}
+
+export interface LoveMapWeeklyReviewPublic {
+  week_start: string;
+  my_answers: LoveMapWeeklyReviewAnswersPublic;
+  partner_answers: LoveMapWeeklyReviewAnswersPublic;
+  my_updated_at: string | null;
+  partner_updated_at: string | null;
+}
+
+export interface LoveMapWeeklyReviewUpsertPayload {
+  understood_this_week: string;
+  worth_carrying_forward: string;
+  needs_care: string;
+  next_week_intention: string;
+}
+
 export interface RelationshipKnowledgeSuggestionEvidencePublic {
   source_kind: string;
   source_id: string;
@@ -540,6 +562,16 @@ export const fetchLoveMapSystem = async (): Promise<LoveMapSystemResponse> => {
       weekly_task: response.essentials?.weekly_task ?? null,
     },
   };
+};
+
+export const fetchLoveMapWeeklyReviewCurrent = async (): Promise<LoveMapWeeklyReviewPublic> => {
+  return apiGet<LoveMapWeeklyReviewPublic>('/love-map/weekly-review/current');
+};
+
+export const upsertLoveMapWeeklyReviewCurrent = async (
+  payload: LoveMapWeeklyReviewUpsertPayload,
+): Promise<LoveMapWeeklyReviewPublic> => {
+  return apiPut<LoveMapWeeklyReviewPublic>('/love-map/weekly-review/current', payload);
 };
 
 export interface LoveMapHeartProfileUpsertPayload extends LoveLanguagePreferenceRecord {
